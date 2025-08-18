@@ -1,0 +1,77 @@
+:root {
+  /* === Primary Colors === */
+  --primary-color: #2284F4;           /* 피그마 파란색 - 주요 액션 */
+  --primary-hover: #0768AE;
+  --primary-light: #EEF2FF;
+  
+  --secondary-color: #6B7280;         /* 그레이 - 보조 액션 */
+  --secondary-hover: #4B5563;
+  
+  /* === Background Colors === */
+  --background-main: #E3E7E8;         /* 메인 배경 - 피그마 기준 진한 그레이 */
+  --background-white: #FFFFFF;        /* 카드/모달 배경 */
+  --background-dark: #111827;         /* 다크모드 배경 */
+  
+  /* === Surface Colors === */
+  --surface-elevated: #FFFFFF;        /* 상승된 표면 (카드, 모달) */
+  --surface-sunken: #F3F4F6;         /* 함몰된 표면 */
+  
+  /* === Text Colors === */
+  --text-primary: #111827;            /* 주요 텍스트 */
+  --text-secondary: #6B7280;          /* 보조 텍스트 */
+  --text-tertiary: #9CA3AF;           /* 세번째 텍스트 */
+  --text-white: #FFFFFF;              /* 흰색 텍스트 */
+  
+  /* === Border Colors === */
+  --border-default: #E5E7EB;          /* 기본 테두리 */
+  --border-light: #F3F4F6;            /* 연한 테두리 */
+  --border-dark: #D1D5DB;             /* 진한 테두리 */
+  
+  /* === Locker Status Colors (피그마 기준) === */
+  --locker-available: #1298D5;        /* 사용가능 - 파란색 테두리 */
+  --locker-available-bg: #D9D9D9;     /* 사용가능 배경 - 회색 */
+  --locker-available-border: #1298D5;
+  --locker-available-text: #065F46;   /* 사용가능 텍스트 */
+  
+  --locker-occupied: #F59E0B;         /* 사용중 - 노랑/주황 */
+  --locker-occupied-bg: #FEF3C7;      /* 사용중 배경 */
+  --locker-occupied-border: #FBBF24;
+  --locker-occupied-text: #78350F;    /* 사용중 텍스트 */
+  
+  --locker-expired: #EF4444;          /* 만료 - 빨강 */
+  --locker-expired-bg: #FEE2E2;       /* 만료 배경 */
+  --locker-expired-border: #F87171;
+  --locker-expired-text: #7F1D1D;     /* 만료 텍스트 */
+  
+  --locker-maintenance: #6B7280;      /* 정비중 - 그레이 */
+  --locker-maintenance-bg: #F3F4F6;   /* 정비중 배경 */
+  --locker-maintenance-border: #9CA3AF;
+  --locker-maintenance-text: #1F2937;  /* 정비중 텍스트 */
+  
+  --locker-selected: #4F46E5;         /* 선택됨 - 인디고 */
+  --locker-selected-bg: #EEF2FF;      /* 선택됨 배경 */
+  --locker-selected-border: #6366F1;
+  
+  --locker-hover-bg: rgba(0, 0, 0, 0.05);  /* 호버 배경 */
+  
+  /* === Form Colors === */
+  --primary-color-alpha: rgba(79, 70, 229, 0.1);  /* 주요 색상 알파 */
+  --primary-color-dark: #4338CA;      /* 주요 색상 어두운 버전 */
+  --text-placeholder: #9CA3AF;        /* 플레이스홀더 텍스트 */
+  
+  /* === Semantic Colors === */
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+  --color-info: #3B82F6;
+  
+  /* === Shadow === */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  
+  /* === Overlay === */
+  --overlay-bg: rgba(0, 0, 0, 0.5);
+  --overlay-light: rgba(255, 255, 255, 0.9);
+}
