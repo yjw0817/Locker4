@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, readonly } from 'vue'
+import { lockerApi } from '@/services/lockerApi'
 
 export type LockerStatus = 'available' | 'occupied' | 'expired' | 'maintenance'
 export type ViewMode = 'floor' | 'front'
@@ -7,7 +8,7 @@ export type PlacementMode = 'flat' | 'vertical' // 평면배치 | 세로배치
 
 export interface Locker {
   id: string
-  number: string  // Floor placement number (zone management)
+  number: string  // Floor placement number (zone management) - maps to LOCKR_LABEL
   x: number
   y: number
   width: number  // 가로 (공통)
@@ -19,29 +20,55 @@ export interface Locker {
   zoneId: string
   typeId: string
   
+  // Database fields
+  lockrCd?: number              // Maps to LOCKR_CD (primary key)
+  compCd?: string               // Company code (COMP_CD)
+  bcoffCd?: string              // Branch office code (BCOFF_CD)
+  lockrLabel?: string           // Floor view number (LOCKR_LABEL) - e.g., "A-01"
+  lockrNo?: number              // Front view number (LOCKR_NO) - e.g., 101, 102
+  lockrKnd?: string             // Locker kind/zone (LOCKR_KND)
+  lockrTypeCd?: string          // Locker type code (LOCKR_TYPE_CD)
+  doorDirection?: string        // Door direction (DOOR_DIRECTION)
+  groupNum?: number             // Group number for front view (GROUP_NUM)
+  lockrGendrSet?: string        // Gender setting (LOCKR_GENDR_SET)
+  
   // Parent-child relationship
   parentLockerId?: string | null     // null = parent locker
+  parentLockrCd?: number | null      // Database parent reference (PARENT_LOCKR_CD)
   childLockerIds?: string[]          // IDs of child lockers
-  tierLevel?: number                 // 0 = parent, 1+ = child tiers
+  tierLevel?: number                 // 0 = parent, 1+ = child tiers (TIER_LEVEL)
   
   // Front view specific
-  frontViewX?: number                // X position in front view
-  frontViewY?: number                // Y position in front view  
+  frontViewX?: number                // X position in front view (FRONT_VIEW_X)
+  frontViewY?: number                // Y position in front view (FRONT_VIEW_Y)
   frontViewNumber?: string           // Assignment number for front view
   actualHeight?: number              // Actual height for front view rendering
+  
+  // Member assignment
+  memSno?: string               // Member serial number (MEM_SNO)
+  memNm?: string                // Member name (MEM_NM)
+  lockrUseSDate?: string        // Usage start date (LOCKR_USE_S_DATE)
+  lockrUseEDate?: string        // Usage end date (LOCKR_USE_E_DATE)
+  lockrStat?: string            // Status code (LOCKR_STAT) - '00', '01', etc.
+  buyEventSno?: string          // Purchase event serial (BUY_EVENT_SNO)
   
   // Visibility control
   isVisible?: boolean                // Control visibility in floor view
   isAnimating?: boolean              // Animation state flag
   hasError?: boolean                 // Error state flag
   
-  // Assignment info
+  // Assignment info (legacy support)
   assignedTo?: {
     name: string
     expiryDate: Date
   }
   memberInfo?: any                   // Future: member assignment info
   lockerState?: string               // Future: in-use, empty, broken, etc.
+  
+  // Metadata
+  memo?: string                 // Additional notes (MEMO)
+  updateBy?: string             // Last updated by (UPDATE_BY)
+  updateDt?: Date | string      // Last update timestamp (UPDATE_DT)
 }
 
 export interface LockerZone {
@@ -81,6 +108,12 @@ export const useLockerStore = defineStore('locker', () => {
   // Undo/Redo를 위한 히스토리
   const history = ref<Locker[][]>([])
   const historyIndex = ref(-1)
+  
+  // Database integration flags
+  const isOnlineMode = ref(false) // Toggle between local and DB mode
+  const isSyncing = ref(false)
+  const lastSyncTime = ref<Date | null>(null)
+  const connectionStatus = ref<'connected' | 'disconnected' | 'error'>('disconnected')
 
   // Computed
   const selectedLocker = computed(() => 
@@ -122,19 +155,44 @@ export const useLockerStore = defineStore('locker', () => {
   }
 
   // Actions
-  const addLocker = (locker: Omit<Locker, 'id'>) => {
+  const addLocker = async (locker: Omit<Locker, 'id'>) => {
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     const newLocker: Locker = {
       ...locker,
       rotation: locker.rotation || 0, // 기본값 0 설정
-      id: `locker-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      id: tempId
     }
+    
     saveHistory()
     lockers.value.push(newLocker)
     console.log('[Store] Added locker with rotation:', newLocker.rotation)
+    
+    // If online mode, try to save to database
+    if (isOnlineMode.value) {
+      isSyncing.value = true
+      try {
+        const savedLocker = await lockerApi.saveLocker(newLocker)
+        if (savedLocker) {
+          // Replace temp locker with saved one
+          const index = lockers.value.findIndex(l => l.id === tempId)
+          if (index !== -1) {
+            lockers.value[index] = savedLocker
+          }
+          console.log('[Store] Locker saved to database:', savedLocker.id)
+        } else {
+          console.warn('[Store] Failed to save to database, keeping local copy')
+        }
+      } catch (error) {
+        console.error('[Store] Database save error:', error)
+      } finally {
+        isSyncing.value = false
+      }
+    }
+    
     return newLocker
   }
 
-  const updateLocker = (id: string, updates: Partial<Locker>) => {
+  const updateLocker = async (id: string, updates: Partial<Locker>) => {
     const index = lockers.value.findIndex(l => l.id === id)
     if (index !== -1) {
       saveHistory()
@@ -148,6 +206,22 @@ export const useLockerStore = defineStore('locker', () => {
       lockers.value[index] = { ...lockers.value[index], ...updates }
       // 선택된 락커가 업데이트되면 selectedLocker computed도 자동 갱신됨
       console.log(`[Store] Updated locker ${id}:`, updates)
+      
+      // If online mode, sync to database
+      if (isOnlineMode.value && !id.includes('temp')) {
+        isSyncing.value = true
+        try {
+          const savedLocker = await lockerApi.saveLocker(lockers.value[index])
+          if (!savedLocker) {
+            console.warn('[Store] Failed to sync update to database')
+          }
+        } catch (error) {
+          console.error('[Store] Database update error:', error)
+        } finally {
+          isSyncing.value = false
+        }
+      }
+      
       return lockers.value[index]
     }
     return null
@@ -158,11 +232,26 @@ export const useLockerStore = defineStore('locker', () => {
     return lockers.value.find(l => l.id === id) || null
   }
 
-  const deleteLocker = (id: string) => {
+  const deleteLocker = async (id: string) => {
     const index = lockers.value.findIndex(l => l.id === id)
     if (index !== -1) {
       saveHistory()
       lockers.value.splice(index, 1)
+      
+      // If online mode, delete from database
+      if (isOnlineMode.value && !id.includes('temp')) {
+        isSyncing.value = true
+        try {
+          const success = await lockerApi.deleteLocker(id)
+          if (!success) {
+            console.warn('[Store] Failed to delete from database')
+          }
+        } catch (error) {
+          console.error('[Store] Database delete error:', error)
+        } finally {
+          isSyncing.value = false
+        }
+      }
     }
   }
   
@@ -352,6 +441,70 @@ export const useLockerStore = defineStore('locker', () => {
     console.log('[Store] Test data initialized with adjacent lockers (no gaps)')
   }
 
+  // Database integration methods
+  const loadLockersFromDatabase = async () => {
+    if (!isOnlineMode.value) return
+    
+    isSyncing.value = true
+    try {
+      const dbLockers = await lockerApi.getAllLockers()
+      if (dbLockers.length > 0) {
+        lockers.value = dbLockers
+        lastSyncTime.value = new Date()
+        connectionStatus.value = 'connected'
+        console.log(`[Store] Loaded ${dbLockers.length} lockers from database`)
+      } else {
+        console.log('[Store] No lockers found in database')
+        connectionStatus.value = 'connected'
+      }
+    } catch (error) {
+      console.error('[Store] Failed to load from database:', error)
+      connectionStatus.value = 'error'
+    } finally {
+      isSyncing.value = false
+    }
+  }
+  
+  const toggleOnlineMode = async (enabled: boolean): Promise<boolean> => {
+    isOnlineMode.value = enabled
+    
+    if (enabled) {
+      // Test connection first
+      const isConnected = await lockerApi.testConnection()
+      if (isConnected) {
+        connectionStatus.value = 'connected'
+        // When enabling online mode, load from database
+        await loadLockersFromDatabase()
+        return true
+      } else {
+        connectionStatus.value = 'error'
+        isOnlineMode.value = false
+        console.error('[Store] Cannot connect to database')
+        return false
+      }
+    } else {
+      // When disabling, keep current local data
+      connectionStatus.value = 'disconnected'
+      console.log('[Store] Switched to offline mode')
+      return true
+    }
+  }
+  
+  const syncToDatabase = async () => {
+    if (!isOnlineMode.value) return
+    
+    isSyncing.value = true
+    try {
+      const successCount = await lockerApi.batchSaveLockers(lockers.value)
+      console.log(`[Store] Synced ${successCount}/${lockers.value.length} lockers`)
+      lastSyncTime.value = new Date()
+    } catch (error) {
+      console.error('[Store] Sync failed:', error)
+    } finally {
+      isSyncing.value = false
+    }
+  }
+
   return {
     // State
     lockers,
@@ -381,6 +534,15 @@ export const useLockerStore = defineStore('locker', () => {
     redo,
     checkCollision,
     getRotatedBounds,
-    getLockerById
+    getLockerById,
+    
+    // Database integration
+    isOnlineMode: readonly(isOnlineMode),
+    isSyncing: readonly(isSyncing),
+    lastSyncTime: readonly(lastSyncTime),
+    connectionStatus: readonly(connectionStatus),
+    loadLockersFromDatabase,
+    toggleOnlineMode,
+    syncToDatabase
   }
 })

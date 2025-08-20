@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animation Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .info { 
+            background: #f0f9ff; 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin-bottom: 20px;
+        }
+        .status { 
+            padding: 10px; 
+            background: #fef3c7; 
+            border-radius: 4px; 
+            margin: 10px 0;
+        }
+        code { 
+            background: #e5e7eb; 
+            padding: 2px 6px; 
+            border-radius: 3px; 
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h1>Locker4 Animation Test</h1>
+        <p>To test the animation:</p>
+        <ol>
+            <li>Open the application at <a href="http://localhost:3003/locker-placement-figma" target="_blank">http://localhost:3003/locker-placement-figma</a></li>
+            <li>Look for the view mode selector (radio buttons or dropdown)</li>
+            <li>Switch between "평면배치모드" (floor view) and "세로배치모드" (front view)</li>
+            <li>Open browser console (F12) to see debug logs</li>
+        </ol>
+    </div>
+
+    <div class="status">
+        <h2>Expected Behavior:</h2>
+        <ul>
+            <li>When switching to "세로배치모드" (front view), lockers should animate with a smooth transition</li>
+            <li>When switching back to "평면배치모드" (floor view), lockers should animate back</li>
+            <li>Console should show: <code>[View Mode Change] Transition: floor → front</code></li>
+            <li>Animation duration: 1 second with cubic-bezier easing</li>
+        </ul>
+    </div>
+
+    <div class="status">
+        <h2>Current Implementation:</h2>
+        <ul>
+            <li>✅ Vue watcher on <code>currentViewMode</code> ref</li>
+            <li>✅ <code>animateToFrontView()</code> function with position transform first</li>
+            <li>✅ <code>animateToFloorView()</code> function for reverse animation</li>
+            <li>✅ CSS transitions with 1s duration and staggered delays</li>
+        </ul>
+    </div>
+
+    <div class="status">
+        <h2>Files Modified:</h2>
+        <ul>
+            <li><code>frontend/src/pages/LockerPlacementFigma.vue</code> - Animation implementation</li>
+            <li><code>frontend/src/stores/lockerStoreV2.ts</code> - Database-compatible store</li>
+            <li><code>frontend/src/composables/useLockerStore.ts</code> - Smart store selector</li>
+        </ul>
+    </div>
+</body>
+</html>
