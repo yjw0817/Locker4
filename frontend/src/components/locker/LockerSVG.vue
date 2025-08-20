@@ -1,7 +1,7 @@
 <template>
   <g
     :data-locker-id="locker.id"
-    :transform="`translate(${locker.x || 0}, ${locker.y || 0}) rotate(${locker.rotation || 0}, ${logicalDimensions.width/2}, ${logicalDimensions.height/2})`"
+    :transform="`translate(${locker.x}, ${locker.y}) rotate(${locker.rotation || 0}, ${logicalDimensions.width/2}, ${logicalDimensions.height/2})`"
     @click.stop="handleClick"
     @mousedown.prevent="handleMouseDown"
     @mouseenter="isHovered = true"
@@ -129,22 +129,17 @@ const isHovered = ref(false)
 // All dimensions here are in logical units
 // Logical dimensions (all coordinates in SVG are logical)
 const logicalDimensions = computed(() => {
-  // Ensure we always have valid numeric values
-  const defaultWidth = 40
-  const defaultHeight = 40
-  const defaultDepth = 40
-  
   if (props.viewMode === 'floor') {
     // Floor view: Width x Depth
     return {
-      width: props.locker.width || defaultWidth,
-      height: props.locker.depth || props.locker.height || defaultDepth
+      width: props.locker.width,
+      height: props.locker.depth || props.locker.height || props.locker.width
     }
   } else {
     // Front view: Width x Height (actual height)
     return {
-      width: props.locker.width || defaultWidth,
-      height: props.locker.actualHeight || props.locker.height || defaultHeight
+      width: props.locker.width,
+      height: props.locker.actualHeight || props.locker.height || 60
     }
   }
 })

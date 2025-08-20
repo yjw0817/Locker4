@@ -11,39 +11,9 @@
     </header>
 
     <div class="container">
-      <!-- 좌측 사이드바 (평면배치 모드에서만 표시) -->
-      <aside v-if="currentViewMode === 'floor'" class="sidebar">
+      <!-- 좌측 사이드바 -->
+      <aside class="sidebar">
         <h2 class="sidebar-title">락커 선택창</h2>
-        
-        <!-- 데이터베이스 연동 컨트롤 -->
-        <div class="database-controls">
-          <label class="db-toggle">
-            <input 
-              type="checkbox" 
-              :checked="lockerStore.isOnlineMode" 
-              @change="handleDatabaseToggle"
-              :disabled="lockerStore.isSyncing"
-            />
-            <span>데이터베이스 연동</span>
-          </label>
-          
-          <div v-if="lockerStore.isOnlineMode" class="db-status">
-            <span v-if="lockerStore.isSyncing" class="syncing">🔄 동기화 중...</span>
-            <span v-else-if="lockerStore.connectionStatus === 'error'" class="error">❌ 연결 실패</span>
-            <span v-else-if="lockerStore.lastSyncTime" class="synced">
-              ✅ {{ formatSyncTime(lockerStore.lastSyncTime) }}
-            </span>
-            <span v-else class="connected">✅ 연결됨</span>
-          </div>
-          
-          <button 
-            v-if="lockerStore.isOnlineMode && !lockerStore.isSyncing && lockerStore.connectionStatus === 'connected'"
-            @click="handleManualSync"
-            class="sync-btn"
-          >
-            수동 동기화
-          </button>
-        </div>
         
         <!-- 락커 타입 목록 -->
         <div class="locker-types">
@@ -141,20 +111,6 @@
           락커 등록
         </button>
 
-        <!-- Front View 전용 버튼들 -->
-        <div v-if="currentViewMode === 'front'" class="front-view-controls">
-          <button 
-            class="add-tiers-btn" 
-            @click="showAddTiersDialog"
-            :disabled="selectedLockerIds.size === 0"
-          >
-            층 추가 (Add Tiers)
-          </button>
-          <div class="help-text">
-            💡 Parent 락커를 선택하고 층을 추가하세요
-          </div>
-        </div>
-
         <!-- 뷰 모드 선택 -->
         <div class="view-mode-selector">
           <label>배치 모드:</label>
@@ -222,8 +178,8 @@
               v-if="selectedZone"
               :x="1"
               :y="1"
-              :width="canvasWidth - 2"
-              :height="canvasHeight - 2"
+              :width="canvasWidth.value - 2"
+              :height="canvasHeight.value - 2"
               fill="none"
               stroke="black"
               stroke-width="1"
@@ -278,11 +234,11 @@
             <!-- Selection UI handles (delete, rotate) - Follow during drag and rotate with locker -->
             <g v-if="selectedLocker && !isDragging && showSelectionUI">
               <!-- Apply position and rotation transforms (all in logical coordinates) -->
-              <g :transform="`translate(${getSelectionUIPosition().x}, ${getSelectionUIPosition().y}) rotate(${Number(selectedLocker.rotation) || 0}, ${(Number(selectedLocker.width) || 40) / 2}, ${(Number(selectedLocker.height) || 40) / 2})`">
+              <g :transform="`translate(${getSelectionUIPosition().x}, ${getSelectionUIPosition().y}) rotate(${selectedLocker.rotation || 0}, ${selectedLocker.width / 2}, ${selectedLocker.height / 2})`">
                 
                 <!-- Delete button (top right, outside locker bounds) -->
                 <g 
-                  :transform="`translate(${(Number(selectedLocker.width) || 40) + 15}, -15)`"
+                  :transform="`translate(${selectedLocker.width + 15}, -15)`"
                   @click.stop="deleteSelectedLocker"
                   style="cursor: pointer"
                   class="selection-button delete-button"
@@ -295,7 +251,7 @@
                 
                 <!-- Rotate Clockwise button (above center handle, slightly right) -->
                 <g 
-                  :transform="`translate(${(Number(selectedLocker.width) || 40) / 2 + 15}, -30)`"
+                  :transform="`translate(${selectedLocker.width / 2 + 15}, -30)`"
                   @click.stop="() => rotateSelectedLocker(45)"
                   style="cursor: pointer"
                   class="selection-button rotate-cw-button"
@@ -316,7 +272,7 @@
                 
                 <!-- Rotate Counter-Clockwise button (above center handle, slightly left) -->
                 <g 
-                  :transform="`translate(${(Number(selectedLocker.width) || 40) / 2 - 15}, -30)`"
+                  :transform="`translate(${selectedLocker.width / 2 - 15}, -30)`"
                   @click.stop="() => rotateSelectedLocker(-45)"
                   style="cursor: pointer"
                   class="selection-button rotate-ccw-button"
@@ -371,7 +327,7 @@
                 :key="`h-${guide.position}`"
                 :x1="0"
                 :y1="guide.position"
-                :x2="canvasWidth"
+                :x2="canvasWidth.value"
                 :y2="guide.position"
                 stroke="#00ff00"
                 stroke-width="1"
@@ -386,7 +342,7 @@
                 :x1="guide.position"
                 :y1="0"
                 :x2="guide.position"
-                :y2="canvasHeight"
+                :y2="canvasHeight.value"
                 stroke="#00ff00"
                 stroke-width="1"
                 stroke-dasharray="5,5"
@@ -436,15 +392,28 @@
     @save="handleLockerRegistration"
   />
 
-  <!-- Context Menu Component -->
-  <ContextMenu
-    v-if="currentViewMode === 'front'"
-    :visible="contextMenuVisible"
-    :position="contextMenuPosition"
-    :items="contextMenuItems"
-    @close="hideContextMenu"
-    @select="handleContextMenuSelect"
-  />
+  <!-- Context Menu - Only visible in front view (세로배치모드) -->
+  <div 
+    v-if="contextMenuVisible && currentViewMode === 'front'" 
+    :style="{ 
+      position: 'fixed', 
+      left: contextMenuPosition.x + 'px', 
+      top: contextMenuPosition.y + 'px',
+      zIndex: 1000
+    }"
+    class="context-menu"
+    @click.stop
+  >
+    <div class="context-menu-item" @click="showFloorInputDialog">
+      <i class="fas fa-layer-group"></i> 단수 입력
+    </div>
+    <div class="context-menu-item" @click="showNumberAssignDialog">
+      <i class="fas fa-sort-numeric-up"></i> 번호 부여
+    </div>
+    <div class="context-menu-item" @click="deleteNumbers">
+      <i class="fas fa-eraser"></i> 번호 삭제
+    </div>
+  </div>
   
   <!-- Floor Input Dialog -->
   <div v-if="floorInputVisible" class="modal-overlay" @click="floorInputVisible = false">
@@ -513,50 +482,14 @@
       </div>
     </div>
   </div>
-
-  <!-- Floating Mode Toggle Button (Always Visible) -->
-  <div class="mode-toggle-float">
-    <button 
-      class="mode-btn"
-      :class="{ active: currentViewMode === 'floor' }"
-      @click="setViewMode('floor')"
-      title="평면배치모드 (P)"
-    >
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="3" y="3" width="18" height="18" rx="2" />
-        <rect x="7" y="7" width="4" height="4" />
-        <rect x="13" y="7" width="4" height="4" />
-        <rect x="7" y="13" width="4" height="4" />
-        <rect x="13" y="13" width="4" height="4" />
-      </svg>
-      <span>평면배치</span>
-    </button>
-    <button 
-      class="mode-btn"
-      :class="{ active: currentViewMode === 'front' }"
-      @click="setViewMode('front')"
-      title="세로배치모드 (F)"
-    >
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="3" y="3" width="18" height="18" rx="2" />
-        <line x1="3" y1="15" x2="21" y2="15" stroke-dasharray="2 2" />
-        <rect x="7" y="7" width="4" height="6" />
-        <rect x="13" y="7" width="4" height="6" />
-      </svg>
-      <span>세로배치</span>
-    </button>
-  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useLockerStore } from '@/stores/lockerStore'
-import type { Locker } from '@/stores/lockerStore'
 import LockerSVG from '@/components/locker/LockerSVG.vue'
 import ZoneModal from '@/components/modals/ZoneModal.vue'
 import LockerRegistrationModal from '@/components/modals/LockerRegistrationModal.vue'
-import ContextMenu from '@/components/ContextMenu.vue'
-import type { ContextMenuItem } from '@/components/ContextMenu.vue'
 
 const lockerStore = useLockerStore()
 
@@ -789,14 +722,14 @@ const getSelectionUIPosition = () => {
   const currentLocker = currentLockers.value.find(l => l.id === selectedLocker.value.id)
   if (currentLocker) {
     return {
-      x: Number(currentLocker.x) || 0,
-      y: Number(currentLocker.y) || 0
+      x: currentLocker.x,
+      y: currentLocker.y
     }
   }
   
   return {
-    x: Number(selectedLocker.value.x) || 0,
-    y: Number(selectedLocker.value.y) || 0
+    x: selectedLocker.value.x,
+    y: selectedLocker.value.y
   }
 }
 
@@ -993,113 +926,6 @@ const addLocker = () => {
 }
 
 // Add locker by double-clicking on type card
-// Database integration handlers
-const handleDatabaseToggle = async (event: Event) => {
-  const enabled = (event.target as HTMLInputElement).checked
-  const success = await lockerStore.toggleOnlineMode(enabled)
-  
-  if (success && enabled) {
-    console.log('[Database] Connected and loading lockers...')
-    // Lockers are loaded automatically in toggleOnlineMode
-  }
-}
-
-const handleManualSync = async () => {
-  console.log('[Database] Manual sync triggered')
-  await lockerStore.syncToDatabase()
-}
-
-const formatSyncTime = (time: Date) => {
-  return time.toLocaleTimeString('ko-KR', { 
-    hour: '2-digit', 
-    minute: '2-digit', 
-    second: '2-digit' 
-  })
-}
-
-// Add tiers to selected parent lockers
-const addTiersToSelectedLockers = async (tierCount: number) => {
-  if (currentViewMode.value !== 'front') {
-    console.warn('[Tiers] Tier addition only works in front view')
-    alert('층 추가는 세로배치모드(Front View)에서만 가능합니다.')
-    return
-  }
-  
-  const selectedIds = Array.from(selectedLockerIds.value)
-  if (selectedIds.length === 0) {
-    console.warn('[Tiers] No lockers selected')
-    alert('층을 추가할 락커를 먼저 선택해주세요.')
-    return
-  }
-  
-  let addedCount = 0
-  let skippedCount = 0
-  
-  for (const lockerId of selectedIds) {
-    const locker = currentLockers.value.find(l => l.id === lockerId)
-    
-    // Skip if not a parent locker
-    if (!locker || locker.parentLockrCd || locker.tierLevel > 0) {
-      console.log(`[Tiers] Skipping ${lockerId} - not a parent locker`)
-      skippedCount++
-      continue
-    }
-    
-    // Skip if no lockrCd (not saved to DB yet)
-    if (!locker.lockrCd) {
-      console.warn(`[Tiers] Locker ${lockerId} has no database ID`)
-      skippedCount++
-      continue
-    }
-    
-    try {
-      // Call API to add tiers
-      const newTiers = await lockerApi.addTiers(locker.lockrCd, tierCount)
-      
-      if (newTiers && newTiers.length > 0) {
-        // Add new tiers to local store
-        newTiers.forEach(tier => {
-          lockerStore.addLocker(tier)
-        })
-        
-        console.log(`[Tiers] Added ${newTiers.length} tiers to locker ${locker.lockrLabel || locker.number}`)
-        addedCount++
-      }
-    } catch (error) {
-      console.error(`[Tiers] Failed to add tiers to locker ${lockerId}:`, error)
-    }
-  }
-  
-  // Show result
-  if (addedCount > 0) {
-    console.log(`[Tiers] Successfully added tiers to ${addedCount} locker(s)`)
-    
-    // Refresh locker display
-    if (lockerStore.isOnlineMode) {
-      await lockerStore.loadLockersFromDatabase()
-    }
-  }
-  
-  if (skippedCount > 0) {
-    console.log(`[Tiers] Skipped ${skippedCount} locker(s) (not parent lockers or not saved)`)
-  }
-}
-
-// Helper function to show tier addition dialog
-const showAddTiersDialog = () => {
-  const tierCount = prompt('추가할 층 수를 입력하세요 (1-3):', '1')
-  
-  if (tierCount === null) return // User cancelled
-  
-  const count = parseInt(tierCount)
-  if (isNaN(count) || count < 1 || count > 3) {
-    alert('올바른 층 수를 입력해주세요 (1-3)')
-    return
-  }
-  
-  addTiersToSelectedLockers(count)
-}
-
 const addLockerByDoubleClick = (type: any) => {
   console.log('[Double-Click] Adding locker:', {
     type: type.name,
@@ -1421,9 +1247,7 @@ const updateSelectionInRectangle = () => {
     width: l.width,
     height: l.height || l.depth,
     frontViewX: l.frontViewX,
-    frontViewY: l.frontViewY,
-    lockrLabel: l.lockrLabel,
-    lockrNo: l.lockrNo
+    frontViewY: l.frontViewY
   })))
   
   selectedLockerIds.value.clear()
@@ -1431,17 +1255,16 @@ const updateSelectionInRectangle = () => {
   currentLockers.value.forEach(locker => {
     let lockerLeft, lockerRight, lockerTop, lockerBottom
     
-    if (currentViewMode.value === 'front' && locker.frontViewX !== undefined) {
-      // Use front view positions when in front view mode
-      const displayX = (locker.frontViewX || 0) * DISPLAY_SCALE
-      const displayY = (locker.frontViewY || 0) * DISPLAY_SCALE
-      const displayWidth = locker.width * DISPLAY_SCALE
-      const displayHeight = (locker.actualHeight || locker.height || 60) * DISPLAY_SCALE
+    if (currentViewMode.value === 'front') {
+      // Use front view positions for hit detection
+      const frontX = locker.frontViewX !== undefined ? locker.frontViewX : locker.x
+      const frontY = locker.frontViewY !== undefined ? locker.frontViewY : locker.y
+      const displayHeight = locker.actualHeight || locker.height || 60
       
-      lockerLeft = displayX
-      lockerRight = displayX + displayWidth
-      lockerTop = displayY
-      lockerBottom = displayY + displayHeight
+      lockerLeft = frontX
+      lockerRight = frontX + locker.width
+      lockerTop = frontY
+      lockerBottom = frontY + displayHeight
     } else {
       // Use floor view positions
       const dims = getLockerDimensions(locker)
@@ -1456,15 +1279,15 @@ const updateSelectionInRectangle = () => {
       right: lockerRight,
       top: lockerTop,
       bottom: lockerBottom,
-      viewMode: currentViewMode.value,
-      lockrLabel: locker.lockrLabel,
-      lockrNo: locker.lockrNo
+      viewMode: currentViewMode.value
     })
     
-    // Check intersection
-    if (lockerRight > minX && lockerLeft < maxX && 
-        lockerBottom > minY && lockerTop < maxY) {
-      console.log('[DEBUG] Locker selected!', locker.id)
+    // Check for ANY overlap (not just complete containment)
+    const overlaps = !(lockerRight < minX || lockerLeft > maxX || 
+                       lockerBottom < minY || lockerTop > maxY)
+    
+    if (overlaps) {
+      console.log('[DEBUG] Locker overlaps!', locker.id)
       selectedLockerIds.value.add(locker.id)
     }
   })
@@ -1877,26 +1700,18 @@ const validateLockerPlacement = () => {
   const errors = []
   const problematicLockers = new Set()
   
-  // Skip door blockage validation for database-imported lockers
-  // Database lockers may not have proper door directions set
-  const hasDbLockers = currentLockers.value.some(l => l.lockrCd !== undefined)
+  // 락커의 문 방향 앞에 다른 락커가 있는지 체크
+  const lockers = currentLockers.value
   
-  if (hasDbLockers) {
-    console.log('[Validation] Skipping door blockage check for database lockers')
-    // Continue with other validations but skip door blockage
-  } else {
-    // 락커의 문 방향 앞에 다른 락커가 있는지 체크
-    const lockers = currentLockers.value
+  for (let i = 0; i < lockers.length; i++) {
+    const locker = lockers[i]
     
-    for (let i = 0; i < lockers.length; i++) {
-      const locker = lockers[i]
-      
-      // 락커의 회전 각도에 따라 문 방향 결정
-      // rotation이 0도일 때 문은 앞쪽(+Y 방향)을 향함
-      const rotation = locker.rotation || 0
-      
-      // 문 앞 영역 계산 (락커 크기만큼의 공간)
-      let doorFrontArea = null
+    // 락커의 회전 각도에 따라 문 방향 결정
+    // rotation이 0도일 때 문은 앞쪽(+Y 방향)을 향함
+    const rotation = locker.rotation || 0
+    
+    // 문 앞 영역 계산 (락커 크기만큼의 공간)
+    let doorFrontArea = null
     
     if (rotation === 0 || rotation === 360) {
       // 문이 아래쪽을 향함 (+Y 방향)
@@ -1959,23 +1774,22 @@ const validateLockerPlacement = () => {
     }
   }
   
-    // 디버깅 로그
-    if (errors.length > 0) {
-      console.log('[Door Blockage Check]:', {
-        blocked: true,
-        errors: errors,
-        problematicLockers: Array.from(problematicLockers)
-      })
-    } else {
-      console.log('[Door Blockage Check]: All locker doors are accessible')
-    }
-    
-    // 문 앞이 막힌 경우 세로배치 불가
-    if (errors.length > 0) {
-      // 에러 메시지를 하나로 통합
-      errors.length = 0 // 기존 에러 제거
-      errors.push('세로배치 모드 불가: 락커의 문 앞이 다른 락커에 의해 막혀있습니다.')
-    }
+  // 디버깅 로그
+  if (errors.length > 0) {
+    console.log('[Door Blockage Check]:', {
+      blocked: true,
+      errors: errors,
+      problematicLockers: Array.from(problematicLockers)
+    })
+  } else {
+    console.log('[Door Blockage Check]: All locker doors are accessible')
+  }
+  
+  // 문 앞이 막힌 경우 세로배치 불가
+  if (errors.length > 0) {
+    // 에러 메시지를 하나로 통합
+    errors.length = 0 // 기존 에러 제거
+    errors.push('세로배치 모드 불가: 락커의 문 앞이 다른 락커에 의해 막혀있습니다.')
   }
   
   // 2. 기존 마주보는 입구 검증
@@ -2090,19 +1904,19 @@ const updateViewMode = () => {
   isVerticalMode.value = currentViewMode.value === 'front'
   
   if (currentViewMode.value === 'front') {
-    // 프론트 뷰에서는 드래그 이동만 비활성화, 선택은 허용
+    // 프론트 뷰에서는 선택 해제 및 상호작용 비활성화
     selectedLocker.value = null
     selectedLockerIds.value.clear()
     isDragging.value = false
-    showSelectionUI.value = true // Keep selection UI enabled
-    console.log('[Front View] Drag movement disabled, selection enabled')
+    showSelectionUI.value = false
+    console.log('[Front View] Interactions disabled, view-only mode')
     
     // 프론트 뷰 변환 수행
     transformToFrontView()
   } else {
-    // 플로어 뷰로 돌아올 때 모든 상호작용 복원
+    // 플로어 뷰로 돌아올 때 선택 UI 복원
     showSelectionUI.value = true
-    console.log('[Floor View] All interactions enabled')
+    console.log('[Floor View] Interactions enabled, full editing mode')
   }
   
   const newMode = currentViewMode.value === 'floor' ? 'flat' : 'vertical'
@@ -2119,34 +1933,6 @@ const transformToFrontView = () => {
     console.log('[Front View] No lockers to transform')
     return
   }
-  
-  // First, ensure all lockers have valid frontView coordinates
-  // For database lockers without frontView coords, auto-generate them
-  lockers.forEach((locker, index) => {
-    if (locker.frontViewX === undefined || locker.frontViewX === null) {
-      // Auto-generate frontViewX based on sequential positioning
-      const baseX = 50 // Starting X position
-      const spacing = 10 // Space between lockers
-      let currentX = baseX
-      
-      // Calculate X position based on previous lockers
-      for (let i = 0; i < index; i++) {
-        const prevLocker = lockers[i]
-        currentX += (prevLocker.width || 40) + spacing
-      }
-      
-      locker.frontViewX = currentX
-      console.log(`[Front View] Generated frontViewX for ${locker.id}: ${currentX}`)
-    }
-    
-    if (locker.frontViewY === undefined || locker.frontViewY === null) {
-      // Auto-generate frontViewY based on floor position
-      const floorY = FLOOR_Y
-      const lockerHeight = locker.actualHeight || locker.height || 60
-      locker.frontViewY = floorY - lockerHeight
-      console.log(`[Front View] Generated frontViewY for ${locker.id}: ${locker.frontViewY}`)
-    }
-  })
   
   // Simple approach: Detect U-shape by checking if lockers form 3 sides
   const bounds = {
@@ -2322,15 +2108,6 @@ const toggleVerticalMode = () => {
   updateViewMode()
 }
 
-// Set view mode directly (for floating toggle buttons)
-const setViewMode = (mode: 'floor' | 'front') => {
-  if (currentViewMode.value === mode) return // Already in this mode
-  
-  console.log(`[View Mode] Switching from ${currentViewMode.value} to ${mode}`)
-  currentViewMode.value = mode
-  updateViewMode()
-}
-
 // 선택된 락커 삭제
 const deleteSelectedLocker = () => {
   console.log('[UI] Button clicked: delete')
@@ -2432,65 +2209,6 @@ const findNumberGaps = () => {
   return gaps
 }
 
-// Context menu items for front view
-const contextMenuItems = computed((): ContextMenuItem[] => {
-  const hasSelection = selectedLockerIds.value.size > 0
-  
-  return [
-    {
-      id: 'add-tiers',
-      label: '단수추가',
-      icon: '➕',
-      disabled: !hasSelection,
-      action: showFloorInputDialog
-    },
-    {
-      id: 'assign-numbers',
-      label: '번호 부여',
-      icon: '🔢',
-      disabled: !hasSelection,
-      action: () => {
-        numberAssignVisible.value = true
-      }
-    },
-    {
-      id: 'delete-numbers',
-      label: '번호 삭제',
-      icon: '🗑️',
-      disabled: !hasSelection,
-      action: deleteNumbers
-    },
-    {
-      id: 'separator-1',
-      label: '',
-      type: 'separator'
-    },
-    {
-      id: 'properties',
-      label: '락커 속성',
-      icon: '⚙️',
-      disabled: !hasSelection || selectedLockerIds.value.size !== 1,
-      action: () => {
-        // TODO: Show properties dialog
-        console.log('[Context Menu] Properties for locker')
-      }
-    },
-    {
-      id: 'separator-2',
-      label: '',
-      type: 'separator'
-    },
-    {
-      id: 'delete-lockers',
-      label: '락커 삭제',
-      icon: '❌',
-      shortcut: 'Del',
-      disabled: !hasSelection,
-      action: deleteSelectedLockers
-    }
-  ]
-})
-
 // Show context menu
 const showContextMenu = (event: MouseEvent) => {
   // Only show in front view mode (세로배치모드)
@@ -2501,31 +2219,7 @@ const showContextMenu = (event: MouseEvent) => {
   
   event.preventDefault()
   contextMenuVisible.value = true
-  
-  // Adjust position to prevent menu from going off-screen
-  const menuWidth = 200 // Approximate menu width
-  const menuHeight = 300 // Approximate menu height
-  
-  let x = event.clientX
-  let y = event.clientY
-  
-  // Check if menu would go off the right edge
-  if (x + menuWidth > window.innerWidth) {
-    x = window.innerWidth - menuWidth - 10
-  }
-  
-  // Check if menu would go off the bottom edge
-  if (y + menuHeight > window.innerHeight) {
-    y = window.innerHeight - menuHeight - 10
-  }
-  
-  contextMenuPosition.value = { x, y }
-}
-
-// Handle context menu selection
-const handleContextMenuSelect = (item: ContextMenuItem) => {
-  console.log('[Context Menu] Selected:', item.id)
-  // The action is already executed by the component
+  contextMenuPosition.value = { x: event.clientX, y: event.clientY }
 }
 
 // Hide context menu
@@ -3509,23 +3203,6 @@ const handleKeyDown = (event: KeyboardEvent) => {
     return // Don't process shortcuts when typing
   }
   
-  // Mode switching shortcuts
-  if (event.key === 'p' || event.key === 'P') {
-    // P key - switch to floor (평면) mode
-    event.preventDefault()
-    setViewMode('floor')
-    console.log('[Keyboard] Switched to floor view (P key)')
-    return
-  }
-  
-  if (event.key === 'f' || event.key === 'F') {
-    // F key - switch to front view
-    event.preventDefault()
-    setViewMode('front')
-    console.log('[Keyboard] Switched to front view (F key)')
-    return
-  }
-  
   // Also skip if registration modal is open
   if (showLockerRegistrationModal.value || showZoneModal.value) {
     console.log('[Keyboard] Ignored - modal is open')
@@ -3714,9 +3391,6 @@ onMounted(() => {
   console.log('[DEBUG] Initial view mode:', currentViewMode.value)
   console.log('[DEBUG] Add button initial state:', currentViewMode.value === 'floor' ? 'ENABLED' : 'DISABLED')
   
-  // Test dual numbering system
-  testDualNumberingSystem()
-  
   // Update canvas size on mount
   setTimeout(() => {
     updateCanvasSize()
@@ -3759,95 +3433,6 @@ const handleKeyUp = (event: KeyboardEvent) => {
     clearInterval(rotateInterval)
     rotateInterval = null
   }
-}
-
-// Test function for dual numbering system
-const testDualNumberingSystem = () => {
-  console.log('=== Testing Dual Numbering System ===')
-  
-  // Create test lockers with both LOCKR_LABEL and LOCKR_NO
-  const testLockers = [
-    {
-      id: 'test-1',
-      number: 'A-01',       // LOCKR_LABEL for floor view
-      lockrLabel: 'A-01',
-      lockrNo: 101,         // LOCKR_NO for front view
-      frontViewNumber: '101',
-      x: 100,
-      y: 100,
-      frontViewX: 50,
-      frontViewY: 50,
-      width: 40,
-      height: 40,
-      depth: 40,
-      status: 'available' as const,
-      rotation: 0,
-      zoneId: selectedZone.value?.id || 'zone-1',
-      typeId: '1'
-    },
-    {
-      id: 'test-2',
-      number: 'B-02',       // LOCKR_LABEL for floor view
-      lockrLabel: 'B-02',
-      lockrNo: 102,         // LOCKR_NO for front view
-      frontViewNumber: '102',
-      x: 150,
-      y: 100,
-      frontViewX: 100,
-      frontViewY: 50,
-      width: 40,
-      height: 40,
-      depth: 40,
-      status: 'occupied' as const,
-      rotation: 0,
-      zoneId: selectedZone.value?.id || 'zone-1',
-      typeId: '1'
-    }
-  ]
-  
-  // Add test lockers to the store
-  testLockers.forEach(locker => {
-    console.log(`[Test] Adding locker with dual numbers:`, {
-      id: locker.id,
-      floorViewNumber: locker.lockrLabel,
-      frontViewNumber: locker.lockrNo,
-      viewMode: currentViewMode.value
-    })
-    
-    // Check if locker already exists
-    const existing = lockerStore.lockers.find(l => l.id === locker.id)
-    if (!existing) {
-      lockerStore.lockers.push(locker as any)
-    }
-  })
-  
-  // Test view mode switching
-  console.log('[Test] Current view mode:', currentViewMode.value)
-  console.log('[Test] Lockers in current zone:', currentLockers.value.map(l => ({
-    id: l.id,
-    number: l.number,
-    lockrLabel: l.lockrLabel,
-    lockrNo: l.lockrNo,
-    frontViewNumber: l.frontViewNumber
-  })))
-  
-  // Verify display logic
-  currentLockers.value.forEach(locker => {
-    const expectedDisplay = currentViewMode.value === 'floor' 
-      ? locker.lockrLabel || locker.number
-      : locker.frontViewNumber || `${locker.lockrNo}` || ''
-    
-    console.log(`[Test] Locker ${locker.id} display check:`, {
-      viewMode: currentViewMode.value,
-      expectedDisplay,
-      actualNumber: locker.number,
-      lockrLabel: locker.lockrLabel,
-      lockrNo: locker.lockrNo,
-      frontViewNumber: locker.frontViewNumber
-    })
-  })
-  
-  console.log('=== Dual Numbering System Test Complete ===')
 }
 
 // 컴포넌트 언마운트 시 정리
@@ -3921,118 +3506,6 @@ onUnmounted(() => {
   margin: 0;
   padding-bottom: 12px;
   border-bottom: 1px solid #e5e5e5;
-}
-
-/* Database controls */
-.database-controls {
-  padding: 12px;
-  background: #f9fafb;
-  border-radius: 8px;
-  margin: 16px 0;
-  border: 1px solid #e5e7eb;
-}
-
-.db-toggle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-}
-
-.db-toggle input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-}
-
-.db-toggle span {
-  font-size: 14px;
-  font-weight: 500;
-  color: #374151;
-}
-
-.db-status {
-  margin-top: 8px;
-  font-size: 13px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  display: inline-block;
-}
-
-.db-status .syncing {
-  color: #92400e;
-}
-
-.db-status .error {
-  color: #991b1b;
-}
-
-.db-status .synced,
-.db-status .connected {
-  color: #166534;
-}
-
-.sync-btn {
-  margin-top: 8px;
-  padding: 6px 12px;
-  background: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.sync-btn:hover {
-  background: #2563eb;
-}
-
-.sync-btn:active {
-  background: #1d4ed8;
-}
-
-/* Front View Controls */
-.front-view-controls {
-  padding: 12px;
-  background: #f0f9ff;
-  border: 1px solid #0284c7;
-  border-radius: 8px;
-  margin: 16px 0;
-}
-
-.add-tiers-btn {
-  width: 100%;
-  padding: 10px;
-  background: #0284c7;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  margin-bottom: 8px;
-}
-
-.add-tiers-btn:hover:not(:disabled) {
-  background: #0369a1;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.add-tiers-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  background: #94a3b8;
-}
-
-.front-view-controls .help-text {
-  font-size: 12px;
-  color: #0369a1;
-  margin: 0;
-  padding: 4px 0;
 }
 
 /* 락커 타입 목록 */
@@ -4668,75 +4141,5 @@ onUnmounted(() => {
 
 .btn-secondary:hover {
   background: #d1d5db;
-}
-
-/* Floating Mode Toggle */
-.mode-toggle-float {
-  position: fixed;
-  top: 80px;
-  right: 20px;
-  z-index: 1000;
-  display: flex;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e5e7eb;
-  overflow: hidden;
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.95);
-}
-
-.mode-toggle-float .mode-btn {
-  padding: 10px 16px;
-  border: none;
-  background: transparent;
-  color: #6b7280;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  position: relative;
-}
-
-.mode-toggle-float .mode-btn:first-child {
-  border-right: 1px solid #e5e7eb;
-}
-
-.mode-toggle-float .mode-btn:hover {
-  background: #f3f4f6;
-  color: #374151;
-}
-
-.mode-toggle-float .mode-btn.active {
-  background: #0768AE;
-  color: white;
-}
-
-.mode-toggle-float .mode-btn.active svg {
-  stroke: white;
-}
-
-.mode-toggle-float .mode-btn svg {
-  width: 20px;
-  height: 20px;
-  transition: stroke 0.2s ease;
-}
-
-.mode-toggle-float .mode-btn span {
-  white-space: nowrap;
-}
-
-/* Responsive: Hide text on small screens */
-@media (max-width: 768px) {
-  .mode-toggle-float .mode-btn span {
-    display: none;
-  }
-  
-  .mode-toggle-float .mode-btn {
-    padding: 10px 12px;
-  }
 }
 </style>
