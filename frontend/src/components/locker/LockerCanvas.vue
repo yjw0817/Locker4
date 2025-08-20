@@ -169,10 +169,8 @@ const resetZoom = () => {
 
 // 초기화
 onMounted(() => {
-  // 테스트 데이터 초기화
-  if (lockerStore.lockers.length === 0) {
-    lockerStore.initTestData()
-  }
+  // Component initialization
+  // Data should be loaded by parent component from database
 })
 </script>
 

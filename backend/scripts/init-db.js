@@ -19,7 +19,7 @@ async function initializeDatabase() {
           LOCKR_CD INT PRIMARY KEY AUTO_INCREMENT,
           COMP_CD VARCHAR(20) DEFAULT '001',
           BCOFF_CD VARCHAR(20) DEFAULT '001',
-          LOCKR_KND VARCHAR(8),
+          LOCKR_KND VARCHAR(36),
           LOCKR_TYPE_CD VARCHAR(20),
           X INT,
           Y INT,
@@ -107,20 +107,19 @@ async function initializeDatabase() {
       console.log('📝 Creating lockr_area table...');
       await connection.query(`
         CREATE TABLE lockr_area (
-          LOCKR_AREA_ID INT PRIMARY KEY AUTO_INCREMENT,
-          LOCKR_KND_CD VARCHAR(20) NOT NULL,
+          LOCKR_KND_CD VARCHAR(36) NOT NULL,
           LOCKR_KND_NM VARCHAR(50),
-          COMP_CD VARCHAR(20) DEFAULT '001',
-          BCOFF_CD VARCHAR(20) DEFAULT '001',
-          X INT DEFAULT 0,
-          Y INT DEFAULT 0,
-          WIDTH INT DEFAULT 800,
-          HEIGHT INT DEFAULT 600,
-          COLOR VARCHAR(20),
-          UPDATE_DT DATETIME DEFAULT CURRENT_TIMESTAMP,
-          UPDATE_BY VARCHAR(45),
-          INDEX idx_comp_bcoff (COMP_CD, BCOFF_CD),
-          UNIQUE KEY uk_zone (COMP_CD, BCOFF_CD, LOCKR_KND_CD)
+          COMP_CD VARCHAR(20) NOT NULL DEFAULT '001',
+          BCOFF_CD VARCHAR(20) NOT NULL DEFAULT '001',
+          X INT NOT NULL DEFAULT 0,
+          Y INT NOT NULL DEFAULT 0,
+          WIDTH INT NOT NULL DEFAULT 800,
+          HEIGHT INT NOT NULL DEFAULT 600,
+          COLOR VARCHAR(7),
+          FLOOR INT DEFAULT 1,
+          CRE_DATETM DATETIME DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (LOCKR_KND_CD, COMP_CD, BCOFF_CD),
+          INDEX idx_comp_bcoff (COMP_CD, BCOFF_CD)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
       `);
       console.log('✅ lockr_area table created');

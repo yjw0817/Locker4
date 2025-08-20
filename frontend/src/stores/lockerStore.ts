@@ -110,7 +110,7 @@ export const useLockerStore = defineStore('locker', () => {
   const historyIndex = ref(-1)
   
   // Database integration flags
-  const isOnlineMode = ref(false) // Toggle between local and DB mode
+  const isOnlineMode = ref(true) // Toggle between local and DB mode - default to online
   const isSyncing = ref(false)
   const lastSyncTime = ref<Date | null>(null)
   const connectionStatus = ref<'connected' | 'disconnected' | 'error'>('disconnected')

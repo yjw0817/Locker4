@@ -10,7 +10,16 @@ export default defineConfig({
     }
   },
   server: {
-    port: 3000,
-    host: true
+    port: 5173,  // Frontend server port - fixed to avoid conflicts
+    strictPort: false,  // Allow auto-increment if port is taken
+    host: 'localhost',  // Listen on localhost only
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3333',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path
+      }
+    }
   }
 })

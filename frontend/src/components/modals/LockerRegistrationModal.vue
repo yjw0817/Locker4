@@ -1,5 +1,5 @@
 <template>
-  <div class="modal-overlay" @click.self="$emit('close')">
+  <div class="modal-overlay">
     <div class="modal-content" @keydown.stop @keyup.stop>
       <div class="modal-header">
         <h2>락커 등록</h2>

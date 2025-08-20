@@ -1,5 +1,11 @@
 <template>
   <div class="locker-placement">
+    <!-- Loading Overlay -->
+    <div v-if="isLoading" class="loading-overlay">
+      <div class="loading-spinner"></div>
+      <p>데이터 로딩 중...</p>
+    </div>
+    
     <!-- 간단한 헤더 -->
     <header class="header">
       <h1 class="title">락커 배치</h1>
@@ -15,8 +21,19 @@
       <aside class="sidebar">
         <h2 class="sidebar-title">락커 선택창</h2>
         
-        <!-- 락커 타입 목록 -->
-        <div class="locker-types">
+        <!-- Loading state -->
+        <div v-if="isLoadingTypes" class="loading-state">
+          <p>🔄 락커 타입을 불러오는 중...</p>
+        </div>
+        
+        <!-- Empty state after loading -->
+        <div v-else-if="hasLoadedTypes && visibleLockerTypes.length === 0" class="empty-state">
+          <p>📦 등록된 락커가 없습니다</p>
+          <p class="empty-hint">락커를 등록해주세요</p>
+        </div>
+        
+        <!-- Loaded data state -->
+        <div v-else-if="visibleLockerTypes.length > 0" class="locker-types">
           <div 
             v-for="type in visibleLockerTypes" 
             :key="type.id"
@@ -27,6 +44,7 @@
               :class="{ active: selectedType?.id === type.id }"
               @click="selectLockerType(type)"
               @dblclick="addLockerByDoubleClick(type)"
+              @contextmenu.prevent="showTypeContextMenuHandler($event, type)"
               style="cursor: pointer"
             >
               <div class="type-visual">
@@ -42,9 +60,9 @@
                   y="1" 
                   :width="type.width - 2"
                   :height="(type.depth || type.width) - 2"
-                  fill="#e0f2fe"
-                  stroke="#0284c7"
-                  stroke-width="1.5"
+                  :fill="type.color ? `${type.color}20` : '#e0f2fe'"
+                  :stroke="type.color || '#0284c7'"
+                  stroke-width="0.5"
                   rx="2"
                   ry="2"
                 />
@@ -54,26 +72,14 @@
                   :y1="(type.depth || type.width) - 6"
                   :x2="type.width - 6"
                   :y2="(type.depth || type.width) - 6"
-                  stroke="#0284c7"
-                  stroke-width="2"
-                  opacity="0.6"
+                  :stroke="type.color || '#0284c7'"
+                  stroke-width="1"
+                  opacity="0.4"
                 />
-                <!-- Type name text -->
-                <text 
-                  :x="type.width / 2" 
-                  :y="(type.depth || type.width) / 2"
-                  text-anchor="middle"
-                  dominant-baseline="middle"
-                  font-size="10"
-                  fill="#0284c7"
-                  font-weight="600"
-                >
-                  {{ type.name.charAt(0) }}
-                </text>
               </svg>
             </div>
             <div class="type-info">
-              <span class="type-name">{{ type.name }}</span>
+              <span class="type-name">{{ type.name || 'Unknown' }}</span>
               <span class="type-size">
                 {{ type.width }}x{{ type.depth || type.width }}x{{ type.height }}cm
               </span>
@@ -92,10 +98,6 @@
           </div>
         </div>
 
-        <!-- 더블클릭 안내 텍스트 -->
-        <div class="help-text">
-          💡 더블클릭으로 락커 추가
-        </div>
         
         <!-- 삭제된 타입 섹션 -->
         <div v-if="hiddenTypes.length > 0" class="deleted-types-section">
@@ -120,6 +122,20 @@
           </select>
         </div>
 
+        <!-- Front View 전용 버튼들 -->
+        <div v-if="currentViewMode === 'front'" class="front-view-controls">
+          <button 
+            class="add-tiers-btn" 
+            @click="showAddTiersDialog"
+            :disabled="selectedLockerIds.size === 0"
+          >
+            층 추가 (Add Tiers)
+          </button>
+          <div class="help-text">
+            💡 Parent 락커를 선택하고 층을 추가하세요
+          </div>
+        </div>
+
       </aside>
 
       <!-- 메인 캔버스 영역 -->
@@ -132,18 +148,55 @@
             class="zone-tab"
             :class="{ active: selectedZone?.id === zone.id }"
             @click="selectZone(zone)"
+            @contextmenu="showZoneContextMenuHandler($event, zone)"
           >
             {{ zone.name }}
             <span v-if="selectedZone?.id === zone.id" class="tab-indicator"></span>
           </button>
           
-          <!-- 구역 추가 버튼 -->
-          <button 
-            class="zone-add-btn"
-            @click="showZoneModal = true"
-          >
-            + 구역 추가
-          </button>
+          <!-- Zone controls container -->
+          <div class="zone-controls">
+            <!-- 구역 추가 버튼 - LEFT position -->
+            <button 
+              class="zone-add-btn"
+              @click="showZoneModal = true"
+            >
+              + 구역 추가
+            </button>
+            
+            <!-- 모드 전환 버튼 - RIGHT of add button -->
+            <div class="mode-toggle-inline">
+              <button 
+                class="mode-btn"
+                :class="{ active: currentViewMode === 'floor' }"
+                @click="setViewMode('floor')"
+                title="평면배치모드 (P)"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <rect x="7" y="7" width="4" height="4" />
+                  <rect x="13" y="7" width="4" height="4" />
+                  <rect x="7" y="13" width="4" height="4" />
+                  <rect x="13" y="13" width="4" height="4" />
+                </svg>
+                <span>평면배치</span>
+              </button>
+              <button 
+                class="mode-btn"
+                :class="{ active: currentViewMode === 'front' }"
+                @click="setViewMode('front')"
+                title="세로배치모드 (F)"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <line x1="3" y1="15" x2="21" y2="15" stroke-dasharray="2 2" />
+                  <rect x="7" y="7" width="4" height="6" />
+                  <rect x="13" y="7" width="4" height="6" />
+                </svg>
+                <span>세로배치</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- 캔버스 -->
@@ -221,10 +274,7 @@
               :view-mode="currentViewMode"
               :show-number="true"
               :show-rotate-handle="selectedLocker?.id === locker.id"
-              @click="(e) => {
-                e.stopPropagation();
-                selectLocker(locker, e);
-              }"
+              @click="(locker, event) => selectLocker(locker, event)"
               @contextmenu.prevent="showContextMenu"
               @select="(id) => selectedLocker = currentLockers.find(l => l.id === id)"
               @dragstart="startDragLocker"
@@ -482,14 +532,53 @@
       </div>
     </div>
   </div>
+
+  <!-- Zone Context Menu -->
+  <teleport to="body">
+    <div 
+      v-if="showZoneContextMenu" 
+      class="zone-context-menu"
+      :style="{
+        position: 'fixed',
+        left: zoneContextMenuPosition.x + 'px',
+        top: zoneContextMenuPosition.y + 'px',
+        zIndex: 9999
+      }"
+    >
+      <div class="context-menu-item" @click="deleteZone(contextMenuZone)">
+        <span class="context-menu-icon">🗑️</span>
+        구역 삭제
+      </div>
+    </div>
+  </teleport>
+
+  <!-- Locker Type Context Menu -->
+  <teleport to="body">
+    <div
+      v-if="showTypeContextMenu"
+      class="context-menu"
+      :style="{
+        position: 'fixed',
+        left: typeContextMenuPosition.x + 'px',
+        top: typeContextMenuPosition.y + 'px',
+        zIndex: 9999
+      }"
+    >
+      <div class="context-menu-item" @click="deleteLockerType(contextMenuType)">
+        <span class="context-menu-icon">🗑️</span>
+        타입 삭제
+      </div>
+    </div>
+  </teleport>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useLockerStore } from '@/stores/lockerStore'
 import LockerSVG from '@/components/locker/LockerSVG.vue'
 import ZoneModal from '@/components/modals/ZoneModal.vue'
 import LockerRegistrationModal from '@/components/modals/LockerRegistrationModal.vue'
+// import * as lockerApi from '@/api/lockers' // TODO: Add this when API module is created
 
 const lockerStore = useLockerStore()
 
@@ -511,6 +600,16 @@ const isCopyMode = ref(false) // Track if Ctrl/Cmd is pressed for copy mode
 // Context menu state
 const contextMenuVisible = ref(false)
 const contextMenuPosition = ref({ x: 0, y: 0 })
+
+// Zone context menu state
+const showZoneContextMenu = ref(false)
+const zoneContextMenuPosition = ref({ x: 0, y: 0 })
+const contextMenuZone = ref(null)
+
+// Locker type context menu state
+const showTypeContextMenu = ref(false)
+const typeContextMenuPosition = ref({ x: 0, y: 0 })
+const contextMenuType = ref(null)
 
 // Dialog states
 const floorInputVisible = ref(false)
@@ -589,18 +688,290 @@ const toDisplaySize = (width: number, height: number) => {
 const zones = computed(() => lockerStore.zones)
 
 // 락커 타입 목록 (depth 속성 포함)
-const lockerTypes = ref([
-  { id: '1', name: '소형', width: 40, depth: 40, height: 40, color: '#3b82f6', type: 'small' },
-  { id: '2', name: '중형', width: 50, depth: 50, height: 60, color: '#10b981', type: 'medium' },
-  { id: '3', name: '대형', width: 60, depth: 60, height: 80, color: '#f59e0b', type: 'large' }
-])
+// Locker types will be loaded from database
+const lockerTypes = ref([])
+
+// Loading states
+const isLoading = ref(false)
+const isLoadingTypes = ref(true)
+const isLoadingLockers = ref(true)
+const hasLoadedTypes = ref(false)
+const saveError = ref<string | null>(null)
+const loadError = ref<string | null>(null)
+
+// API Base URL
+const API_BASE_URL = 'http://localhost:3333/api'
+
+// Data Loading Functions
+const loadZones = async () => {
+  try {
+    console.log('[API] Loading zones from API...')
+    const response = await fetch(`${API_BASE_URL}/zones`)
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+    
+    const data = await response.json()
+    console.log('[API] Zones API response:', data)
+    
+    // Transform backend data to frontend format
+    if (data.zones) {
+      const transformedZones = data.zones.map(zone => ({
+        id: zone.LOCKR_KND_CD,
+        name: zone.LOCKR_KND_NM,
+        x: zone.X,
+        y: zone.Y,
+        width: zone.WIDTH,
+        height: zone.HEIGHT,
+        color: zone.COLOR,
+        floor: zone.FLOOR,
+        // Keep original data as well
+        ...zone
+      }))
+      
+      lockerStore.zones = transformedZones
+      console.log('[API] Zones loaded and transformed:', transformedZones.length)
+    } else {
+      console.warn('[API] No zones data in response:', data)
+      lockerStore.zones = []
+    }
+  } catch (error) {
+    console.error('[API] Failed to load zones:', error.message)
+    // Don't throw error - just log it and continue
+    lockerStore.zones = []
+  }
+}
+
+const loadLockers = async () => {
+  try {
+    console.log('[API] Loading lockers from API...')
+    const response = await fetch(`${API_BASE_URL}/lockrs`)
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+    
+    const data = await response.json()
+    console.log('[API] Lockers API response:', data)
+    
+    if (data.success && data.lockers) {
+      // Transform backend data to frontend format
+      const transformedLockers = data.lockers.map(locker => ({
+        id: `locker-${locker.LOCKR_CD}`,
+        lockrCd: locker.LOCKR_CD,
+        number: locker.LOCKR_LABEL || `L${locker.LOCKR_CD}`,
+        x: locker.X || 0,
+        y: locker.Y || 0,
+        width: 40, // Default width, should come from type
+        height: 40, // Default height
+        depth: 40, // Default depth
+        status: 'available',
+        rotation: locker.ROTATION || 0,
+        zoneId: locker.LOCKR_KND,
+        typeId: locker.LOCKR_TYPE_CD,
+        type: locker.LOCKR_TYPE_CD,
+        // Database fields
+        compCd: locker.COMP_CD,
+        bcoffCd: locker.BCOFF_CD,
+        lockrLabel: locker.LOCKR_LABEL,
+        lockrNo: locker.LOCKR_NO,
+        lockrKnd: locker.LOCKR_KND,
+        lockrTypeCd: locker.LOCKR_TYPE_CD,
+        // Front view positions
+        frontViewX: locker.FRONT_VIEW_X,
+        frontViewY: locker.FRONT_VIEW_Y,
+        // Other fields
+        parentLockrCd: locker.PARENT_LOCKR_CD,
+        tierLevel: locker.TIER_LEVEL,
+        lockrStat: locker.LOCKR_STAT
+      }))
+      
+      // Update the store with transformed data
+      lockerStore.lockers = transformedLockers
+      console.log('[API] Lockers loaded successfully:', transformedLockers.length)
+    } else if (data.lockers) {
+      // Handle case where success flag is not present but lockers exist
+      lockerStore.lockers = data.lockers
+      console.log('[API] Lockers loaded successfully:', data.lockers.length)
+    } else {
+      console.warn('[API] No lockers data in response:', data)
+      lockerStore.lockers = []
+    }
+  } catch (error) {
+    console.error('[API] Failed to load lockers:', error.message)
+    // Don't throw error - just log it and continue
+    lockerStore.lockers = []
+  }
+}
+
+const loadLockerTypes = async () => {
+  try {
+    isLoadingTypes.value = true
+    console.log('Loading locker types from API...')
+    
+    const response = await fetch(`${API_BASE_URL}/types`)
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+    
+    const data = await response.json()
+    console.log('Types API response:', data)
+    
+    if (data.success) {
+      // Transform backend data to frontend format
+      const transformedTypes = (data.types || []).map(type => ({
+        id: type.LOCKR_TYPE_CD,
+        name: type.LOCKR_TYPE_NM,
+        width: type.WIDTH,
+        height: type.HEIGHT,
+        depth: type.DEPTH,
+        color: type.COLOR || '#3b82f6',
+        type: type.LOCKR_TYPE_CD
+      }))
+      
+      lockerTypes.value = transformedTypes
+      console.log('Locker types loaded and transformed:', transformedTypes.length)
+    }
+  } catch (error) {
+    console.error('Failed to load locker types:', error)
+    lockerTypes.value = []
+  } finally {
+    isLoadingTypes.value = false
+    hasLoadedTypes.value = true
+  }
+}
+
+// Save Functions
+const saveZone = async (zoneData: any) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/zones`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(zoneData)
+    })
+    
+    if (!response.ok) throw new Error('Failed to save zone')
+    const result = await response.json()
+    
+    if (result.success) {
+      await loadZones() // Refresh zones
+      console.log('[API] Zone saved successfully')
+      return result
+    }
+  } catch (error) {
+    console.error('[API] Zone save failed:', error)
+    saveError.value = 'Failed to save zone'
+    throw error
+  }
+}
+
+const saveLocker = async (lockerData: any) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/lockrs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(lockerData)
+    })
+    
+    if (!response.ok) throw new Error('Failed to save locker')
+    const result = await response.json()
+    
+    if (result.success) {
+      await loadLockers() // Refresh lockers
+      console.log('[API] Locker saved successfully')
+      return result
+    }
+  } catch (error) {
+    console.error('[API] Locker save failed:', error)
+    saveError.value = 'Failed to save locker'
+    throw error
+  }
+}
+
+const updateLockerPlacement = async (lockerId: string, placementData: any) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/lockrs/${lockerId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(placementData)
+    })
+    
+    if (!response.ok) throw new Error('Failed to update locker placement')
+    const result = await response.json()
+    
+    if (result.success) {
+      console.log('[API] Locker placement updated successfully')
+      return result
+    }
+  } catch (error) {
+    console.error('[API] Locker placement update failed:', error)
+    saveError.value = 'Failed to update locker placement'
+    throw error
+  }
+}
+
+// Helper function for saving locker position changes (with debouncing)
+const saveLockerPositionDebounced = (() => {
+  let timeout: any = null
+  return (lockerId: string, position: { x: number, y: number }) => {
+    clearTimeout(timeout)
+    timeout = setTimeout(async () => {
+      try {
+        await updateLockerPlacement(lockerId, position)
+      } catch (error) {
+        console.error(`Failed to save position for locker ${lockerId}:`, error)
+      }
+    }, 500) // Debounce for 500ms to avoid too many API calls during dragging
+  }
+})()
+
+// Helper to save multiple locker positions
+const saveMultipleLockerPositions = async (positions: Array<{ id: string, x: number, y: number }>) => {
+  // Save all positions after drag ends
+  try {
+    const savePromises = positions.map(pos => {
+      // Find the locker to get its database ID
+      const locker = currentLockers.value.find(l => l.id === pos.id)
+      if (locker && locker.lockrCd) {
+        // If locker has a database ID, update its position
+        return updateLockerPlacement(locker.lockrCd, { 
+          X: pos.x, 
+          Y: pos.y 
+        })
+      } else if (locker) {
+        // If locker doesn't have a database ID yet, save it first
+        const saveData = {
+          LOCKR_KND: selectedZone.value?.id,
+          LOCKR_TYPE_CD: locker.type || '1',
+          X: pos.x,
+          Y: pos.y,
+          LOCKR_LABEL: locker.number,
+          ROTATION: locker.rotation || 0,
+          LOCKR_STAT: '00'
+        }
+        return saveLocker(saveData).then(result => {
+          if (result && result.lockrCd) {
+            locker.lockrCd = result.lockrCd
+          }
+          return result
+        })
+      }
+    })
+    
+    await Promise.all(savePromises)
+    console.log('[API] Saved positions for', positions.length, 'lockers')
+  } catch (error) {
+    console.error('[API] Failed to save some locker positions:', error)
+  }
+}
 
 // Hidden/deleted locker types
 const hiddenTypes = ref<string[]>([])
 
 // Filter visible locker types
 const visibleLockerTypes = computed(() => {
-  return lockerTypes.value.filter(type => !hiddenTypes.value.includes(type.type))
+  return lockerTypes.value.filter(type => !hiddenTypes.value.includes(type.id))
 })
 
 // 현재 구역의 락커들
@@ -790,6 +1161,160 @@ const selectZone = (zone) => {
   selectedLocker.value = null
 }
 
+// Show zone context menu
+const showZoneContextMenuHandler = (event, zone) => {
+  event.preventDefault()
+  event.stopPropagation()
+  
+  contextMenuZone.value = zone
+  zoneContextMenuPosition.value = {
+    x: event.clientX,
+    y: event.clientY
+  }
+  showZoneContextMenu.value = true
+  
+  // Close menu when clicking elsewhere
+  const closeMenu = () => {
+    showZoneContextMenu.value = false
+    document.removeEventListener('click', closeMenu)
+  }
+  document.addEventListener('click', closeMenu)
+}
+
+// Delete zone function
+const deleteZone = async (zone) => {
+  try {
+    // Debug logging
+    console.log('[DEBUG] Deleting zone:', zone)
+    console.log('[DEBUG] Zone ID:', zone.id)
+    console.log('[DEBUG] Zone LOCKR_KND_CD:', zone.LOCKR_KND_CD)
+    console.log('[DEBUG] Full zone object:', JSON.stringify(zone, null, 2))
+    
+    // Check if zone has lockers
+    const zoneLockers = currentLockers.value.filter(l => l.LOCKR_KND === zone.id || l.zoneId === zone.id || l.LOCKR_KND === zone.LOCKR_KND_CD)
+    
+    if (zoneLockers.length > 0) {
+      alert(`구역 삭제 불가\n\n이 구역에 ${zoneLockers.length}개의 락커가 배치되어 있습니다.\n먼저 모든 락커를 제거해주세요.`)
+      return
+    }
+    
+    // Confirm deletion
+    if (!confirm(`구역 "${zone.name}"을(를) 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`)) {
+      return
+    }
+    
+    // Use LOCKR_KND_CD if available, otherwise use id
+    const zoneIdToDelete = zone.LOCKR_KND_CD || zone.id
+    const deleteUrl = `${API_BASE_URL}/zones/${zoneIdToDelete}`
+    
+    console.log('[DEBUG] DELETE URL:', deleteUrl)
+    console.log('[DEBUG] Zone ID to delete:', zoneIdToDelete)
+    
+    // Call API
+    const response = await fetch(deleteUrl, {
+      method: 'DELETE'
+    })
+    
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.message || 'Failed to delete zone')
+    }
+    
+    const result = await response.json()
+    
+    if (result.success) {
+      console.log('[API] Zone deleted successfully:', zone.name)
+      
+      // Refresh zones
+      await loadZones()
+      
+      // If deleted zone was selected, select another zone or clear selection
+      if (selectedZone.value?.id === zone.id) {
+        selectedZone.value = zones.value.length > 0 ? zones.value[0] : null
+      }
+      
+      alert('구역이 성공적으로 삭제되었습니다.')
+    }
+  } catch (error) {
+    console.error('[API] Zone deletion failed:', error)
+    alert(`구역 삭제 중 오류가 발생했습니다:\n${error.message}`)
+  } finally {
+    showZoneContextMenu.value = false
+  }
+}
+
+// Show type context menu
+const showTypeContextMenuHandler = (event, type) => {
+  event.preventDefault()
+  contextMenuType.value = type
+  typeContextMenuPosition.value = {
+    x: event.clientX,
+    y: event.clientY
+  }
+  showTypeContextMenu.value = true
+  
+  const closeMenu = () => {
+    showTypeContextMenu.value = false
+    document.removeEventListener('click', closeMenu)
+  }
+  document.addEventListener('click', closeMenu)
+}
+
+// Delete locker type function
+const deleteLockerType = async (type) => {
+  try {
+    console.log('[DEBUG] Delete type function called:', type)
+    
+    // Check if type has lockers
+    const typeLockers = currentLockers.value.filter(l => l.LOCKR_TYPE_CD === type.id || l.type === type.id)
+    
+    if (typeLockers.length > 0) {
+      alert(`타입 삭제 불가\n\n이 타입으로 ${typeLockers.length}개의 락커가 배치되어 있습니다.\n먼저 모든 락커를 제거해주세요.`)
+      return
+    }
+    
+    // Confirm deletion
+    if (!confirm(`락커 타입 "${type.name}"을(를) 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`)) {
+      return
+    }
+    
+    console.log('[DEBUG] Sending DELETE request to:', `${API_BASE_URL}/types/${type.id}`)
+    
+    // Call API
+    const response = await fetch(`${API_BASE_URL}/types/${type.id}`, {
+      method: 'DELETE'
+    })
+    
+    console.log('[DEBUG] Response status:', response.status)
+    
+    if (!response.ok) {
+      const errorData = await response.json()
+      console.log('[DEBUG] Error response:', errorData)
+      throw new Error(errorData.message || 'Failed to delete locker type')
+    }
+    
+    const result = await response.json()
+    console.log('[DEBUG] Success response:', result)
+    
+    if (result.success) {
+      console.log('[API] Locker type deleted successfully:', type.name)
+      
+      // Refresh locker types
+      await loadLockerTypes()
+      
+      // If deleted type was selected, clear selection
+      if (selectedType.value?.id === type.id) {
+        selectedType.value = null
+      }
+      
+      showTypeContextMenu.value = false
+    }
+  } catch (error) {
+    console.error('Failed to delete locker type:', error)
+    alert('락커 타입 삭제에 실패했습니다.')
+  }
+}
+
 // 락커 타입 선택
 const selectLockerType = (type) => {
   selectedType.value = type
@@ -847,7 +1372,7 @@ const findAvailablePosition = (startX: number, startY: number, width: number, de
 }
 
 // Direct locker addition without preview
-const addLocker = () => {
+const addLocker = async () => {
   console.log('[Direct Add] Add button clicked', {
     currentViewMode: currentViewMode.value,
     hasType: !!selectedType.value,
@@ -905,28 +1430,133 @@ const addLocker = () => {
     }
   })
   
-  // Add to store
-  const created = lockerStore.addLocker(newLocker)
-  
-  // Select the newly added locker
-  selectedLocker.value = created
-  selectedLockerIds.value.clear()
-  selectedLockerIds.value.add(created.id)
-  showSelectionUI.value = true
+  // Save to database first (this will also add to store via loadLockers)
+  try {
+    const saveData = {
+      LOCKR_KND: selectedZone.value.id,
+      LOCKR_TYPE_CD: selectedType.value.id || selectedType.value.type,
+      X: newLocker.x,
+      Y: newLocker.y,
+      LOCKR_LABEL: newLocker.number,
+      ROTATION: newLocker.rotation || 0,
+      LOCKR_STAT: '00' // available status
+    }
+    
+    const result = await saveLocker(saveData)
+    if (result && result.lockrCd) {
+      console.log('[Database] Locker saved with ID:', result.lockrCd)
+    }
+  } catch (error) {
+    console.error('[Database] Failed to save locker:', error)
+    // If save fails, add locally only
+    const created = lockerStore.addLocker(newLocker)
+    selectedLocker.value = created
+    selectedLockerIds.value.clear()
+    selectedLockerIds.value.add(created.id)
+    showSelectionUI.value = true
+  }
   
   // Debug all locker dimensions after adding
   debugLockerDimensions()
   
   console.log('[Direct Add] Locker placed:', {
-    id: created.id,
     type: selectedType.value.name,
     position: { x: position.x, y: position.y },
-    dimensions: { width: created.width, depth: created.depth }
+    dimensions: { width: newLocker.width, depth: newLocker.depth }
   })
 }
 
+// Add tiers to selected parent lockers
+const addTiersToSelectedLockers = async (tierCount: number) => {
+  if (currentViewMode.value !== 'front') {
+    console.warn('[Tiers] Tier addition only works in front view')
+    alert('층 추가는 세로배치모드(Front View)에서만 가능합니다.')
+    return
+  }
+  
+  const selectedIds = Array.from(selectedLockerIds.value)
+  if (selectedIds.length === 0) {
+    console.warn('[Tiers] No lockers selected')
+    alert('층을 추가할 락커를 먼저 선택해주세요.')
+    return
+  }
+  
+  let addedCount = 0
+  let skippedCount = 0
+  
+  for (const lockerId of selectedIds) {
+    const locker = currentLockers.value.find(l => l.id === lockerId)
+    
+    // Skip if not a parent locker
+    if (!locker || locker.parentLockrCd || locker.tierLevel > 0) {
+      console.log(`[Tiers] Skipping ${lockerId} - not a parent locker`)
+      skippedCount++
+      continue
+    }
+    
+    // Skip if no lockrCd (not saved to DB yet)
+    if (!locker.lockrCd) {
+      console.warn(`[Tiers] Locker ${lockerId} has no database ID`)
+      skippedCount++
+      continue
+    }
+    
+    try {
+      // Call API to add tiers
+      // TODO: Implement lockerApi.addTiers when API module is created
+      // const newTiers = await lockerApi.addTiers(locker.lockrCd, tierCount)
+      
+      // For now, show message that tier functionality is not yet implemented
+      console.log(`[Tiers] Would add ${tierCount} tiers to locker ${locker.lockrLabel || locker.number}`)
+      alert('층 추가 기능은 아직 구현 중입니다.')
+      return
+      
+      // if (newTiers && newTiers.length > 0) {
+      //   // Add new tiers to local store
+      //   newTiers.forEach(tier => {
+      //     lockerStore.addLocker(tier)
+      //   })
+      //   
+      //   console.log(`[Tiers] Added ${newTiers.length} tiers to locker ${locker.lockrLabel || locker.number}`)
+      //   addedCount++
+      // }
+    } catch (error) {
+      console.error(`[Tiers] Failed to add tiers to locker ${lockerId}:`, error)
+    }
+  }
+  
+  // Show result
+  if (addedCount > 0) {
+    console.log(`[Tiers] Successfully added tiers to ${addedCount} locker(s)`)
+    
+    // Refresh locker display
+    if (lockerStore.isOnlineMode) {
+      await lockerStore.loadLockersFromDatabase()
+    }
+  }
+  
+  if (skippedCount > 0) {
+    console.log(`[Tiers] Skipped ${skippedCount} locker(s) (not parent lockers or not saved)`)
+  }
+}
+
+// Helper function to show tier addition dialog
+const showAddTiersDialog = () => {
+  const tierCount = prompt('추가할 층 수를 입력하세요 (1-3):', '1')
+  
+  if (tierCount === null) return // User cancelled
+  
+  const count = parseInt(tierCount)
+  if (isNaN(count) || count < 1 || count > 3) {
+    alert('올바른 층 수를 입력해주세요 (1-3)')
+    return
+  }
+  
+  addTiersToSelectedLockers(count)
+}
+
 // Add locker by double-clicking on type card
-const addLockerByDoubleClick = (type: any) => {
+const addLockerByDoubleClick = async (type: any) => {
   console.log('[Double-Click] Adding locker:', {
     type: type.name,
     trigger: 'double-click',
@@ -978,6 +1608,7 @@ const addLockerByDoubleClick = (type: any) => {
     height: type.depth || type.width, // IMPORTANT: In floor view, height property stores depth!
     depth: type.depth || type.width,
     actualHeight: type.height, // Store real height for 3D view
+    color: type.color, // Add type color
     rotation: 0,
     type: type.name,
     status: 'available',
@@ -992,8 +1623,27 @@ const addLockerByDoubleClick = (type: any) => {
     position: { x: newLocker.x, y: newLocker.y }
   })
   
-  // Add to store
-  const created = lockerStore.addLocker(newLocker)
+  // Save to database first (this will also add to store via loadLockers)
+  try {
+    const saveData = {
+      LOCKR_KND: selectedZone.value.id,
+      LOCKR_TYPE_CD: type.id || type.type,
+      X: newLocker.x,
+      Y: newLocker.y,
+      LOCKR_LABEL: newLocker.number,
+      ROTATION: newLocker.rotation || 0,
+      LOCKR_STAT: '00' // available status
+    }
+    
+    const result = await saveLocker(saveData)
+    if (result && result.lockrCd) {
+      console.log('[Database] Locker saved with ID:', result.lockrCd)
+    }
+  } catch (error) {
+    console.error('[Database] Failed to save locker:', error)
+    // If save fails, add locally only
+    lockerStore.addLocker(newLocker)
+  }
   
   // Select the newly added locker
   selectedLocker.value = created
@@ -1013,52 +1663,6 @@ const addLockerByDoubleClick = (type: any) => {
   }
   
   console.log('[Double-Click] Locker added successfully:', created)
-}
-
-// Delete locker type function
-const deleteLockerType = async (type: any) => {
-  // Check if any lockers of this type are currently placed
-  const lockersOfType = currentLockers.value.filter(l => l.type === type.name || l.type === type.type)
-  
-  console.log('[Delete Type] Action:', {
-    type: type.type,
-    affectedLockers: lockersOfType.length
-  })
-  
-  if (lockersOfType.length > 0) {
-    // Show warning if lockers of this type exist
-    const confirmMessage = `현재 ${lockersOfType.length}개의 ${type.name} 락커가 배치되어 있습니다.\n이 타입을 삭제하면 배치된 락커도 모두 삭제됩니다.\n계속하시겠습니까?`
-    
-    if (!confirm(confirmMessage)) {
-      console.log('[Delete Type] Cancelled by user')
-      return
-    }
-    
-    // Remove all lockers of this type from canvas
-    lockersOfType.forEach(locker => {
-      lockerStore.removeLocker(locker.id)
-    })
-  } else {
-    // Simple confirmation if no lockers exist
-    if (!confirm(`${type.name} 락커 타입을 삭제하시겠습니까?`)) {
-      console.log('[Delete Type] Cancelled by user')
-      return
-    }
-  }
-  
-  // Add to hidden types
-  hiddenTypes.value.push(type.type)
-  
-  // If this was the selected type, clear selection
-  if (selectedType.value?.id === type.id) {
-    selectedType.value = null
-  }
-  
-  console.log('[Delete Type] Completed:', {
-    type: type.type,
-    deletedLockers: lockersOfType.length,
-    confirmed: true
-  })
 }
 
 // Restore deleted locker type
@@ -1682,6 +2286,16 @@ const endDragLocker = () => {
     lockerDragJustFinished.value = false
     console.log('[Drag] Cleared lockerDragJustFinished flag')
   }, 150) // Increased from 100ms for better reliability
+  
+  // Save positions of all dragged lockers to database
+  if (draggedLockers.value.length > 0) {
+    const positions = draggedLockers.value.map(locker => ({
+      id: locker.id,
+      x: locker.x,
+      y: locker.y
+    }))
+    saveMultipleLockerPositions(positions)
+  }
   
   isDragging.value = false
   showSelectionUI.value = true
@@ -3002,6 +3616,11 @@ const rotateSelectedLocker = (angle = 45) => {
       id: updated.id,
       rotation: updated.rotation
     })
+    
+    // Save rotation to database
+    updateLockerPlacement(locker.id, { rotation: newRotation }).catch(error => {
+      console.error('Failed to save rotation:', error)
+    })
   }
 }
 
@@ -3120,42 +3739,112 @@ const rotateMultipleLockers = (angle: number) => {
 }
 
 // 구역 저장 처리
-const handleZoneSave = (zoneData) => {
-  const newZone = lockerStore.addZone({
-    name: zoneData.name,
-    x: 0,
-    y: 0,
-    width: canvasWidth.value,
-    height: canvasHeight.value,
-    color: zoneData.color || '#f0f9ff'
-  })
-  selectedZone.value = newZone
-  showZoneModal.value = false
+const handleZoneSave = async (zoneData) => {
+  try {
+    // Generate unique zone ID
+    const zoneId = `zone-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    
+    // Prepare zone data for API - CRITICAL: Use correct field names
+    const zoneToSave = {
+      LOCKR_KND_CD: zoneId,
+      LOCKR_KND_NM: zoneData.name,
+      X: 0,
+      Y: 0,
+      WIDTH: canvasWidth.value,
+      HEIGHT: canvasHeight.value,
+      COLOR: zoneData.color || '#f0f9ff'
+    }
+    
+    // Save to database
+    await saveZone(zoneToSave)
+    
+    // Find the newly created zone
+    const newZone = zones.value.find(z => z.LOCKR_KND_NM === zoneData.name)
+    if (newZone) {
+      selectedZone.value = newZone
+    }
+    
+    showZoneModal.value = false
+  } catch (error) {
+    console.error('Failed to save zone:', error)
+    alert('Failed to save zone. Please try again.')
+  }
 }
 
 // 락커 등록 처리
-const handleLockerRegistration = (data) => {
-  // Add new locker type to the list with complete properties
-  const newType = {
-    id: `type-${Date.now()}`, // Generate unique ID
-    name: data.name,
-    width: data.width,
-    depth: data.depth,
-    height: data.height,
-    description: data.description,
-    color: data.color || '#3b82f6',
-    type: `custom-${Date.now()}` // Unique type identifier
+const handleLockerRegistration = async (data) => {
+  try {
+    // Prepare locker data for API
+    const newLocker = {
+      id: `locker-${Date.now()}`, // Generate unique ID
+      name: data.name,
+      width: data.width,
+      depth: data.depth,
+      height: data.height,
+      description: data.description,
+      color: data.color || '#3b82f6',
+      type: `custom-${Date.now()}`, // Unique type identifier
+      zoneId: selectedZone.value?.id || null,
+      x: 0,
+      y: 0,
+      rotation: 0
+    }
+    
+    // Save to database
+    await saveLocker(newLocker)
+    
+    // Save as a locker type to backend
+    try {
+      const typeResponse = await fetch(`${API_BASE_URL}/types`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          LOCKR_TYPE_CD: `custom-${Date.now()}`,
+          LOCKR_TYPE_NM: data.name,
+          WIDTH: data.width,
+          HEIGHT: data.height,
+          DEPTH: data.depth,
+          COLOR: data.color || '#3b82f6'
+        })
+      })
+      
+      if (!typeResponse.ok) {
+        console.error('Failed to save locker type to backend:', await typeResponse.text())
+      } else {
+        console.log('[Locker Registration] Type saved to backend successfully')
+      }
+    } catch (error) {
+      console.error('Error saving locker type to backend:', error)
+      // Continue even if type save fails
+    }
+    
+    // Also add as a locker type for selection
+    const newType = {
+      id: newLocker.id,
+      name: data.name,
+      width: data.width,
+      depth: data.depth,
+      height: data.height,
+      description: data.description,
+      color: data.color || '#3b82f6',
+      type: newLocker.type
+    }
+    
+    lockerTypes.value.push(newType)
+    showLockerRegistrationModal.value = false
+    
+    console.log('[Locker Registration] New locker saved:', {
+      id: newLocker.id,
+      name: newLocker.name,
+      dimensions: { width: newLocker.width, depth: newLocker.depth, height: newLocker.height },
+      type: newLocker.type
+    })
+  } catch (error) {
+    console.error('Failed to save locker:', error)
+    alert('Failed to save locker. Please try again.')
   }
-  
-  lockerTypes.value.push(newType)
-  showLockerRegistrationModal.value = false
-  
-  console.log('[Locker Registration] New type added:', {
-    id: newType.id,
-    name: newType.name,
-    dimensions: { width: newType.width, depth: newType.depth, height: newType.height },
-    type: newType.type
-  })
 }
 
 // 디버그: 모든 락커의 치수 확인
@@ -3386,10 +4075,27 @@ const getCursorStyle = computed(() => {
 
 
 // 초기화
-onMounted(() => {
-  // 초기 상태 디버깅
-  console.log('[DEBUG] Initial view mode:', currentViewMode.value)
-  console.log('[DEBUG] Add button initial state:', currentViewMode.value === 'floor' ? 'ENABLED' : 'DISABLED')
+onMounted(async () => {
+  try {
+    console.log('Component mounted, loading data...')
+    
+    // Load all data concurrently
+    await Promise.all([
+      loadZones(),
+      loadLockers(), 
+      loadLockerTypes()
+    ])
+    
+    console.log('All data loading completed')
+    
+    // Select first zone if available
+    if (zones.value.length > 0 && !selectedZone.value) {
+      selectZone(zones.value[0])
+      console.log('[Data Loading] Auto-selected first zone:', zones.value[0].name)
+    }
+  } catch (error) {
+    console.error('Data loading error:', error)
+  }
   
   // Update canvas size on mount
   setTimeout(() => {
@@ -3406,10 +4112,8 @@ onMounted(() => {
   // Add click listener to close context menu
   document.addEventListener('click', hideContextMenu)
   
-  // 테스트 데이터가 없으면 초기화
-  if (lockerStore.zones.length === 0) {
-    lockerStore.initTestData()
-  }
+  // 데이터베이스에서 락커 로드
+  await lockerStore.loadLockersFromDatabase()
   
   // 첫 번째 구역 선택
   if (lockerStore.zones.length > 0) {
@@ -3449,6 +4153,42 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* Loading Overlay */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #0768AE;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-overlay p {
+  margin-top: 16px;
+  color: #333;
+  font-size: 16px;
+  font-weight: 500;
+}
+
 .locker-placement {
   width: 100%;
   height: 100vh;
@@ -3693,6 +4433,24 @@ onUnmounted(() => {
   box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
 }
 
+/* Loading and Empty states */
+.loading-state, .empty-state {
+  padding: 20px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.empty-hint {
+  font-size: 0.875rem;
+  margin-top: 8px;
+  opacity: 0.7;
+}
+
 .register-locker-btn {
   width: 100%;
   padding: 10px;
@@ -3709,42 +4467,6 @@ onUnmounted(() => {
 .register-locker-btn:hover {
   background: #F9FAFB;
   border-color: #9CA3AF;
-}
-
-/* View mode selector */
-.view-mode-selector {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.view-mode-selector label {
-  font-size: 14px;
-  font-weight: 500;
-  color: #374151;
-}
-
-.mode-select {
-  flex: 1;
-  padding: 10px 12px;
-  border: 1px solid #D1D5DB;
-  border-radius: 8px;
-  background: white;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.mode-select:hover {
-  border-color: #9CA3AF;
-  background: #F9FAFB;
-}
-
-.mode-select:focus {
-  outline: none;
-  border-color: #3B82F6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .vertical-mode-btn {
@@ -3861,7 +4583,6 @@ onUnmounted(() => {
 }
 
 .zone-add-btn {
-  margin-left: auto;
   padding: 6px 12px;
   background: white;
   color: var(--primary-color);
@@ -4141,5 +4862,106 @@ onUnmounted(() => {
 
 .btn-secondary:hover {
   background: #d1d5db;
+}
+
+/* Zone Context Menu Styles */
+.zone-context-menu {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  padding: 4px;
+  min-width: 120px;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.context-menu-item:hover {
+  background-color: #f3f4f6;
+}
+
+.context-menu-icon {
+  font-size: 16px;
+}
+
+/* Zone Controls Container */
+.zone-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+/* Inline Mode Toggle */
+.mode-toggle-inline {
+  display: flex;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+.mode-toggle-inline .mode-btn {
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.mode-toggle-inline .mode-btn:first-child {
+  border-right: 1px solid #e5e7eb;
+}
+
+.mode-toggle-inline .mode-btn:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.mode-toggle-inline .mode-btn.active {
+  background: #0768AE;
+  color: white;
+}
+
+.mode-toggle-inline .mode-btn.active svg {
+  stroke: white;
+}
+
+.mode-toggle-inline .mode-btn svg {
+  width: 18px;
+  height: 18px;
+  transition: stroke 0.2s ease;
+}
+
+.mode-toggle-inline .mode-btn span {
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+/* Responsive: Hide text on small screens */
+@media (max-width: 768px) {
+  .mode-toggle-inline .mode-btn span {
+    display: none;
+  }
+  
+  .mode-toggle-inline .mode-btn {
+    padding: 8px 10px;
+  }
 }
 </style>

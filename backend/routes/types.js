@@ -95,19 +95,17 @@ router.post('/', async (req, res) => {
       // Create table if it doesn't exist
       await pool.query(`
         CREATE TABLE IF NOT EXISTS lockr_types (
-          LOCKR_TYPE_ID INT PRIMARY KEY AUTO_INCREMENT,
           LOCKR_TYPE_CD VARCHAR(20) NOT NULL,
           LOCKR_TYPE_NM VARCHAR(50),
-          COMP_CD VARCHAR(20),
-          BCOFF_CD VARCHAR(20),
-          WIDTH INT DEFAULT 50,
-          HEIGHT INT DEFAULT 60,
-          DEPTH INT DEFAULT 50,
-          COLOR VARCHAR(20),
-          UPDATE_DT DATETIME DEFAULT CURRENT_TIMESTAMP,
-          UPDATE_BY VARCHAR(45),
-          INDEX idx_comp_bcoff (COMP_CD, BCOFF_CD),
-          UNIQUE KEY uk_type (COMP_CD, BCOFF_CD, LOCKR_TYPE_CD)
+          COMP_CD VARCHAR(20) NOT NULL,
+          BCOFF_CD VARCHAR(20) NOT NULL,
+          WIDTH INT NOT NULL,
+          HEIGHT INT NOT NULL,
+          DEPTH INT NOT NULL,
+          COLOR VARCHAR(7),
+          CRE_DATETM DATETIME DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (LOCKR_TYPE_CD, COMP_CD, BCOFF_CD),
+          INDEX idx_comp_bcoff (COMP_CD, BCOFF_CD)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
       `);
     }
@@ -115,11 +113,11 @@ router.post('/', async (req, res) => {
     const [result] = await pool.query(
       `INSERT INTO lockr_types (
         LOCKR_TYPE_CD, LOCKR_TYPE_NM, WIDTH, HEIGHT, DEPTH, COLOR,
-        COMP_CD, BCOFF_CD, UPDATE_DT, UPDATE_BY
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)`,
+        COMP_CD, BCOFF_CD, CRE_DATETM
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
         LOCKR_TYPE_CD, LOCKR_TYPE_NM, WIDTH, HEIGHT, DEPTH, COLOR,
-        COMP_CD, BCOFF_CD, 'system'
+        COMP_CD, BCOFF_CD
       ]
     );
     
@@ -136,6 +134,61 @@ router.post('/', async (req, res) => {
       success: false,
       error: 'Failed to create locker type',
       details: error.message 
+    });
+  }
+});
+
+// Delete locker type
+router.delete('/:typeId', async (req, res) => {
+  try {
+    const { typeId } = req.params;
+    const { COMP_CD = '001', BCOFF_CD = '001' } = req.query;
+    
+    // First check if type has any lockers
+    const [lockrTables] = await pool.query("SHOW TABLES LIKE 'lockrs'");
+    
+    if (lockrTables.length > 0) {
+      const [lockers] = await pool.query(
+        'SELECT COUNT(*) as count FROM lockrs WHERE LOCKR_TYPE_CD = ? AND COMP_CD = ? AND BCOFF_CD = ?',
+        [typeId, COMP_CD, BCOFF_CD]
+      );
+      
+      if (lockers[0].count > 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Cannot delete locker type',
+          message: `Type has ${lockers[0].count} lockers. Please remove all lockers first.`,
+          lockerCount: lockers[0].count
+        });
+      }
+    }
+    
+    // Delete the type
+    const [result] = await pool.query(
+      'DELETE FROM lockr_types WHERE LOCKR_TYPE_CD = ? AND COMP_CD = ? AND BCOFF_CD = ?',
+      [typeId, COMP_CD, BCOFF_CD]
+    );
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Locker type not found'
+      });
+    }
+    
+    console.log(`[API] Deleted locker type: ${typeId}`);
+    
+    res.json({
+      success: true,
+      message: 'Locker type deleted successfully',
+      deletedTypeId: typeId
+    });
+  } catch (error) {
+    console.error('[API] Error deleting locker type:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete locker type',
+      details: error.message
     });
   }
 });

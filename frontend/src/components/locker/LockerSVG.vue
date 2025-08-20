@@ -159,6 +159,12 @@ const lockerFill = computed(() => {
   if (isHovered.value) return '#F0F8FF'
   if (props.isSelected) return '#E6F4FF'
   
+  // Apply locker type color if available
+  if (props.locker.color) {
+    // Use color with low opacity for fill
+    return props.locker.color + '20' // 20 is hex for ~12% opacity
+  }
+  
   switch (props.locker.status) {
     case 'available': return '#FFFFFF'
     case 'occupied': return '#FFF7ED'
@@ -173,7 +179,15 @@ const lockerStroke = computed(() => {
   if (props.hasError || props.locker.hasError) return '#ef4444'
   if (props.isSelected) return '#0768AE'
   if (props.isMultiSelected) return '#0768AE'  // Also blue for multi-selected
-  if (isHovered.value) return '#374151'
+  if (isHovered.value) {
+    // Use locker type color for hover if available
+    return props.locker.color || '#374151'
+  }
+  
+  // Apply locker type color if available
+  if (props.locker.color) {
+    return props.locker.color
+  }
   
   switch (props.locker.status) {
     case 'available': return '#D1D5DB'
@@ -186,11 +200,11 @@ const lockerStroke = computed(() => {
 
 const strokeWidth = computed(() => {
   // 에러가 있는 락커는 두꺼운 테두리
-  if (props.hasError || props.locker.hasError) return 3
-  if (props.isSelected) return 3
-  if (props.isMultiSelected) return 2  // Slightly thinner for multi-selected
-  if (isHovered.value) return 2
-  return 1
+  if (props.hasError || props.locker.hasError) return 2
+  if (props.isSelected) return 2
+  if (props.isMultiSelected) return 1.5  // Slightly thinner for multi-selected
+  if (isHovered.value) return 1
+  return 0.5  // Thinner default border
 })
 
 const fontSize = computed(() => {

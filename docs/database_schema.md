@@ -16,7 +16,7 @@ CREATE TABLE lockrs (
   LOCKR_CD INT PRIMARY KEY AUTO_INCREMENT,
   COMP_CD VARCHAR(20),
   BCOFF_CD VARCHAR(20),
-  LOCKR_KND VARCHAR(8),
+  LOCKR_KND VARCHAR(36),
   LOCKR_TYPE_CD VARCHAR(20),
   X INT,
   Y INT,
@@ -62,7 +62,7 @@ CREATE TABLE lockrs (
 | LOCKR_CD | INT | Primary key, auto-increment | 1, 2, 3... |
 | COMP_CD | VARCHAR(20) | Company code | "COMP001" |
 | BCOFF_CD | VARCHAR(20) | Branch office code | "BR001" |
-| LOCKR_KND | VARCHAR(8) | Locker zone/kind | "zone-1" |
+| LOCKR_KND | VARCHAR(36) | Locker zone/kind (UUID format) | "zone-1" or "zone-1755669651095-spqpucfvu" |
 | LOCKR_TYPE_CD | VARCHAR(20) | Locker type code | "TYPE01" |
 | X | INT | X coordinate in floor view | 100 |
 | Y | INT | Y coordinate in floor view | 200 |
@@ -97,6 +97,29 @@ CREATE TABLE lockrs (
 | 04 | Disabled | Temporarily disabled |
 | 05 | Expired | Assignment has expired |
 
+## lockr_area (락커구역)
+락커 배치를 위한 구역 정보를 관리하는 테이블
+
+| 컬럼명(한글) | 컬럼명(영문) | 타입 | PK | FK | NULL | Default | 설명 |
+|-------------|-------------|------|----|----|------|---------|------|
+| 구역아이디 | LOCKR_KND_CD | VARCHAR(36) | ✓ | | YES | NULL | 락커 구역 고유 식별자 |
+| 락커_구역명 | LOCKR_KND_NM | VARCHAR(50) | | | YES | NULL | 구역 표시명 |
+| 회사_코드 | COMP_CD | VARCHAR(20) | ✓ | | YES | NULL | 회사 식별 코드 |
+| 지점_코드 | BCOFF_CD | VARCHAR(20) | ✓ | | YES | NULL | 지점 식별 코드 |
+| x좌표 | X | INT | | | NO | NULL | 구역 X 좌표 |
+| y좌표 | Y | INT | | | NO | NULL | 구역 Y 좌표 |
+| 가로 | WIDTH | INT | | | NO | NULL | 구역 너비 |
+| 높이 | HEIGHT | INT | | | NO | NULL | 구역 높이 |
+| 색상 | COLOR | VARCHAR(7) | | | YES | NULL | 구역 배경색 (HEX) |
+| 층 | FLOOR | INT | | | YES | 1 | 층수 정보 |
+| 등록_일시 | CRE_DATETM | DATETIME | | | YES | CURRENT_TIMESTAMP | 레코드 생성 시간 |
+
+### Primary Key
+- COMP_CD + BCOFF_CD + LOCKR_KND_CD (복합 기본키)
+
+### 인덱스
+- idx_comp_bcoff (COMP_CD, BCOFF_CD)
+
 ## History Table: `lockrs_hist`
 
 ```sql
@@ -106,7 +129,7 @@ CREATE TABLE lockrs_hist (
   LOCKR_CD INT,
   COMP_CD VARCHAR(20),
   BCOFF_CD VARCHAR(20),
-  LOCKR_KND VARCHAR(8),
+  LOCKR_KND VARCHAR(36),
   LOCKR_TYPE_CD VARCHAR(20),
   X INT,
   Y INT,
