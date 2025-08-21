@@ -17,8 +17,8 @@
     </header>
 
     <div class="container">
-      <!-- 좌측 사이드바 -->
-      <aside class="sidebar">
+      <!-- 좌측 사이드바 - 평면배치모드에서만 표시 -->
+      <aside v-if="currentViewMode === 'floor'" class="sidebar">
         <h2 class="sidebar-title">락커 선택창</h2>
         
         <!-- Loading state -->
@@ -113,28 +113,6 @@
           락커 등록
         </button>
 
-        <!-- 뷰 모드 선택 -->
-        <div class="view-mode-selector">
-          <label>배치 모드:</label>
-          <select v-model="currentViewMode" @change="updateViewMode" class="mode-select">
-            <option value="floor">평면배치모드</option>
-            <option value="front">세로배치모드</option>
-          </select>
-        </div>
-
-        <!-- Front View 전용 버튼들 -->
-        <div v-if="currentViewMode === 'front'" class="front-view-controls">
-          <button 
-            class="add-tiers-btn" 
-            @click="showAddTiersDialog"
-            :disabled="selectedLockerIds.size === 0"
-          >
-            층 추가 (Add Tiers)
-          </button>
-          <div class="help-text">
-            💡 Parent 락커를 선택하고 층을 추가하세요
-          </div>
-        </div>
 
       </aside>
 
@@ -1055,7 +1033,13 @@ const sortedLockers = computed(() => {
         rotation: 0  // IMPORTANT: All lockers face forward in front view
       }
     }
-    return locker
+    // For floor view, also create a new object to ensure Vue detects changes
+    return {
+      ...locker,
+      x: locker.x,
+      y: locker.y,
+      rotation: locker.rotation || 0
+    }
   })
   
   if (selectedLocker.value) {
@@ -2486,6 +2470,12 @@ const highlightProblematicLockers = (lockerIds: string[]) => {
   })
 }
 
+// 뷰 모드 설정
+const setViewMode = (mode: 'floor' | 'front') => {
+  currentViewMode.value = mode
+  updateViewMode()
+}
+
 // 뷰 모드 업데이트
 const updateViewMode = () => {
   // 프론트 뷰로 전환하려는 경우 검증 수행
@@ -2547,6 +2537,23 @@ const transformToFrontView = () => {
     console.log('[Front View] No lockers to transform')
     return
   }
+  
+  // ===== 테스트 코드: 테스트 락커만 별도 처리 =====
+  // ID가 'test-locker'인 락커를 찾아서 별도 처리
+  const testLockerId = 'test-locker-999'
+  const testLocker = lockers.find(l => l.id === testLockerId)
+  
+  if (testLocker) {
+    console.log('[TEST] Moving test locker for animation test:', testLockerId)
+    
+    // 테스트 락커만 우측 하단으로 이동
+    lockerStore.updateLocker(testLockerId, {
+      frontViewX: 800,  // 우측으로
+      frontViewY: 400,  // 하단으로
+      frontViewRotation: 0
+    })
+  }
+  // ===== 테스트 코드 끝 =====
   
   // Simple approach: Detect U-shape by checking if lockers form 3 sides
   const bounds = {
@@ -2683,17 +2690,22 @@ const positionLockersInFrontView = (lockerSequence) => {
     const displayHeight = locker.actualHeight || locker.height || 60
     const displayWidth = locker.width // Always use original width
     
-    locker.frontViewX = currentX
-    locker.frontViewY = FLOOR_Y - displayHeight
-    // Clear any rotation for front view
-    locker.frontViewRotation = 0  // All lockers face forward
+    const frontViewX = currentX
+    const frontViewY = FLOOR_Y - displayHeight
+    
+    // Update through lockerStore to trigger Vue reactivity
+    lockerStore.updateLocker(locker.id, {
+      frontViewX: frontViewX,
+      frontViewY: frontViewY,
+      frontViewRotation: 0  // All lockers face forward
+    })
     
     currentX += displayWidth // 간격 제거 (기존 + 5 제거)
     
     console.log(`[Front View] L${locker.number} positioned:`, {
       index: index,
-      x: locker.frontViewX,
-      y: locker.frontViewY,
+      x: frontViewX,
+      y: frontViewY,
       width: displayWidth,
       height: displayHeight,
       rotation: 'none (facing forward)'
