@@ -89,8 +89,8 @@ const props = defineProps<{
 const lockerStore = useLockerStore()
 
 // Canvas 설정
-const canvasWidth = ref(1200)
-const canvasHeight = ref(800)
+const canvasWidth = ref(1050)  // 150px 감소
+const canvasHeight = ref(490)  // 프로젝트 표준에 맞춤
 const svgCanvas = ref<SVGSVGElement>()
 
 // 줌 & 팬 상태

@@ -125,32 +125,55 @@ const emit = defineEmits<{
 
 const isHovered = ref(false)
 
+// Visual scale for lockers only (canvas stays original, lockers get bigger)
+const LOCKER_VISUAL_SCALE = 2.0
+
 // Note: Display scaling is handled by the parent SVG viewBox/size
 // All dimensions here are in logical units
 // Logical dimensions (all coordinates in SVG are logical)
 const logicalDimensions = computed(() => {
+  // ✅ CRITICAL FIX: Add defensive programming with fallbacks for all values
+  if (!props.locker) {
+    console.warn('[LockerSVG] props.locker is undefined, using defaults')
+    return { width: 40 * LOCKER_VISUAL_SCALE, height: 40 * LOCKER_VISUAL_SCALE }
+  }
+  
+  const width = (props.locker.width || 40) * LOCKER_VISUAL_SCALE
+  const depth = (props.locker.depth || 40) * LOCKER_VISUAL_SCALE
+  const height = (props.locker.height || 40) * LOCKER_VISUAL_SCALE
+  const actualHeight = (props.locker.actualHeight || 40) * LOCKER_VISUAL_SCALE
+  
   if (props.viewMode === 'floor') {
-    // Floor view: Width x Depth
+    // Floor view: Width x Depth (both 2x scaled)
     return {
-      width: props.locker.width,
-      height: props.locker.depth || props.locker.height || props.locker.width
+      width,
+      height: depth || height || width
     }
   } else {
-    // Front view: Width x Height (actual height)
+    // Front view: Width x Height (both 2x scaled)
+    const frontHeight = height || actualHeight || (60 * LOCKER_VISUAL_SCALE)
+    console.log(`[LockerSVG] ${props.locker.number || 'UNKNOWN'} dimensions in front view (2x scale):`, {
+      width,
+      height: frontHeight,
+      actualHeight,
+      scale: LOCKER_VISUAL_SCALE,
+      EXPECTED: props.locker.number === 'L3' || props.locker.number === 'L4' ? '162px (90*1.8)' : '54px (30*1.8)',
+      IS_CORRECT: frontHeight === (props.locker.number === 'L3' || props.locker.number === 'L4' ? 162 : 54) ? '✅ CORRECT' : '❌ WRONG'
+    })
     return {
-      width: props.locker.width,
-      height: props.locker.actualHeight || props.locker.height || 60
+      width,
+      height: frontHeight
     }
   }
 })
 
-// 모서리 라운드 값 - 세로배치 모드에서 더 둥글게
+// 모서리 라운드 값 - 세로배치 모드에서 더 둥글게 (스케일 적용)
 const cornerRadius = computed(() => {
   // front view (세로배치)일 때 더 둥글게
   if (props.viewMode === 'front') {
-    return 6 // 더 둥근 모서리
+    return 6 * LOCKER_VISUAL_SCALE // 더 둥근 모서리 (2x 스케일)
   }
-  return 2 // 평면배치일 때는 약간만 둥글게
+  return 2 * LOCKER_VISUAL_SCALE // 평면배치일 때는 약간만 둥글게 (2x 스케일)
 })
 
 const lockerFill = computed(() => {
@@ -199,17 +222,17 @@ const lockerStroke = computed(() => {
 })
 
 const strokeWidth = computed(() => {
-  // 에러가 있는 락커는 두꺼운 테두리
-  if (props.hasError || props.locker.hasError) return 2
-  if (props.isSelected) return 2
-  if (props.isMultiSelected) return 1.5  // Slightly thinner for multi-selected
-  if (isHovered.value) return 1
-  return 0.5  // Thinner default border
+  // 에러가 있는 락커는 두꺼운 테두리 (스케일 적용)
+  if (props.hasError || props.locker.hasError) return 2 * LOCKER_VISUAL_SCALE
+  if (props.isSelected) return 2 * LOCKER_VISUAL_SCALE
+  if (props.isMultiSelected) return 1.5 * LOCKER_VISUAL_SCALE  // Slightly thinner for multi-selected
+  if (isHovered.value) return 1 * LOCKER_VISUAL_SCALE
+  return 0.5 * LOCKER_VISUAL_SCALE  // Thinner default border
 })
 
 const fontSize = computed(() => {
-  // 일관된 폰트 크기 유지 (뷰 모드와 관계없이)
-  return 12
+  // 폰트 크기도 락커 스케일에 비례 (2x 확대)
+  return 12 * LOCKER_VISUAL_SCALE
 })
 
 const textColor = computed(() => {
@@ -224,12 +247,16 @@ const textColor = computed(() => {
 
 // Get the appropriate number to display based on view mode
 const getDisplayNumber = () => {
+  // ✅ Defensive programming: Handle undefined props.locker
+  if (!props.locker) return ''
+  
   if (props.viewMode === 'floor') {
     // In floor view, show the zone management number (only for parent lockers)
-    return !props.locker.parentLockerId ? props.locker.number : ''
+    return !props.locker.parentLockerId ? (props.locker.number || '') : ''
   } else {
-    // In front view, show the assignment number
-    return props.locker.frontViewNumber || ''
+    // In front view, show the assignment number or fallback to regular number
+    // frontViewNumber가 없으면 일반 number를 표시
+    return props.locker.frontViewNumber || props.locker.number || ''
   }
 }
 

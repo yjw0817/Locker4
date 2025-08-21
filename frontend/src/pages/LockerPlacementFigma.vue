@@ -1,13 +1,17 @@
 <template>
   <div class="locker-placement">
-    <!-- Loading Overlay -->
-    <div v-if="isLoading" class="loading-overlay">
-      <div class="loading-spinner"></div>
-      <p>데이터 로딩 중...</p>
+    <!-- Loading overlay to prevent initial flicker -->
+    <div v-if="isLoadingTypes || isLoadingLockers" class="loading-overlay">
+      <div class="loading-spinner">
+        <div class="spinner"></div>
+        <p>Loading locker data...</p>
+      </div>
     </div>
     
-    <!-- 간단한 헤더 -->
-    <header class="header">
+    <!-- Main content - only show when data is ready -->
+    <div v-else class="main-content">
+      <!-- 간단한 헤더 -->
+      <header class="header">
       <h1 class="title">락커 배치</h1>
       <div class="breadcrumb">
         <span>관리자</span>
@@ -18,7 +22,7 @@
 
     <div class="container">
       <!-- 좌측 사이드바 - 평면배치모드에서만 표시 -->
-      <aside v-if="currentViewMode === 'floor'" class="sidebar">
+      <aside class="sidebar">
         <h2 class="sidebar-title">락커 선택창</h2>
         
         <!-- Loading state -->
@@ -50,31 +54,32 @@
               <div class="type-visual">
               <!-- SVG preview matching actual display size -->
               <svg 
-                :width="type.width * DISPLAY_SCALE" 
-                :height="(type.depth || type.width) * DISPLAY_SCALE"
-                :viewBox="`0 0 ${type.width} ${type.depth || type.width}`"
+                :width="(type.width || 40) * 2.0" 
+                :height="((type.depth || type.width) || 40) * 2.0"
+                :viewBox="`0 0 ${(type.width || 40) * 2.0} ${((type.depth || type.width) || 40) * 2.0}`"
                 class="type-preview"
               >
                 <rect 
-                  x="1" 
-                  y="1" 
-                  :width="type.width - 2"
-                  :height="(type.depth || type.width) - 2"
-                  :fill="type.color ? `${type.color}20` : '#e0f2fe'"
-                  :stroke="type.color || '#0284c7'"
-                  stroke-width="0.5"
-                  rx="2"
-                  ry="2"
+                  x="2" 
+                  y="2" 
+                  :width="Math.max(((type.width || 40) * 2.0) - 4, 1)"
+                  :height="Math.max((((type.depth || type.width) || 40) * 2.0) - 4, 1)"
+                  :fill="type.color ? `${type.color}20` : '#FFFFFF'"
+                  :stroke="type.color || '#D1D5DB'"
+                  :stroke-width="0.5 * 2.0"
+                  :rx="2 * 2.0"
+                  :ry="2 * 2.0"
+                  shape-rendering="crispEdges"
                 />
                 <!-- Front indicator line -->
                 <line
-                  :x1="6"
-                  :y1="(type.depth || type.width) - 6"
-                  :x2="type.width - 6"
-                  :y2="(type.depth || type.width) - 6"
-                  :stroke="type.color || '#0284c7'"
-                  stroke-width="1"
-                  opacity="0.4"
+                  :x1="6 * 2.0"
+                  :y1="(((type.depth || type.width) || 40) * 2.0) - (6 * 2.0)"
+                  :x2="((type.width || 40) * 2.0) - (6 * 2.0)"
+                  :y2="(((type.depth || type.width) || 40) * 2.0) - (6 * 2.0)"
+                  :stroke="type.color || '#D1D5DB'"
+                  :stroke-width="2 * 2.0"
+                  opacity="0.8"
                 />
               </svg>
             </div>
@@ -182,11 +187,11 @@
           <svg 
             ref="canvasRef"
             class="canvas"
-            :width="`${canvasWidth * DISPLAY_SCALE}px`"
-            :height="`${canvasHeight * DISPLAY_SCALE}px`"
+            width="100%"
+            height="100%"
             :viewBox="`0 0 ${canvasWidth} ${canvasHeight}`"
-            :style="{ cursor: getCursorStyle }"
-            preserveAspectRatio="xMidYMid meet"
+            :style="{ cursor: getCursorStyle, margin: 0, padding: 0 }"
+            preserveAspectRatio="none"
             @mousedown="handleCanvasMouseDown"
             @mousemove="handleCanvasMouseMove"
             @mouseup="handleCanvasMouseUp"
@@ -207,10 +212,10 @@
             <!-- 구역 경계 -->
             <rect 
               v-if="selectedZone"
-              :x="1"
-              :y="1"
-              :width="canvasWidth.value - 2"
-              :height="canvasHeight.value - 2"
+              x="0"
+              y="0"
+              :width="canvasWidth"
+              :height="canvasHeight"
               fill="none"
               stroke="black"
               stroke-width="1"
@@ -222,7 +227,7 @@
               <line
                 :x1="0"
                 :y1="FLOOR_Y"
-                :x2="canvasWidth"
+                :x2="1550"
                 :y2="FLOOR_Y"
                 stroke="#94a3b8"
                 stroke-width="2"
@@ -381,11 +386,14 @@
             
             <!-- 드래그 선택 박스 - Only show if actually dragging, not just clicked -->
             <rect
-              v-if="isDragSelecting && Math.abs(dragSelectEnd.x - dragSelectStart.x) > 5"
-              :x="Math.min(dragSelectStart.x, dragSelectEnd.x)"
-              :y="Math.min(dragSelectStart.y, dragSelectEnd.y)"
-              :width="Math.abs(dragSelectEnd.x - dragSelectStart.x)"
-              :height="Math.abs(dragSelectEnd.y - dragSelectStart.y)"
+              v-if="isDragSelecting && 
+                    dragSelectStart.x != null && dragSelectStart.y != null && 
+                    dragSelectEnd.x != null && dragSelectEnd.y != null &&
+                    Math.abs((dragSelectEnd.x || 0) - (dragSelectStart.x || 0)) > 5"
+              :x="Math.min(dragSelectStart.x || 0, dragSelectEnd.x || 0)"
+              :y="Math.min(dragSelectStart.y || 0, dragSelectEnd.y || 0)"
+              :width="Math.abs((dragSelectEnd.x || 0) - (dragSelectStart.x || 0))"
+              :height="Math.abs((dragSelectEnd.y || 0) - (dragSelectStart.y || 0))"
               fill="rgba(0, 122, 255, 0.1)"
               stroke="#007AFF"
               stroke-width="1"
@@ -509,45 +517,52 @@
         <button class="btn btn-primary" @click="assignNumbers">번호 부여</button>
       </div>
     </div>
-  </div>
-
-  <!-- Zone Context Menu -->
-  <teleport to="body">
-    <div 
-      v-if="showZoneContextMenu" 
-      class="zone-context-menu"
-      :style="{
-        position: 'fixed',
-        left: zoneContextMenuPosition.x + 'px',
-        top: zoneContextMenuPosition.y + 'px',
-        zIndex: 9999
-      }"
-    >
-      <div class="context-menu-item" @click="deleteZone(contextMenuZone)">
-        <span class="context-menu-icon">🗑️</span>
-        구역 삭제
+    </div> <!-- Close main-content -->
+    
+    <!-- Zone Context Menu -->
+    <teleport to="body">
+      <div 
+        v-if="showZoneContextMenu" 
+        class="zone-context-menu"
+        :style="{
+          position: 'fixed',
+          left: zoneContextMenuPosition.x + 'px',
+          top: zoneContextMenuPosition.y + 'px',
+          zIndex: 9999
+        }"
+        @click.stop
+      >
+        <div class="zone-context-menu-item" @click="editZone(contextMenuZone)">
+          <span class="zone-context-menu-icon">✏️</span>
+          구역 수정
+        </div>
+        <div class="zone-context-menu-item" @click="deleteZone(contextMenuZone)">
+          <span class="zone-context-menu-icon">🗑️</span>
+          구역 삭제
+        </div>
       </div>
-    </div>
-  </teleport>
+    </teleport>
 
-  <!-- Locker Type Context Menu -->
-  <teleport to="body">
-    <div
-      v-if="showTypeContextMenu"
-      class="context-menu"
-      :style="{
-        position: 'fixed',
-        left: typeContextMenuPosition.x + 'px',
-        top: typeContextMenuPosition.y + 'px',
-        zIndex: 9999
-      }"
-    >
-      <div class="context-menu-item" @click="deleteLockerType(contextMenuType)">
-        <span class="context-menu-icon">🗑️</span>
-        타입 삭제
+    <!-- Locker Type Context Menu -->
+    <teleport to="body">
+      <div
+        v-if="showTypeContextMenu"
+        class="context-menu"
+        :style="{
+          position: 'fixed',
+          left: contextMenuPosition.x + 'px',
+          top: contextMenuPosition.y + 'px',
+          zIndex: 9999
+        }"
+        @click.stop
+      >
+        <div class="context-menu-item" @click="deleteLockerType(contextMenuType)">
+          <span class="context-menu-icon">🗑️</span>
+          타입 삭제
+        </div>
       </div>
-    </div>
-  </teleport>
+    </teleport>
+  </div> <!-- Close locker-placement -->
 </template>
 
 <script setup lang="ts">
@@ -598,39 +613,62 @@ const numberDirection = ref<'horizontal' | 'vertical'>('horizontal')
 const reverseDirection = ref(false)
 const fromTop = ref(false)
 
-// Display scale for visual rendering (1.2x for optimal visibility)
-const DISPLAY_SCALE = 1.2
+// Display scale for visual rendering - 모든 뷰모드에서 동일한 스케일 사용
+const FLOOR_VIEW_SCALE = 1.0  // 평면배치 모드
+const FRONT_VIEW_SCALE = 1.0  // 세로배치 모드
+
+// 현재 뷰모드에 따른 스케일 계산
+const getCurrentScale = () => {
+  return currentViewMode.value === 'floor' ? FLOOR_VIEW_SCALE : FRONT_VIEW_SCALE
+}
+
+// 캔버스 디스플레이 너비 계산 (뷰모드에 따라 다름)
+const getCanvasDisplayWidth = () => {
+  // 두 모드 모두 고정 크기 사용
+  return 1550  // 고정 1550px
+}
+
+// 하위 호환성을 위한 DISPLAY_SCALE (기본값)
+const DISPLAY_SCALE = 1.0
 
 // Floor line position for front view (logical units)
-const FLOOR_Y = 500  // 바닥선 Y 위치
+const FLOOR_Y = 450  // 바닥선 Y 위치
 
 // Log scale configuration
 console.log('[Scale] Display configuration:', {
-  scale: DISPLAY_SCALE,
+  floorScale: FLOOR_VIEW_SCALE,
+  frontScale: FRONT_VIEW_SCALE,
+  currentScale: getCurrentScale(),
+  viewMode: currentViewMode.value,
   sizes: {
-    small: { logical: 40, display: 48 },
-    medium: { logical: 50, display: 60 },
-    large: { logical: 60, display: 72 }
+    small: { logical: 40, display: 72 },   // 40 * 1.8 = 72
+    medium: { logical: 50, display: 90 },  // 50 * 1.8 = 90
+    large: { logical: 60, display: 108 }   // 60 * 1.8 = 108
   },
-  grid: { logical: 20, visual: 24 }
+  grid: { logical: 20, visual: 36 }        // 20 * 1.8 = 36
 })
 
 // 캔버스 크기 (동적으로 조정)
-const canvasWidth = ref(1200)
-const canvasHeight = ref(800)
+const canvasWidth = ref(1550)  // 고정 너비
+const canvasHeight = ref(720)  // 평면배치 시 720px
+
+// 세로모드일 때 동적 viewBox 크기
+const dynamicCanvasWidth = ref(1550)
+const dynamicCanvasHeight = ref(700)
 
 // Update canvas size to fill container
 const updateCanvasSize = () => {
+  // 로딩 중일 때는 캔버스 크기 변경하지 않음 (깜빡임 방지)
+  if (isLoadingTypes.value || isLoadingLockers.value) {
+    return
+  }
+  
   const wrapper = document.querySelector('.canvas-wrapper')
   if (wrapper) {
     const rect = wrapper.getBoundingClientRect()
     // Use full wrapper dimensions without subtracting padding
     const wrapperWidth = rect.width
     const wrapperHeight = rect.height
-    
-    // Set canvas dimensions to match wrapper or minimum size
-    canvasWidth.value = Math.max(1200, wrapperWidth)
-    canvasHeight.value = Math.max(800, wrapperHeight)
     
     console.log('[Canvas] Dimensions:', { 
       wrapper: { width: wrapperWidth, height: wrapperHeight },
@@ -642,23 +680,26 @@ const updateCanvasSize = () => {
 
 // Helper functions for coordinate conversion
 const toLogicalCoords = (displayX: number, displayY: number) => {
+  const scale = getCurrentScale()
   return {
-    x: displayX / DISPLAY_SCALE,
-    y: displayY / DISPLAY_SCALE
+    x: displayX / scale,
+    y: displayY / scale
   }
 }
 
 const toDisplayCoords = (logicalX: number, logicalY: number) => {
+  const scale = getCurrentScale()
   return {
-    x: logicalX * DISPLAY_SCALE,
-    y: logicalY * DISPLAY_SCALE
+    x: logicalX * scale,
+    y: logicalY * scale
   }
 }
 
 const toDisplaySize = (width: number, height: number) => {
+  const scale = getCurrentScale()
   return {
-    width: width * DISPLAY_SCALE,
-    height: height * DISPLAY_SCALE
+    width: width * scale,
+    height: height * scale
   }
 }
 
@@ -735,43 +776,116 @@ const loadLockers = async () => {
     
     if (data.success && data.lockers) {
       // Transform backend data to frontend format
-      const transformedLockers = data.lockers.map(locker => ({
-        id: `locker-${locker.LOCKR_CD}`,
-        lockrCd: locker.LOCKR_CD,
-        number: locker.LOCKR_LABEL || `L${locker.LOCKR_CD}`,
-        x: locker.X || 0,
-        y: locker.Y || 0,
-        width: 40, // Default width, should come from type
-        height: 40, // Default height
-        depth: 40, // Default depth
-        status: 'available',
-        rotation: locker.ROTATION || 0,
-        zoneId: locker.LOCKR_KND,
-        typeId: locker.LOCKR_TYPE_CD,
-        type: locker.LOCKR_TYPE_CD,
-        // Database fields
-        compCd: locker.COMP_CD,
-        bcoffCd: locker.BCOFF_CD,
-        lockrLabel: locker.LOCKR_LABEL,
-        lockrNo: locker.LOCKR_NO,
-        lockrKnd: locker.LOCKR_KND,
-        lockrTypeCd: locker.LOCKR_TYPE_CD,
-        // Front view positions
-        frontViewX: locker.FRONT_VIEW_X,
-        frontViewY: locker.FRONT_VIEW_Y,
-        // Other fields
-        parentLockrCd: locker.PARENT_LOCKR_CD,
-        tierLevel: locker.TIER_LEVEL,
-        lockrStat: locker.LOCKR_STAT
-      }))
+      const transformedLockers = data.lockers.map(locker => {
+        // 타입 정보에서 실제 치수 가져오기
+        const lockerType = lockerTypes.value.find(t => t.id === locker.LOCKR_TYPE_CD)
+        const typeWidth = lockerType?.width || 40
+        const typeHeight = lockerType?.height || 60  // 실제 높이
+        const typeDepth = lockerType?.depth || 40
+        
+        // CRITICAL DEBUG: 타입 매핑 확인
+        console.log(`[LoadLockers] ${locker.LOCKR_LABEL}:`, {
+          typeCode: locker.LOCKR_TYPE_CD,
+          foundType: lockerType ? `Found - ${lockerType.name}` : 'NOT FOUND',
+          expectedHeight: typeHeight,
+          isNormalLocker: locker.LOCKR_TYPE_CD === 'custom-1755675491548' ? 'YES (30px)' : 'NO',
+          isTallLocker: locker.LOCKR_TYPE_CD === 'custom-1755675506519' ? 'YES (90px)' : 'NO'
+        })
+        
+        const transformedLocker = {
+          id: `locker-${locker.LOCKR_CD}`,
+          lockrCd: locker.LOCKR_CD,
+          number: locker.LOCKR_LABEL || `L${locker.LOCKR_CD}`,
+          x: locker.X || 0,
+          y: locker.Y || 0,
+          width: typeWidth,
+          height: typeDepth,  // Floor view에서는 depth를 height로 사용
+          depth: typeDepth,
+          actualHeight: typeHeight,  // 실제 높이를 별도로 저장 (세로배치용)
+          status: 'available',
+          rotation: locker.ROTATION || 0,
+          zoneId: locker.LOCKR_KND,
+          typeId: locker.LOCKR_TYPE_CD,
+          type: locker.LOCKR_TYPE_CD,
+          color: lockerType?.color,  // 타입 색상도 추가
+          // Database fields
+          compCd: locker.COMP_CD,
+          bcoffCd: locker.BCOFF_CD,
+          lockrLabel: locker.LOCKR_LABEL,
+          lockrNo: locker.LOCKR_NO,
+          lockrKnd: locker.LOCKR_KND,
+          lockrTypeCd: locker.LOCKR_TYPE_CD,
+          // Front view positions
+          frontViewX: locker.FRONT_VIEW_X,
+          frontViewY: locker.FRONT_VIEW_Y,
+          frontViewNumber: locker.FRONT_VIEW_NUMBER,
+          // Other fields
+          parentLockrCd: locker.PARENT_LOCKR_CD,
+          tierLevel: locker.TIER_LEVEL,
+          lockrStat: locker.LOCKR_STAT
+        }
+        
+        // CRITICAL DEBUG: Verify actualHeight is in the transformed object
+        console.log(`[LoadLockers Transform] ${transformedLocker.number}: actualHeight=${transformedLocker.actualHeight}, typeHeight=${typeHeight}`)
+        
+        return transformedLocker
+      })
       
       // Update the store with transformed data
       lockerStore.lockers = transformedLockers
+      
+      // CRITICAL DEBUG: Verify actualHeight is preserved in store
+      transformedLockers.forEach(locker => {
+        if (locker.number === 'L3' || locker.number === 'L4') {
+          console.log(`[Store Assignment] ${locker.number}: actualHeight=${locker.actualHeight} (should be 90)`)
+        } else if (locker.number === 'L1' || locker.number === 'L2' || locker.number === 'L5') {
+          console.log(`[Store Assignment] ${locker.number}: actualHeight=${locker.actualHeight} (should be 30)`)
+        }
+      })
+      
       console.log('[API] Lockers loaded successfully:', transformedLockers.length)
     } else if (data.lockers) {
       // Handle case where success flag is not present but lockers exist
-      lockerStore.lockers = data.lockers
-      console.log('[API] Lockers loaded successfully:', data.lockers.length)
+      // CRITICAL: Process the data instead of direct assignment to preserve actualHeight
+      const transformedLockers = data.lockers.map(locker => {
+        // Find matching type
+        const lockerType = lockerTypes.value.find(t => t.id === locker.LOCKR_TYPE_CD)
+        const typeHeight = lockerType?.height || 60
+        
+        return {
+          id: `locker-${locker.LOCKR_CD}`,
+          lockrCd: locker.LOCKR_CD,
+          number: locker.LOCKR_LABEL || `L${locker.LOCKR_CD}`,
+          x: locker.X || 0,
+          y: locker.Y || 0,
+          width: lockerType?.width || 40,
+          height: lockerType?.depth || 40,
+          depth: lockerType?.depth || 40,
+          actualHeight: typeHeight,  // CRITICAL: Calculate actualHeight
+          status: 'available',
+          rotation: locker.ROTATION || 0,
+          zoneId: locker.LOCKR_KND,
+          typeId: locker.LOCKR_TYPE_CD,
+          type: locker.LOCKR_TYPE_CD,
+          color: lockerType?.color,
+          // ... other fields
+          compCd: locker.COMP_CD,
+          bcoffCd: locker.BCOFF_CD,
+          lockrLabel: locker.LOCKR_LABEL,
+          lockrNo: locker.LOCKR_NO,
+          lockrKnd: locker.LOCKR_KND,
+          lockrTypeCd: locker.LOCKR_TYPE_CD,
+          frontViewX: locker.FRONT_VIEW_X,
+          frontViewY: locker.FRONT_VIEW_Y,
+          frontViewNumber: locker.FRONT_VIEW_NUMBER,
+          parentLockrCd: locker.PARENT_LOCKR_CD,
+          tierLevel: locker.TIER_LEVEL,
+          lockrStat: locker.LOCKR_STAT
+        }
+      })
+      
+      lockerStore.lockers = transformedLockers
+      console.log('[API] Lockers loaded successfully (fallback path):', transformedLockers.length)
     } else {
       console.warn('[API] No lockers data in response:', data)
       lockerStore.lockers = []
@@ -955,7 +1069,16 @@ const visibleLockerTypes = computed(() => {
 // 현재 구역의 락커들
 const currentLockers = computed(() => {
   if (!selectedZone.value) return []
-  return lockerStore.lockers.filter(l => l.zoneId === selectedZone.value.id)
+  const filtered = lockerStore.lockers.filter(l => l.zoneId === selectedZone.value.id)
+  
+  // CRITICAL DEBUG: Check actualHeight at the start of the computed chain
+  filtered.forEach(locker => {
+    if (locker.number === 'L3' || locker.number === 'L4' || locker.number === 'L1' || locker.number === 'L2' || locker.number === 'L5') {
+      console.log(`[CurrentLockers] ${locker.number}: actualHeight=${locker.actualHeight}, typeId=${locker.typeId}`)
+    }
+  })
+  
+  return filtered
 })
 
 // Compute display versions of lockers with scaled dimensions
@@ -972,6 +1095,8 @@ const displayLockers = computed(() => {
   
   return filteredLockers.map((locker, index) => {
     let displayX, displayY, displayHeight
+    // CRITICAL FIX: Move lockerActualHeight declaration outside if/else blocks
+    const lockerActualHeight = locker.actualHeight || locker.height || 60
     
     if (currentViewMode.value === 'floor') {
       // Floor view: use stored positions
@@ -981,12 +1106,12 @@ const displayLockers = computed(() => {
       displayHeight = toDisplaySize(locker.width, locker.height || locker.depth || 40).height
     } else {
       // Front view: use frontViewX and frontViewY set by transformToFrontView
-      const lockerActualHeight = locker.actualHeight || locker.height || 60
       
       // Use frontView positions if available, otherwise fallback
+      const scale = getCurrentScale() // 락커 렌더링 크기를 위한 스케일
       if (locker.frontViewX !== undefined && locker.frontViewY !== undefined) {
-        displayX = locker.frontViewX * DISPLAY_SCALE
-        displayY = locker.frontViewY * DISPLAY_SCALE
+        displayX = locker.frontViewX * scale
+        displayY = locker.frontViewY * scale
       } else {
         // Fallback: Calculate X position (arrange side by side)
         let currentX = 50  // Start position
@@ -996,13 +1121,16 @@ const displayLockers = computed(() => {
         }
         
         // Y position: bottom of locker sits on floor line
-        displayX = currentX * DISPLAY_SCALE
-        displayY = (FLOOR_Y - lockerActualHeight) * DISPLAY_SCALE
+        displayX = currentX * scale
+        displayY = (FLOOR_Y - lockerActualHeight) * scale
       }
-      displayHeight = lockerActualHeight * DISPLAY_SCALE
+      displayHeight = lockerActualHeight * scale
     }
     
-    const displayWidth = locker.width * DISPLAY_SCALE
+    const displayWidth = locker.width * getCurrentScale() // 모든 뷰모드에서 동일한 렌더링 스케일 적용
+    
+    // CRITICAL DEBUG: Check actualHeight preservation
+    console.log(`[DisplayLockers] ${locker.number}: actualHeight=${locker.actualHeight}, typeId=${locker.typeId}`)
     
     return {
       ...locker,
@@ -1010,6 +1138,8 @@ const displayLockers = computed(() => {
       displayY,
       displayWidth,
       displayHeight,
+      // CRITICAL: Preserve actualHeight for front view - ensure it's never undefined
+      actualHeight: locker.actualHeight || lockerActualHeight || 60,
       // Keep original logical values for data operations
       logicalX: locker.x,
       logicalY: locker.y,
@@ -1025,21 +1155,35 @@ const sortedLockers = computed(() => {
   const lockers = displayLockers.value.map(locker => {
     if (currentViewMode.value === 'front') {
       // For front view, override x, y, and RESET rotation (all face forward)
-      return {
+      // actualHeight를 확실히 전달 (30 또는 90)
+      const frontViewHeight = locker.actualHeight || locker.height || 60
+      
+      console.log(`[SortedLockers] ${locker.number}:`, {
+        actualHeight: locker.actualHeight,
+        height: locker.height,
+        frontViewHeight: frontViewHeight,
+        typeId: locker.typeId,
+        EXPECTED_L3_L4: locker.number === 'L3' || locker.number === 'L4' ? '90px' : '30px',
+        IS_CORRECT: frontViewHeight === (locker.number === 'L3' || locker.number === 'L4' ? 90 : 30) ? '✅ CORRECT' : '❌ WRONG'
+      })
+      
+      const resultLocker = {
         ...locker,
-        x: locker.frontViewX !== undefined ? locker.frontViewX : locker.displayX / DISPLAY_SCALE,
-        y: locker.frontViewY !== undefined ? locker.frontViewY : locker.displayY / DISPLAY_SCALE,
-        height: locker.actualHeight || locker.height || 60,
+        x: locker.frontViewX !== undefined ? locker.frontViewX : locker.displayX / getCurrentScale(),
+        y: locker.frontViewY !== undefined ? locker.frontViewY : locker.displayY / getCurrentScale(),
+        height: frontViewHeight,  // LockerSVG에서 이 값을 사용
+        actualHeight: frontViewHeight,  // actualHeight도 명시적으로 설정
         rotation: 0  // IMPORTANT: All lockers face forward in front view
       }
+      
+      // FINAL DEBUG: Check final result passed to LockerSVG
+      if (locker.number === 'L3' || locker.number === 'L4') {
+        console.log(`[SortedLockers FINAL] ${locker.number}: height=${resultLocker.height}, actualHeight=${resultLocker.actualHeight} (FINAL RESULT TO LockerSVG)`)
+      }
+      
+      return resultLocker
     }
-    // For floor view, also create a new object to ensure Vue detects changes
-    return {
-      ...locker,
-      x: locker.x,
-      y: locker.y,
-      rotation: locker.rotation || 0
-    }
+    return locker
   })
   
   if (selectedLocker.value) {
@@ -1513,9 +1657,9 @@ const addTiersToSelectedLockers = async (tierCount: number) => {
   if (addedCount > 0) {
     console.log(`[Tiers] Successfully added tiers to ${addedCount} locker(s)`)
     
-    // Refresh locker display
+    // Refresh locker display - use proper loadLockers to preserve actualHeight
     if (lockerStore.isOnlineMode) {
-      await lockerStore.loadLockersFromDatabase()
+      await loadLockers()  // Use page component's loadLockers instead of store's
     }
   }
   
@@ -1677,12 +1821,14 @@ const getMousePosition = (event: MouseEvent) => {
   // Transform the point to SVG coordinates
   const svgP = pt.matrixTransform(svg.getScreenCTM().inverse())
   
+  const scale = getCurrentScale()
   console.log('[Coordinates] System check:', {
-    scale: DISPLAY_SCALE,
+    scale: scale,
+    viewMode: currentViewMode.value,
     client: { x: event.clientX, y: event.clientY },
     svg: { x: svgP.x, y: svgP.y },
     logical: { x: svgP.x, y: svgP.y },
-    display: { x: svgP.x * DISPLAY_SCALE, y: svgP.y * DISPLAY_SCALE },
+    display: { x: svgP.x * scale, y: svgP.y * scale },
     collision: 'Using logical coordinates',
     snapping: 'Using logical coordinates'
   })
@@ -1822,6 +1968,14 @@ const handleCanvasMouseUp = (event) => {
 
 // 사각형 선택 업데이트
 const updateSelectionInRectangle = () => {
+  // ✅ CRITICAL FIX: Add defensive programming for undefined coordinates
+  if (!dragSelectStart.value || !dragSelectEnd.value || 
+      dragSelectStart.value.x == null || dragSelectStart.value.y == null ||
+      dragSelectEnd.value.x == null || dragSelectEnd.value.y == null) {
+    console.warn('[Rectangle Select] Invalid coordinates, skipping selection update')
+    return
+  }
+  
   const minX = Math.min(dragSelectStart.value.x, dragSelectEnd.value.x)
   const maxX = Math.max(dragSelectStart.value.x, dragSelectEnd.value.x)
   const minY = Math.min(dragSelectStart.value.y, dragSelectEnd.value.y)
@@ -2474,6 +2628,20 @@ const highlightProblematicLockers = (lockerIds: string[]) => {
 const setViewMode = (mode: 'floor' | 'front') => {
   currentViewMode.value = mode
   updateViewMode()
+  
+  // 스케일 변경 로그
+  console.log('[ViewMode] Switching to:', mode, {
+    previousScale: mode === 'floor' ? FRONT_VIEW_SCALE : FLOOR_VIEW_SCALE,
+    newScale: getCurrentScale(),
+    viewMode: currentViewMode.value
+  })
+  
+  // 스케일 변경 후 캔버스 크기 재계산
+  nextTick(() => {
+    updateCanvasSize()
+    // 강제 재렌더링을 위한 플래그 토글 (필요시)
+    // forceRerender.value++
+  })
 }
 
 // 뷰 모드 업데이트
@@ -2537,23 +2705,6 @@ const transformToFrontView = () => {
     console.log('[Front View] No lockers to transform')
     return
   }
-  
-  // ===== 테스트 코드: 테스트 락커만 별도 처리 =====
-  // ID가 'test-locker'인 락커를 찾아서 별도 처리
-  const testLockerId = 'test-locker-999'
-  const testLocker = lockers.find(l => l.id === testLockerId)
-  
-  if (testLocker) {
-    console.log('[TEST] Moving test locker for animation test:', testLockerId)
-    
-    // 테스트 락커만 우측 하단으로 이동
-    lockerStore.updateLocker(testLockerId, {
-      frontViewX: 800,  // 우측으로
-      frontViewY: 400,  // 하단으로
-      frontViewRotation: 0
-    })
-  }
-  // ===== 테스트 코드 끝 =====
   
   // Simple approach: Detect U-shape by checking if lockers form 3 sides
   const bounds = {
@@ -2690,25 +2841,30 @@ const positionLockersInFrontView = (lockerSequence) => {
     const displayHeight = locker.actualHeight || locker.height || 60
     const displayWidth = locker.width // Always use original width
     
-    const frontViewX = currentX
-    const frontViewY = FLOOR_Y - displayHeight
+    // CRITICAL: Check height for L3 and L4
+    if (locker.number === 'L3' || locker.number === 'L4') {
+      console.log(`[CRITICAL] ${locker.number} HEIGHT CHECK:`, {
+        actualHeight: locker.actualHeight,
+        shouldBe90: locker.actualHeight === 90,
+        typeId: locker.typeId,
+        displayHeight: displayHeight
+      })
+    }
     
-    // Update through lockerStore to trigger Vue reactivity
+    // Update via store to maintain reactivity and preserve actualHeight
     lockerStore.updateLocker(locker.id, {
-      frontViewX: frontViewX,
-      frontViewY: frontViewY,
+      frontViewX: currentX,
+      frontViewY: FLOOR_Y - displayHeight,
       frontViewRotation: 0  // All lockers face forward
     })
     
     currentX += displayWidth // 간격 제거 (기존 + 5 제거)
     
-    console.log(`[Front View] L${locker.number} positioned:`, {
-      index: index,
-      x: frontViewX,
-      y: frontViewY,
-      width: displayWidth,
-      height: displayHeight,
-      rotation: 'none (facing forward)'
+    console.log(`[TransformToFront] ${locker.number}:`, {
+      actualHeight: locker.actualHeight,
+      yPosition: locker.frontViewY,
+      floorY: FLOOR_Y,
+      calculatedY: `${FLOOR_Y} - ${displayHeight} = ${FLOOR_Y - displayHeight}`
     })
   })
   
@@ -4088,15 +4244,21 @@ const getCursorStyle = computed(() => {
 
 // 초기화
 onMounted(async () => {
+  console.log('Component mounted, loading data...')
+  
+  // Keep loading true until all critical data is loaded
+  isLoadingTypes.value = true
+  isLoadingLockers.value = true
+  
   try {
-    console.log('Component mounted, loading data...')
+    // Load types first, then lockers (zones can remain parallel)
+    await Promise.all([loadZones(), loadLockerTypes()])
+    await loadLockers()  // Wait for types to complete first
     
-    // Load all data concurrently
-    await Promise.all([
-      loadZones(),
-      loadLockers(), 
-      loadLockerTypes()
-    ])
+    // Only set loading false when everything is ready
+    await nextTick()
+    isLoadingTypes.value = false
+    isLoadingLockers.value = false
     
     console.log('All data loading completed')
     
@@ -4106,13 +4268,15 @@ onMounted(async () => {
       console.log('[Data Loading] Auto-selected first zone:', zones.value[0].name)
     }
   } catch (error) {
-    console.error('Data loading error:', error)
+    console.error('Error loading data:', error)
+    isLoadingTypes.value = false
+    isLoadingLockers.value = false
   }
   
-  // Update canvas size on mount
-  setTimeout(() => {
-    updateCanvasSize()
-  }, 100)
+  // Canvas size update는 데이터 로딩 완료 후에만 실행 (깜빡임 방지)
+  // setTimeout(() => {
+  //   updateCanvasSize()
+  // }, 100)
   
   // Add resize listener
   window.addEventListener('resize', updateCanvasSize)
@@ -4124,8 +4288,8 @@ onMounted(async () => {
   // Add click listener to close context menu
   document.addEventListener('click', hideContextMenu)
   
-  // 데이터베이스에서 락커 로드
-  await lockerStore.loadLockersFromDatabase()
+  // 데이터베이스에서 락커 로드 - use proper loadLockers to preserve actualHeight
+  await loadLockers()
   
   // 첫 번째 구역 선택
   if (lockerStore.zones.length > 0) {
@@ -4170,23 +4334,27 @@ onUnmounted(() => {
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(255, 255, 255, 0.95);
+  width: 100vw;
+  height: 100vh;
+  background: rgba(255, 255, 255, 0.9);
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   z-index: 9999;
 }
 
 .loading-spinner {
-  width: 50px;
-  height: 50px;
+  text-align: center;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
   border: 4px solid #f3f3f3;
   border-top: 4px solid #0768AE;
   border-radius: 50%;
   animation: spin 1s linear infinite;
+  margin: 0 auto 16px;
 }
 
 @keyframes spin {
@@ -4195,10 +4363,17 @@ onUnmounted(() => {
 }
 
 .loading-overlay p {
-  margin-top: 16px;
+  margin-top: 0;
   color: #333;
   font-size: 16px;
   font-weight: 500;
+}
+
+.main-content {
+  width: 100%;
+  height: 100%;
+  opacity: 1;
+  transition: opacity 0.3s ease-in-out;
 }
 
 .locker-placement {
@@ -4550,8 +4725,8 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   padding: 16px;
-  min-height: 0; /* Important for flex children to shrink properly */
-  overflow: hidden; /* Prevent canvas-area from expanding beyond viewport */
+  min-height: 792px; /* 740px + padding + 여백 */
+  overflow: auto; /* 스크롤 허용으로 변경 */
 }
 
 /* 구역 탭 */
@@ -4615,25 +4790,23 @@ onUnmounted(() => {
 .canvas-wrapper {
   flex: 1;
   width: 100%;
-  height: calc(100vh - 200px); /* Adjust height for optimal viewing */
-  min-height: 0; /* Allow proper flex shrinking */
+  height: 720px; /* 평면배치 시 720px */
   background: white;
-  overflow: auto; /* Allow scrolling if canvas is larger than viewport */
-  border: 1px solid #d1d5db;
+  overflow: auto; /* 필요시 스크롤 생성 */
+  border: none; /* 경계 제거로 12px 차이 해소 */
+  position: relative; /* SVG 포지셔닝용 */
   border-radius: 4px;
-  overflow: auto; /* Allow scrolling if content exceeds viewport */
   position: relative;
   display: block; /* Changed from flex to block for proper SVG containment */
   padding: 0;
+  box-sizing: border-box; /* 크기 계산 정확성 */
 }
 
 .canvas {
   background: white;
   cursor: crosshair;
-  min-width: 100%;
-  min-height: 100%;
-  width: auto;
-  height: auto;
+  width: 100%;
+  height: 100%;
   display: block;
 }
 
