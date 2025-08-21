@@ -26,7 +26,7 @@ body {
   color: var(--text-primary);
   background-color: var(--background-main);
   min-height: 100vh;
-  overflow-x: hidden;
+  overflow-x: auto; /* 가로 스크롤 허용 */
 }
 
 /* === 레이아웃 기본 스타일 === */

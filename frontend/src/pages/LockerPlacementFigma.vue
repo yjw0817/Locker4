@@ -1235,17 +1235,20 @@ const getSelectionUIPosition = () => {
 const getLockerDimensions = (locker) => {
   if (!locker) return { width: 0, height: 0 }
   
+  // Apply visual scale to match the display
+  const LOCKER_VISUAL_SCALE = 2.0
+  
   if (currentViewMode.value === 'floor') {
     // Floor view (평면배치): Width x Depth
     return {
-      width: locker.width || 40,
-      height: locker.depth || locker.height || 40
+      width: (locker.width || 40) * LOCKER_VISUAL_SCALE,
+      height: (locker.depth || locker.height || 40) * LOCKER_VISUAL_SCALE
     }
   } else {
     // Front view (세로배치): Width x Height
     return {
-      width: locker.width || 40,
-      height: locker.height || 60
+      width: (locker.width || 40) * LOCKER_VISUAL_SCALE,
+      height: (locker.height || 60) * LOCKER_VISUAL_SCALE
     }
   }
 }
@@ -1998,15 +2001,15 @@ const updateSelectionInRectangle = () => {
     let lockerLeft, lockerRight, lockerTop, lockerBottom
     
     if (currentViewMode.value === 'front') {
-      // Use front view positions for hit detection
+      // Use front view positions for hit detection (already scaled in positionLockersInFrontView)
       const frontX = locker.frontViewX !== undefined ? locker.frontViewX : locker.x
       const frontY = locker.frontViewY !== undefined ? locker.frontViewY : locker.y
-      const displayHeight = locker.actualHeight || locker.height || 60
+      const dims = getLockerDimensions(locker)  // Use same function for consistency
       
       lockerLeft = frontX
-      lockerRight = frontX + locker.width
+      lockerRight = frontX + dims.width
       lockerTop = frontY
-      lockerBottom = frontY + displayHeight
+      lockerBottom = frontY + dims.height
     } else {
       // Use floor view positions
       const dims = getLockerDimensions(locker)
@@ -2823,9 +2826,12 @@ const transformToFrontView = () => {
 
 // 프론트 뷰에서 락커 위치 지정 - 중앙 정렬 및 간격 없음
 const positionLockersInFrontView = (lockerSequence) => {
-  // 전체 락커 너비 계산 (간격 없이)
+  // Apply the same visual scale as getLockerDimensions
+  const LOCKER_VISUAL_SCALE = 2.0
+  
+  // 전체 락커 너비 계산 (스케일 적용, 간격 없이)
   const totalLockersWidth = lockerSequence.reduce((total, locker) => {
-    return total + locker.width;
+    return total + (locker.width || 40) * LOCKER_VISUAL_SCALE;
   }, 0);
   
   // 캔버스 너비 사용 (ref 변수이므로 .value 사용)
@@ -2838,8 +2844,9 @@ const positionLockersInFrontView = (lockerSequence) => {
   
   lockerSequence.forEach((locker, index) => {
     // In front view, all lockers face forward (no rotation)
-    const displayHeight = locker.actualHeight || locker.height || 60
-    const displayWidth = locker.width // Always use original width
+    // Apply same scale as getLockerDimensions for consistency
+    const scaledHeight = (locker.actualHeight || locker.height || 60) * LOCKER_VISUAL_SCALE
+    const scaledWidth = (locker.width || 40) * LOCKER_VISUAL_SCALE
     
     // CRITICAL: Check height for L3 and L4
     if (locker.number === 'L3' || locker.number === 'L4') {
@@ -2847,24 +2854,26 @@ const positionLockersInFrontView = (lockerSequence) => {
         actualHeight: locker.actualHeight,
         shouldBe90: locker.actualHeight === 90,
         typeId: locker.typeId,
-        displayHeight: displayHeight
+        scaledHeight: scaledHeight
       })
     }
     
     // Update via store to maintain reactivity and preserve actualHeight
+    // Y position should place the bottom of locker on the floor line (scaled coordinates)
     lockerStore.updateLocker(locker.id, {
-      frontViewX: currentX,
-      frontViewY: FLOOR_Y - displayHeight,
+      frontViewX: currentX,  // Scaled X coordinate
+      frontViewY: FLOOR_Y - scaledHeight,  // Floor line minus scaled height
       frontViewRotation: 0  // All lockers face forward
     })
     
-    currentX += displayWidth // 간격 제거 (기존 + 5 제거)
+    currentX += scaledWidth // Move by scaled width
     
     console.log(`[TransformToFront] ${locker.number}:`, {
       actualHeight: locker.actualHeight,
-      yPosition: locker.frontViewY,
+      scaledHeight: scaledHeight,
+      yPosition: FLOOR_Y - scaledHeight,
       floorY: FLOOR_Y,
-      calculatedY: `${FLOOR_Y} - ${displayHeight} = ${FLOOR_Y - displayHeight}`
+      calculatedY: `${FLOOR_Y} - ${scaledHeight} = ${FLOOR_Y - scaledHeight}`
     })
   })
   
@@ -3327,10 +3336,25 @@ const checkCollisionForLocker = (x: number, y: number, width: number, height: nu
     
     const otherDims = getLockerDimensions(other)
     
-    return !(x >= other.x + otherDims.width ||
-             x + width <= other.x ||
-             y >= other.y + otherDims.height ||
-             y + height <= other.y)
+    // Visual scale is applied in LockerSVG, but collision uses logical coordinates
+    // Logical coordinates are already scaled (width/height are pre-scaled values)
+    
+    // Calculate overlap using logical coordinates
+    const overlapX = Math.min(x + width, other.x + otherDims.width) - Math.max(x, other.x)
+    const overlapY = Math.min(y + height, other.y + otherDims.height) - Math.max(y, other.y)
+    
+    // Only consider it a collision if there's actual overlap (not just touching)
+    const hasOverlap = overlapX > 0 && overlapY > 0
+    
+    if (hasOverlap) {
+      console.log('[Collision] Overlap detected between lockers:', {
+        movingLocker: { x, y, width, height },
+        existingLocker: { x: other.x, y: other.y, width: otherDims.width, height: otherDims.height },
+        overlapX, overlapY
+      })
+    }
+    
+    return hasOverlap
   })
 }
 
@@ -4382,6 +4406,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   background-color: var(--background-main);
+  min-width: 1890px; /* 사이드바(280+32) + 캔버스(1550+32) = 1890px 최소 너비 */
 }
 
 /* 헤더 */
@@ -4411,7 +4436,8 @@ onUnmounted(() => {
 .container {
   flex: 1;
   display: flex;
-  overflow: hidden;
+  overflow: visible; /* 윈도우 레벨 스크롤 허용 */
+  min-width: 1890px; /* 컨테이너도 최소 너비 보장 */
 }
 
 /* 사이드바 */
@@ -4425,6 +4451,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  flex-shrink: 0; /* 사이드바 크기 고정 */
 }
 
 .sidebar-title {
@@ -4726,7 +4753,7 @@ onUnmounted(() => {
   flex-direction: column;
   padding: 16px;
   min-height: 792px; /* 740px + padding + 여백 */
-  overflow: auto; /* 스크롤 허용으로 변경 */
+  overflow: visible; /* 스크롤 제거 - 윈도우 레벨 스크롤만 사용 */
 }
 
 /* 구역 탭 */
@@ -4788,25 +4815,25 @@ onUnmounted(() => {
 
 /* 캔버스 */
 .canvas-wrapper {
-  flex: 1;
-  width: 100%;
+  width: 1550px; /* 고정 너비 - flex 제거 */
   height: 720px; /* 평면배치 시 720px */
   background: white;
-  overflow: auto; /* 필요시 스크롤 생성 */
+  overflow: hidden; /* 캔버스 내부 스크롤 비활성화 */
   border: none; /* 경계 제거로 12px 차이 해소 */
   position: relative; /* SVG 포지셔닝용 */
   border-radius: 4px;
-  position: relative;
-  display: block; /* Changed from flex to block for proper SVG containment */
+  display: block;
   padding: 0;
-  box-sizing: border-box; /* 크기 계산 정확성 */
+  margin: 16px; /* 좌우 여백 */
+  box-sizing: border-box;
+  flex-shrink: 0; /* 캔버스 크기 고정 */
 }
 
 .canvas {
   background: white;
   cursor: crosshair;
-  width: 100%;
-  height: 100%;
+  width: 100%; /* 부모 컨테이너에 맞춤 - 스크롤 방지 */
+  height: 100%; /* 부모 컨테이너에 맞춤 */
   display: block;
 }
 
