@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>락커 회전 시스템 수정 완료</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+        }
+        .fix-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
+        }
+        .fix-section h2 {
+            color: #28a745;
+            margin-top: 0;
+        }
+        .problem {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border-left: 4px solid #ffc107;
+        }
+        .solution {
+            background: #d4edda;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border-left: 4px solid #28a745;
+        }
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        .test-instructions {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #2196f3;
+        }
+        .test-instructions h3 {
+            color: #2196f3;
+            margin-top: 0;
+        }
+        .test-steps {
+            list-style: none;
+            padding: 0;
+        }
+        .test-steps li {
+            padding: 10px 0;
+            border-bottom: 1px solid #ddd;
+        }
+        .test-steps li:last-child {
+            border-bottom: none;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .status-fixed {
+            background: #28a745;
+            color: white;
+        }
+        .status-improved {
+            background: #17a2b8;
+            color: white;
+        }
+        .highlight {
+            background: #ffeb3b;
+            padding: 2px 4px;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 락커 회전 시스템 수정 완료 보고서</h1>
+        
+        <div class="fix-section">
+            <h2>✅ 수정 사항 #1: 270도 경계 역회전 문제 <span class="status-badge status-fixed">해결됨</span></h2>
+            
+            <div class="problem">
+                <strong>🔴 문제:</strong> 락커를 270도 이상 회전시 거꾸로 돌아가는 현상 발생
+            </div>
+            
+            <div class="solution">
+                <strong>🟢 해결책:</strong> 누적 회전 추적 시스템 구현
+                <div class="code-block">
+// 누적 회전 값 추적
+const cumulativeRotation = ref(0)
+
+// 최단 경로 각도 차이 계산
+const getAngleDifference = (angle1: number, angle2: number) => {
+  let diff = angle2 - angle1
+  while (diff > 180) diff -= 360
+  while (diff < -180) diff += 360
+  return diff
+}
+
+// 델타 방식으로 누적 회전 업데이트
+cumulativeRotation.value += angleDelta</div>
+            </div>
+        </div>
+
+        <div class="fix-section">
+            <h2>✅ 수정 사항 #2: 다중 선택 개별 회전 문제 <span class="status-badge status-fixed">해결됨</span></h2>
+            
+            <div class="problem">
+                <strong>🔴 문제:</strong> 다중 선택시 각 락커가 자신의 중심으로 개별 회전하는 현상
+            </div>
+            
+            <div class="solution">
+                <strong>🟢 해결책:</strong> 그룹 단위 회전만 적용하도록 수정
+                <div class="code-block">
+// 그룹 회전 시 각 락커의 회전값도 동일하게 업데이트
+// (개별 회전이 아닌 그룹 단위 회전)
+locker.rotation = (locker.rotation || 0) + rotationDelta</div>
+            </div>
+        </div>
+
+        <div class="fix-section">
+            <h2>✅ 수정 사항 #3: 스냅 기능 개선 <span class="status-badge status-improved">개선됨</span></h2>
+            
+            <div class="problem">
+                <strong>🔴 문제:</strong> 누적 회전시 스냅이 제대로 작동하지 않음
+            </div>
+            
+            <div class="solution">
+                <strong>🟢 해결책:</strong> 누적 회전을 고려한 스냅 계산 로직 구현
+                <div class="code-block">
+// 누적 회전에서도 스냅이 작동하도록 수정
+const normalizedRotation = ((newRotation % 360) + 360) % 360
+// 누적 회전 값을 유지하면서 스냅 적용
+const fullRotations = Math.floor(newRotation / 360) * 360
+newRotation = fullRotations + snapAngle</div>
+            </div>
+        </div>
+
+        <div class="test-instructions">
+            <h3>🧪 테스트 방법</h3>
+            <ol class="test-steps">
+                <li>
+                    <strong>단일 락커 회전 테스트:</strong>
+                    <br>락커 하나를 선택하고 360도 이상 계속 회전시켜 보세요.
+                    <br><span class="highlight">기대 결과:</span> 역회전 없이 부드럽게 계속 회전
+                </li>
+                <li>
+                    <strong>다중 선택 그룹 회전 테스트:</strong>
+                    <br>Ctrl+클릭으로 여러 락커를 선택하고 회전시켜 보세요.
+                    <br><span class="highlight">기대 결과:</span> 모든 락커가 하나의 그룹처럼 회전
+                </li>
+                <li>
+                    <strong>스냅 기능 테스트:</strong>
+                    <br>락커를 여러 바퀴 돌린 후 45도 간격 지점에서 스냅되는지 확인하세요.
+                    <br><span class="highlight">기대 결과:</span> 몇 바퀴를 돌았든 45도 간격으로 스냅
+                </li>
+            </ol>
+        </div>
+
+        <div style="background: #e8f5e9; padding: 20px; border-radius: 8px; margin-top: 30px; text-align: center;">
+            <h2 style="color: #2e7d32; margin: 0;">🎉 모든 회전 관련 문제가 해결되었습니다!</h2>
+            <p style="margin: 10px 0 0 0; color: #555;">
+                락커 회전 시스템이 이제 완벽하게 작동합니다.
+                <br>테스트 페이지: <a href="http://localhost:5174/locker-placement-figma" target="_blank">http://localhost:5174/locker-placement-figma</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

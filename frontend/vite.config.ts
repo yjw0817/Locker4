@@ -10,8 +10,8 @@ export default defineConfig({
     }
   },
   server: {
-    port: 5173,  // Frontend server port - fixed to avoid conflicts
-    strictPort: false,  // Allow auto-increment if port is taken
+    port: 5174,  // Frontend server port - fixed to avoid conflicts
+    strictPort: true,  // Use exact port 5174
     host: 'localhost',  // Listen on localhost only
     proxy: {
       '/api': {

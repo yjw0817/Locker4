@@ -22,14 +22,28 @@ const statusMapReverse = {
 // Get all lockers
 router.get('/', async (req, res) => {
   try {
-    const { COMP_CD = '001', BCOFF_CD = '001' } = req.query;
+    const { COMP_CD = '001', BCOFF_CD = '001', parentOnly } = req.query;
     
-    const [rows] = await pool.query(
-      'SELECT * FROM lockrs WHERE COMP_CD = ? AND BCOFF_CD = ? ORDER BY LOCKR_CD',
-      [COMP_CD, BCOFF_CD]
-    );
+    // Build dynamic query based on parentOnly parameter
+    let query = 'SELECT * FROM lockrs WHERE COMP_CD = ? AND BCOFF_CD = ?';
+    const params = [COMP_CD, BCOFF_CD];
+    
+    if (parentOnly === 'true') {
+      query += ' AND PARENT_LOCKR_CD IS NULL';
+      console.log('[API] Filtering for parent lockers only (PARENT_LOCKR_CD IS NULL)');
+    }
+    
+    query += ' ORDER BY LOCKR_CD';
+    
+    const [rows] = await pool.query(query, params);
     
     console.log(`[API] Found ${rows.length} lockers for COMP_CD=${COMP_CD}, BCOFF_CD=${BCOFF_CD}`);
+
+    // Add this debug line:
+    console.log('[API Debug] All PARENT_LOCKR_CD values:', rows.map(r => ({ 
+      label: r.LOCKR_LABEL, 
+      parent: r.PARENT_LOCKR_CD 
+    })));
     
     // Ensure type codes are strings for consistency
     const processedRows = rows.map(row => ({
@@ -284,18 +298,32 @@ router.post('/:lockrCd/tiers', async (req, res) => {
     
     // Create tier lockers
     for (let i = 1; i <= tierCount; i++) {
+      // Calculate front view positions - tiers should stack ABOVE parent
+      const LOCKER_VISUAL_SCALE = 2.0
+      const tierHeight = 60
+      const gap = 10
+      const scaledTierHeight = tierHeight * LOCKER_VISUAL_SCALE
+      const scaledGap = gap * LOCKER_VISUAL_SCALE
+      
+      // Parent's front view position (or use floor position as fallback)
+      const parentFrontX = parentLocker.FRONT_VIEW_X !== null ? parentLocker.FRONT_VIEW_X : parentLocker.X
+      const parentFrontY = parentLocker.FRONT_VIEW_Y !== null ? parentLocker.FRONT_VIEW_Y : parentLocker.Y
+      
+      // Stack tiers ABOVE parent (subtract from Y coordinate)
+      const tierFrontViewY = parentFrontY - (scaledTierHeight + scaledGap) * i
+
       const tierData = {
         COMP_CD: parentLocker.COMP_CD,
         BCOFF_CD: parentLocker.BCOFF_CD,
         LOCKR_KND: parentLocker.LOCKR_KND,
         LOCKR_TYPE_CD: parentLocker.LOCKR_TYPE_CD,
-        X: parentLocker.X,
-        Y: parentLocker.Y,
+        X: null, // No floor position for front-view-only tiers
+        Y: null, // No floor position for front-view-only tiers
         LOCKR_LABEL: `${parentLocker.LOCKR_LABEL}-T${i}`,
-        ROTATION: parentLocker.ROTATION,
-        DOOR_DIRECTION: parentLocker.DOOR_DIRECTION,
-        FRONT_VIEW_X: parentLocker.FRONT_VIEW_X,
-        FRONT_VIEW_Y: (parentLocker.FRONT_VIEW_Y || 0) + (i * 40),
+        ROTATION: 0, // Front view lockers always face forward
+        DOOR_DIRECTION: null,
+        FRONT_VIEW_X: parentFrontX,
+        FRONT_VIEW_Y: Math.round(tierFrontViewY),
         GROUP_NUM: parentLocker.GROUP_NUM,
         LOCKR_GENDR_SET: parentLocker.LOCKR_GENDR_SET,
         LOCKR_NO: parentLocker.LOCKR_NO ? (parentLocker.LOCKR_NO * 10 + i) : null,

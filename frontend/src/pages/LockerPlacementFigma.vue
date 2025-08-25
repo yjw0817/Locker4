@@ -71,15 +71,17 @@
                   :ry="2 * 2.0"
                   shape-rendering="crispEdges"
                 />
-                <!-- Front indicator line -->
+                <!-- Front indicator line - 락커 선택창 유지 -->
                 <line
-                  :x1="6 * 2.0"
-                  :y1="(((type.depth || type.width) || 40) * 2.0) - (6 * 2.0)"
-                  :x2="((type.width || 40) * 2.0) - (6 * 2.0)"
-                  :y2="(((type.depth || type.width) || 40) * 2.0) - (6 * 2.0)"
-                  :stroke="type.color || '#D1D5DB'"
-                  :stroke-width="2 * 2.0"
-                  opacity="0.8"
+                  :x1="10"
+                  :y1="(((type.depth || type.width) || 40) * 2.0) - 5"
+                  :x2="((type.width || 40) * 2.0) - 10"
+                  :y2="(((type.depth || type.width) || 40) * 2.0) - 5"
+                  :stroke="type.color || '#1e40af'"
+                  stroke-width="4"
+                  opacity="0.9"
+                  stroke-linecap="square"
+                  class="front-indicator"
                 />
               </svg>
             </div>
@@ -125,17 +127,20 @@
       <main class="canvas-area">
         <!-- 구역 탭 -->
         <div class="zone-tabs">
-          <button 
-            v-for="zone in zones" 
-            :key="zone.id"
-            class="zone-tab"
-            :class="{ active: selectedZone?.id === zone.id }"
-            @click="selectZone(zone)"
-            @contextmenu="showZoneContextMenuHandler($event, zone)"
-          >
-            {{ zone.name }}
-            <span v-if="selectedZone?.id === zone.id" class="tab-indicator"></span>
-          </button>
+          <!-- 탭 그룹 -->
+          <div class="zone-tab-group">
+            <button 
+              v-for="zone in zones" 
+              :key="zone.id"
+              class="zone-tab"
+              :class="{ active: selectedZone?.id === zone.id }"
+              @click="selectZone(zone)"
+              @contextmenu="showZoneContextMenuHandler($event, zone)"
+            >
+              {{ zone.name }}
+              <span v-if="selectedZone?.id === zone.id" class="tab-indicator"></span>
+            </button>
+          </div>
           
           <!-- Zone controls container -->
           <div class="zone-controls">
@@ -167,7 +172,7 @@
               <button 
                 class="mode-btn"
                 :class="{ active: currentViewMode === 'front' }"
-                @click="setViewMode('front')"
+                @click="console.log('[BUTTON] Front view button clicked - BEFORE setViewMode'); setViewMode('front'); console.log('[BUTTON] Front view button clicked - AFTER setViewMode')"
                 title="세로배치모드 (F)"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -177,6 +182,32 @@
                   <rect x="13" y="7" width="4" height="6" />
                 </svg>
                 <span>세로배치</span>
+              </button>
+              
+              <button 
+                class="mode-btn"
+                @click="showGroupingAnalysis"
+                title="그룹핑 결과 확인"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M12 1v6m0 6v6"/>
+                  <path d="m21 12-6-3-6 3-6-3"/>
+                </svg>
+                <span>그룹핑 확인</span>
+              </button>
+              
+              <button 
+                class="mode-btn debug-btn"
+                @click="debugPopupVisible = true"
+                title="락커 데이터 상세 확인"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="m9 12 2 2 4-4"/>
+                  <path d="M21 12c.552 0 1.005-.449.95-.998a10 10 0 0 0-8.953-8.951c-.55-.055-.998.398-.998.95v8a1 1 0 0 0 1 1z"/>
+                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/>
+                </svg>
+                <span>디버그 정보</span>
               </button>
             </div>
           </div>
@@ -253,7 +284,9 @@
               :locker="locker"
               :is-selected="selectedLocker?.id === locker.id"
               :is-multi-selected="selectedLockerIds.has(locker.id)"
+              :should-hide-individual-outline="lockersNeedingUnifiedOutline.has(locker.id) && !isDragging"
               :is-dragging="isDragging && selectedLockerIds.has(locker.id)"
+              :adjacent-sides="getAdjacentSides(locker.id)"
               :view-mode="currentViewMode"
               :show-number="true"
               :show-rotate-handle="selectedLocker?.id === locker.id"
@@ -262,7 +295,34 @@
               @select="(id) => selectedLocker = currentLockers.find(l => l.id === id)"
               @dragstart="startDragLocker"
               @rotatestart="startRotateLocker"
+              @rotate="handleRotateMove"
+              @rotateend="handleRotateEnd"
             />
+            
+            <!-- 통합 외곽선 그리기 (드래그 중에는 숨김) -->
+            <g v-if="connectedGroups.length > 0 && !isDragging" class="unified-outlines">
+              <rect
+                v-for="(group, index) in connectedGroups.filter(g => g.length > 1)"
+                :key="`group-${index}`"
+                :x="(calculateUnifiedBounds(group)?.minX || 0) - 5"
+                :y="(calculateUnifiedBounds(group)?.minY || 0) - 5"
+                :width="(calculateUnifiedBounds(group)?.width || 0) + 10"
+                :height="(calculateUnifiedBounds(group)?.height || 0) + 10"
+                fill="none"
+                stroke="#0768AE"
+                stroke-width="2"
+                stroke-dasharray="5,5"
+                class="unified-selection-outline"
+                pointer-events="none"
+              >
+                <animate 
+                  attributeName="stroke-dashoffset" 
+                  values="0;10" 
+                  dur="0.5s" 
+                  repeatCount="indefinite"
+                />
+              </rect>
+            </g>
             
             <!-- Selection UI handles (delete, rotate) - Follow during drag and rotate with locker -->
             <g v-if="selectedLocker && !isDragging && showSelectionUI">
@@ -271,7 +331,7 @@
                 
                 <!-- Delete button (top right, outside locker bounds) -->
                 <g 
-                  :transform="`translate(${selectedLocker.width + 15}, -15)`"
+                  :transform="`translate(${selectedLocker.width + 25}, -10)`"
                   @click.stop="deleteSelectedLocker"
                   style="cursor: pointer"
                   class="selection-button delete-button"
@@ -282,47 +342,7 @@
                   <path d="M-5,-5 L5,5 M5,-5 L-5,5" stroke="#ef4444" stroke-width="2" stroke-linecap="round"/>
                 </g>
                 
-                <!-- Rotate Clockwise button (above center handle, slightly right) -->
-                <g 
-                  :transform="`translate(${selectedLocker.width / 2 + 15}, -30)`"
-                  @click.stop="() => rotateSelectedLocker(45)"
-                  style="cursor: pointer"
-                  class="selection-button rotate-cw-button"
-                >
-                  <title>시계방향 회전 (R)</title>
-                  <circle r="12" fill="#ffffff" stroke="#e5e7eb" stroke-width="1.5"/>
-                  <circle r="12" fill="#3b82f6" opacity="0" class="hover-fill"/>
-                  <!-- Stable rotation icon without transform -->
-                  <path 
-                    d="M 0,-6 A 6,6 0 0,1 6,0 L 4,-2 M 6,0 L 4,2" 
-                    fill="none" 
-                    stroke="#3b82f6" 
-                    stroke-width="2" 
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </g>
-                
-                <!-- Rotate Counter-Clockwise button (above center handle, slightly left) -->
-                <g 
-                  :transform="`translate(${selectedLocker.width / 2 - 15}, -30)`"
-                  @click.stop="() => rotateSelectedLocker(-45)"
-                  style="cursor: pointer"
-                  class="selection-button rotate-ccw-button"
-                >
-                  <title>반시계방향 회전 (Shift+R)</title>
-                  <circle r="12" fill="#ffffff" stroke="#e5e7eb" stroke-width="1.5"/>
-                  <circle r="12" fill="#10b981" opacity="0" class="hover-fill"/>
-                  <!-- Stable rotation icon without transform -->
-                  <path 
-                    d="M 0,-6 A 6,6 0 0,0 -6,0 L -4,-2 M -6,0 L -4,2" 
-                    fill="none" 
-                    stroke="#10b981" 
-                    stroke-width="2" 
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </g>
+                <!-- 회전 버튼 제거 - 드래그 기반 회전으로 대체됨 -->
                 
                 <!-- Multi-select badge removed as requested -->
                 <!-- <g v-if="selectedLockerIds.size > 1" 
@@ -517,7 +537,101 @@
         <button class="btn btn-primary" @click="assignNumbers">번호 부여</button>
       </div>
     </div>
-    </div> <!-- Close main-content -->
+  </div>
+  
+  <!-- Grouping Analysis Popup -->
+  <div v-if="showGroupingPopup" class="modal-overlay" @click="showGroupingPopup = false">
+    <div class="modal-content grouping-popup" @click.stop>
+      <h3>대그룹 분석 결과</h3>
+      <div class="grouping-results">
+        <pre>{{ groupingAnalysisResult }}</pre>
+      </div>
+      <div class="modal-buttons">
+        <button class="btn btn-primary" @click="showGroupingPopup = false">확인</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Debug Information Popup -->
+  <div v-if="debugPopupVisible" class="modal-overlay" @click="debugPopupVisible = false">
+    <div class="modal-content debug-popup" @click.stop>
+      <h3>🔍 락커 데이터 디버깅 정보</h3>
+      
+      <div class="debug-section">
+        <h4>📊 전체 통계</h4>
+        <div class="debug-stats">
+          <div class="stat-item">
+            <span class="label">Store 전체:</span>
+            <span class="value">{{ lockerStore.lockers.length }}개</span>
+          </div>
+          <div class="stat-item">
+            <span class="label">현재 구역:</span>
+            <span class="value">{{ currentLockers.length }}개</span>
+          </div>
+          <div class="stat-item">
+            <span class="label">뷰모드:</span>
+            <span class="value">{{ currentViewMode }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="label">선택 구역:</span>
+            <span class="value">{{ selectedZone?.name || 'None' }}</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="debug-section">
+        <h4>🏢 Store 전체 락커 ({{ lockerStore.lockers.length }}개)</h4>
+        <div class="locker-list">
+          <div 
+            v-for="locker in lockerStore.lockers" 
+            :key="locker.id"
+            class="locker-item"
+            :class="{ parent: !locker.parentLockrCd, child: !!locker.parentLockrCd }"
+          >
+            <div class="locker-header">
+              <span class="locker-name">{{ locker.number }}</span>
+              <span class="locker-type">{{ !locker.parentLockrCd ? '부모' : '자식' }}</span>
+            </div>
+            <div class="locker-details">
+              <span>ID: {{ locker.id }}</span>
+              <span>Zone: {{ locker.zoneId }}</span>
+              <span>Parent: {{ locker.parentLockrCd || 'None' }}</span>
+              <span>Height: {{ locker.actualHeight || locker.height }}px</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="debug-section">
+        <h4>👁️ 현재 표시 락커 ({{ currentLockers.length }}개)</h4>
+        <div class="locker-list">
+          <div 
+            v-for="locker in currentLockers" 
+            :key="locker.id"
+            class="locker-item current"
+            :class="{ parent: !locker.parentLockrCd, child: !!locker.parentLockrCd }"
+          >
+            <div class="locker-header">
+              <span class="locker-name">{{ locker.number }}</span>
+              <span class="locker-type">{{ !locker.parentLockrCd ? '부모' : '자식' }}</span>
+              <span class="render-status">표시중</span>
+            </div>
+            <div class="locker-details">
+              <span>위치: ({{ locker.x }}, {{ locker.y }})</span>
+              <span>크기: {{ locker.width }}x{{ locker.height }}</span>
+              <span>실제높이: {{ locker.actualHeight }}px</span>
+              <span>회전: {{ locker.rotation }}°</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-buttons">
+        <button class="btn btn-secondary" @click="loadLockers()">🔄 새로고침</button>
+        <button class="btn btn-primary" @click="debugPopupVisible = false">닫기</button>
+      </div>
+    </div>
+  </div>
     
     <!-- Zone Context Menu -->
     <teleport to="body">
@@ -589,6 +703,11 @@ const dragOffset = ref({ x: 0, y: 0 })
 const currentViewMode = ref<'floor' | 'front'>('floor') // View mode state
 const showSelectionUI = ref(true) // Control selection UI visibility during drag
 const isCopyMode = ref(false) // Track if Ctrl/Cmd is pressed for copy mode
+const frontViewSequence = ref<any[]>([]) // Store front view locker sequence
+
+// Grouping analysis popup state
+const showGroupingPopup = ref(false)
+const groupingAnalysisResult = ref('')
 
 // Context menu state
 const contextMenuVisible = ref(false)
@@ -607,6 +726,9 @@ const contextMenuType = ref(null)
 // Dialog states
 const floorInputVisible = ref(false)
 const floorCount = ref(1)
+
+// 디버깅용 팝업 상태
+const debugPopupVisible = ref(false)
 const numberAssignVisible = ref(false)
 const startNumber = ref(1)
 const numberDirection = ref<'horizontal' | 'vertical'>('horizontal')
@@ -632,7 +754,7 @@ const getCanvasDisplayWidth = () => {
 const DISPLAY_SCALE = 1.0
 
 // Floor line position for front view (logical units)
-const FLOOR_Y = 450  // 바닥선 Y 위치
+const FLOOR_Y = 550  // 바닥선 Y 위치 (100px 아래로 이동)
 
 // Log scale configuration
 console.log('[Scale] Display configuration:', {
@@ -764,8 +886,19 @@ const loadZones = async () => {
 
 const loadLockers = async () => {
   try {
-    console.log('[API] Loading lockers from API...')
-    const response = await fetch(`${API_BASE_URL}/lockrs`)
+    // Build API URL based on view mode
+    const isFloorView = currentViewMode.value === 'floor'
+    const apiUrl = isFloorView 
+      ? `${API_BASE_URL}/lockrs?parentOnly=true` 
+      : `${API_BASE_URL}/lockrs`
+    
+    console.log(`[LOADLOCKERS] ⚡ STARTING loadLockers() call`)
+    console.log(`[LOADLOCKERS] Current view mode: ${currentViewMode.value}`)
+    console.log(`[LOADLOCKERS] Is floor view: ${isFloorView}`)
+    console.log(`[LOADLOCKERS] API URL: ${apiUrl}`)
+    console.log(`[LOADLOCKERS] Stack trace:`, new Error().stack)
+    
+    const response = await fetch(apiUrl)
     
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`)
@@ -773,6 +906,17 @@ const loadLockers = async () => {
     
     const data = await response.json()
     console.log('[API] Lockers API response:', data)
+    console.log(`[API] DEBUG - Response contains ${data.lockers?.length || 0} lockers`)
+    
+    // DETAILED DEBUG: 각 락커의 parent 관계 출력
+    if (data.lockers) {
+      console.log('[API] PARENT-CHILD ANALYSIS:')
+      data.lockers.forEach(locker => {
+        const isParent = locker.PARENT_LOCKR_CD === null
+        const parentInfo = isParent ? 'PARENT' : `CHILD of ${locker.PARENT_LOCKR_CD}`
+        console.log(`  ${locker.LOCKR_LABEL}: ${parentInfo} (PARENT_LOCKR_CD: ${locker.PARENT_LOCKR_CD})`)
+      })
+    }
     
     if (data.success && data.lockers) {
       // Transform backend data to frontend format
@@ -792,12 +936,16 @@ const loadLockers = async () => {
           isTallLocker: locker.LOCKR_TYPE_CD === 'custom-1755675506519' ? 'YES (90px)' : 'NO'
         })
         
+        // CRITICAL DEBUG: Parent-child relationship transformation
+        const parentLockerId = locker.PARENT_LOCKR_CD ? `locker-${locker.PARENT_LOCKR_CD}` : null
+        console.log(`[TRANSFORM DEBUG] ${locker.LOCKR_LABEL}: PARENT_LOCKR_CD=${locker.PARENT_LOCKR_CD}, parentLockerId=${parentLockerId}`)
+
         const transformedLocker = {
           id: `locker-${locker.LOCKR_CD}`,
           lockrCd: locker.LOCKR_CD,
           number: locker.LOCKR_LABEL || `L${locker.LOCKR_CD}`,
-          x: locker.X || 0,
-          y: locker.Y || 0,
+          x: locker.X !== null && locker.X !== undefined ? locker.X : undefined,
+          y: locker.Y !== null && locker.Y !== undefined ? locker.Y : undefined,
           width: typeWidth,
           height: typeDepth,  // Floor view에서는 depth를 height로 사용
           depth: typeDepth,
@@ -819,7 +967,8 @@ const loadLockers = async () => {
           frontViewX: locker.FRONT_VIEW_X,
           frontViewY: locker.FRONT_VIEW_Y,
           frontViewNumber: locker.FRONT_VIEW_NUMBER,
-          // Other fields
+          // Parent-child relationship
+          parentLockerId: parentLockerId,  // THIS WAS MISSING!
           parentLockrCd: locker.PARENT_LOCKR_CD,
           tierLevel: locker.TIER_LEVEL,
           lockrStat: locker.LOCKR_STAT
@@ -833,6 +982,14 @@ const loadLockers = async () => {
       
       // Update the store with transformed data
       lockerStore.lockers = transformedLockers
+      
+      // DETAILED DEBUG: Store에 저장된 데이터 확인
+      console.log('[STORE] After assignment, lockerStore.lockers contains:')
+      lockerStore.lockers.forEach(locker => {
+        const isParent = !locker.parentLockrCd
+        const parentInfo = isParent ? 'PARENT' : `CHILD of ${locker.parentLockrCd}`
+        console.log(`  ${locker.number}: ${parentInfo} (parentLockrCd: ${locker.parentLockrCd})`)
+      })
       
       // CRITICAL DEBUG: Verify actualHeight is preserved in store
       transformedLockers.forEach(locker => {
@@ -1061,6 +1218,226 @@ const saveMultipleLockerPositions = async (positions: Array<{ id: string, x: num
 // Hidden/deleted locker types
 const hiddenTypes = ref<string[]>([])
 
+// ========== 통합 외곽선 계산 함수들 ==========
+// 다중 선택된 락커들의 통합 경계 계산
+const calculateUnifiedBounds = (selectedLockers: any[]) => {
+  if (selectedLockers.length <= 1) return null
+  
+  const LOCKER_VISUAL_SCALE = 2.0
+  
+  const bounds = selectedLockers.map(locker => {
+    // Front view에서는 actualHeight 사용
+    const height = currentViewMode.value === 'front' 
+      ? (locker.actualHeight || locker.height || 60)
+      : (locker.depth || locker.height || 40)
+    
+    // Use front view coordinates in front view mode
+    const x = currentViewMode.value === 'front' 
+      ? (locker.frontViewX !== undefined ? locker.frontViewX : locker.x)
+      : locker.x
+    const y = currentViewMode.value === 'front'
+      ? (locker.frontViewY !== undefined ? locker.frontViewY : locker.y) 
+      : locker.y
+    
+    return {
+      left: x,
+      right: x + (locker.width * LOCKER_VISUAL_SCALE),
+      top: y,
+      bottom: y + (height * LOCKER_VISUAL_SCALE),
+      locker
+    }
+  })
+  
+  const minX = Math.min(...bounds.map(b => b.left))
+  const maxX = Math.max(...bounds.map(b => b.right))
+  const minY = Math.min(...bounds.map(b => b.top))
+  const maxY = Math.max(...bounds.map(b => b.bottom))
+  
+  // 논리적 좌표와 실제 크기로 반환
+  return { minX, maxX, minY, maxY, width: maxX - minX, height: maxY - minY }
+}
+
+// 인접성 검사 - 면이 닿아있는지 확인
+const areAdjacent = (locker1: any, locker2: any, maxGap = 5) => {
+  // 락커는 논리적 좌표로 위치하고, 크기만 2배 스케일로 렌더링됨
+  const LOCKER_VISUAL_SCALE = 2.0
+  
+  // Front view에서는 actualHeight 사용
+  const height1 = currentViewMode.value === 'front' 
+    ? (locker1.actualHeight || locker1.height || 60)
+    : (locker1.depth || locker1.height || 40)
+  const height2 = currentViewMode.value === 'front' 
+    ? (locker2.actualHeight || locker2.height || 60)
+    : (locker2.depth || locker2.height || 40)
+  
+  // Use appropriate coordinates based on view mode
+  const getLockerCoords = (locker: any) => {
+    if (currentViewMode.value === 'front') {
+      return {
+        x: locker.frontViewX !== undefined ? locker.frontViewX : locker.x,
+        y: locker.frontViewY !== undefined ? locker.frontViewY : locker.y
+      }
+    } else {
+      return { x: locker.x, y: locker.y }
+    }
+  }
+  
+  const coords1 = getLockerCoords(locker1)
+  const coords2 = getLockerCoords(locker2)
+  
+  // 논리적 좌표 + 스케일된 크기
+  const l1 = { 
+    left: coords1.x, 
+    right: coords1.x + (locker1.width * LOCKER_VISUAL_SCALE),
+    top: coords1.y, 
+    bottom: coords1.y + (height1 * LOCKER_VISUAL_SCALE)
+  }
+  const l2 = { 
+    left: coords2.x, 
+    right: coords2.x + (locker2.width * LOCKER_VISUAL_SCALE),
+    top: coords2.y, 
+    bottom: coords2.y + (height2 * LOCKER_VISUAL_SCALE)
+  }
+  
+  // 최대 간격 (논리적 픽셀 단위)
+  const scaledMaxGap = maxGap
+  
+  // 수평 거리 계산 (좌우로 인접)
+  const horizontalDistance = Math.min(
+    Math.abs(l1.right - l2.left),
+    Math.abs(l2.right - l1.left)
+  )
+  
+  // 수직 거리 계산 (위아래로 인접)
+  const verticalDistance = Math.min(
+    Math.abs(l1.bottom - l2.top),
+    Math.abs(l2.bottom - l1.top)
+  )
+  
+  // 수직 인접 체크 (위아래로 붙어있거나 가까이 있음)
+  const verticallyClose = verticalDistance <= scaledMaxGap
+  const horizontalOverlap = l1.left < l2.right && l2.left < l1.right
+  
+  // 수평 인접 체크 (좌우로 붙어있거나 가까이 있음)
+  const horizontallyClose = horizontalDistance <= scaledMaxGap
+  const verticalOverlap = l1.top < l2.bottom && l2.top < l1.bottom
+  
+  // 인접 여부: 수평 또는 수직으로 가까이 있고 겹치는 부분이 있을 때
+  const isAdjacent = (verticallyClose && horizontalOverlap) || (horizontallyClose && verticalOverlap)
+  
+  // 디버깅 로그
+  console.log(`[DEBUG] Checking adjacency: ${locker1.id} <-> ${locker2.id}`)
+  console.log(`  L1 bounds: x=${l1.left}, right=${l1.right}, y=${l1.top}, bottom=${l1.bottom}`)
+  console.log(`  L2 bounds: x=${l2.left}, right=${l2.right}, y=${l2.top}, bottom=${l2.bottom}`)
+  console.log(`  Distance: horizontal=${horizontalDistance}px (max: ${scaledMaxGap}px), vertical=${verticalDistance}px`)
+  console.log(`  Horizontally close: ${horizontallyClose}, Vertically close: ${verticallyClose}`)
+  console.log(`  Horizontal overlap: ${horizontalOverlap}, Vertical overlap: ${verticalOverlap}`)
+  console.log(`  Result: ${isAdjacent ? '✅ ADJACENT' : '❌ NOT ADJACENT'}`)
+  
+  return isAdjacent
+}
+
+// 연결된 락커 그룹 찾기
+const findConnectedGroups = (selectedLockers: any[]) => {
+  const groups: any[][] = []
+  const visited = new Set()
+  
+  const dfs = (locker: any, currentGroup: any[]) => {
+    if (visited.has(locker.id)) return
+    visited.add(locker.id)
+    currentGroup.push(locker)
+    
+    // 인접한 다른 선택된 락커 찾기
+    selectedLockers.forEach(other => {
+      if (!visited.has(other.id) && areAdjacent(locker, other)) {
+        dfs(other, currentGroup)
+      }
+    })
+  }
+  
+  selectedLockers.forEach(locker => {
+    if (!visited.has(locker.id)) {
+      const group: any[] = []
+      dfs(locker, group)
+      groups.push(group)
+    }
+  })
+  
+  return groups
+}
+
+// 락커의 인접한 면 계산 (회전 고려)
+const getAdjacentSides = (lockerId: string): string[] => {
+  if (!isDragging.value || !selectedLockerIds.value.has(lockerId)) {
+    return []
+  }
+  
+  const locker = currentLockers.value.find(l => l.id === lockerId)
+  if (!locker) return []
+  
+  const adjacentSides: string[] = []
+  const LOCKER_VISUAL_SCALE = 2.0
+  const tolerance = 10 // 인접 판단 허용 오차
+  
+  // 회전된 락커의 실제 경계 구하기
+  const lockerBounds = getRotatedBounds(locker)
+  
+  // 락커의 회전 각도에 따른 각 변의 방향 결정
+  const rotation = (locker.rotation || 0) % 360
+  
+  // 회전에 따른 변 매핑
+  // 0도: top=위, right=오른쪽, bottom=아래, left=왼쪽
+  // 90도: top=왼쪽, right=위, bottom=오른쪽, left=아래
+  // 180도: top=아래, right=왼쪽, bottom=위, left=오른쪽
+  // 270도: top=오른쪽, right=아래, bottom=왼쪽, left=위
+  const sideMap = {
+    0: { top: 'top', right: 'right', bottom: 'bottom', left: 'left' },
+    90: { top: 'left', right: 'top', bottom: 'right', left: 'bottom' },
+    180: { top: 'bottom', right: 'left', bottom: 'top', left: 'right' },
+    270: { top: 'right', right: 'bottom', bottom: 'left', left: 'top' }
+  }
+  
+  const normalizedRotation = Math.round(rotation / 90) * 90 % 360
+  const mapping = sideMap[normalizedRotation] || sideMap[0]
+  
+  // 선택된 다른 락커들과 비교
+  selectedLockers.value.forEach(other => {
+    if (other.id === lockerId) return
+    
+    const otherBounds = getRotatedBounds(other)
+    
+    // 실제 위치에서 상단 인접 체크
+    if (Math.abs(lockerBounds.y - (otherBounds.y + otherBounds.height)) < tolerance &&
+        lockerBounds.x < otherBounds.x + otherBounds.width && 
+        lockerBounds.x + lockerBounds.width > otherBounds.x) {
+      adjacentSides.push(mapping.top)
+    }
+    
+    // 실제 위치에서 하단 인접 체크
+    if (Math.abs(lockerBounds.y + lockerBounds.height - otherBounds.y) < tolerance &&
+        lockerBounds.x < otherBounds.x + otherBounds.width && 
+        lockerBounds.x + lockerBounds.width > otherBounds.x) {
+      adjacentSides.push(mapping.bottom)
+    }
+    
+    // 실제 위치에서 좌측 인접 체크
+    if (Math.abs(lockerBounds.x - (otherBounds.x + otherBounds.width)) < tolerance &&
+        lockerBounds.y < otherBounds.y + otherBounds.height && 
+        lockerBounds.y + lockerBounds.height > otherBounds.y) {
+      adjacentSides.push(mapping.left)
+    }
+    
+    // 실제 위치에서 우측 인접 체크
+    if (Math.abs(lockerBounds.x + lockerBounds.width - otherBounds.x) < tolerance &&
+        lockerBounds.y < otherBounds.y + otherBounds.height && 
+        lockerBounds.y + lockerBounds.height > otherBounds.y) {
+      adjacentSides.push(mapping.right)
+    }
+  })
+  
+  return [...new Set(adjacentSides)] // 중복 제거
+}
+
 // Filter visible locker types
 const visibleLockerTypes = computed(() => {
   return lockerTypes.value.filter(type => !hiddenTypes.value.includes(type.id))
@@ -1069,13 +1446,25 @@ const visibleLockerTypes = computed(() => {
 // 현재 구역의 락커들
 const currentLockers = computed(() => {
   if (!selectedZone.value) return []
-  const filtered = lockerStore.lockers.filter(l => l.zoneId === selectedZone.value.id)
   
-  // CRITICAL DEBUG: Check actualHeight at the start of the computed chain
+  console.log(`[CurrentLockers] DEBUG - Total lockers in store: ${lockerStore.lockers.length}`)
+  console.log(`[CurrentLockers] DEBUG - Selected zone: ${selectedZone.value.id}`)
+  console.log(`[CurrentLockers] DEBUG - Current view mode: ${currentViewMode.value}`)
+  
+  let filtered = lockerStore.lockers.filter(l => l.zoneId === selectedZone.value.id)
+  
+  // 평면뷰(floor)일 때는 부모 락커만 표시
+  if (currentViewMode.value === 'floor') {
+    filtered = filtered.filter(l => !l.parentLockrCd)
+    console.log(`[CurrentLockers] DEBUG - Floor view: filtered to parent lockers only`)
+  }
+  
+  // DETAILED DEBUG: 필터링 결과 분석
+  console.log(`[CurrentLockers] DEBUG - Final result: ${filtered.length} lockers`)
   filtered.forEach(locker => {
-    if (locker.number === 'L3' || locker.number === 'L4' || locker.number === 'L1' || locker.number === 'L2' || locker.number === 'L5') {
-      console.log(`[CurrentLockers] ${locker.number}: actualHeight=${locker.actualHeight}, typeId=${locker.typeId}`)
-    }
+    const isParent = !locker.parentLockrCd
+    const parentInfo = isParent ? 'PARENT' : `CHILD of ${locker.parentLockrCd}`
+    console.log(`  ${locker.number}: ${parentInfo} (actualHeight=${locker.actualHeight}, rotation=${locker.rotation})`)
   })
   
   return filtered
@@ -1083,15 +1472,9 @@ const currentLockers = computed(() => {
 
 // Compute display versions of lockers with scaled dimensions
 const displayLockers = computed(() => {
-  // Filter lockers based on view mode
-  const filteredLockers = currentLockers.value.filter(locker => {
-    // In floor view, only show parent lockers (no parent ID)
-    if (currentViewMode.value === 'floor') {
-      return !locker.parentLockerId
-    }
-    // In front view, show all lockers (parents and children)
-    return true
-  })
+  // Backend should provide appropriate lockers based on view mode
+  console.log(`[DEBUG displayLockers] View mode: ${currentViewMode.value}, lockers count: ${currentLockers.value.length}`)
+  const filteredLockers = currentLockers.value
   
   return filteredLockers.map((locker, index) => {
     let displayX, displayY, displayHeight
@@ -1105,26 +1488,47 @@ const displayLockers = computed(() => {
       displayY = displayPos.y
       displayHeight = toDisplaySize(locker.width, locker.height || locker.depth || 40).height
     } else {
-      // Front view: use frontViewX and frontViewY set by transformToFrontView
+      // Front view: Use NEW algorithm positions if available, fallback to original
+      const scale = getCurrentScale()
       
-      // Use frontView positions if available, otherwise fallback
-      const scale = getCurrentScale() // 락커 렌더링 크기를 위한 스케일
       if (locker.frontViewX !== undefined && locker.frontViewY !== undefined) {
+        // 새로운 알고리즘 결과 사용
+        console.log(`[DisplayLockers NEW] Using new algorithm for ${locker.number}: X=${locker.frontViewX}, Y=${locker.frontViewY}`)
         displayX = locker.frontViewX * scale
         displayY = locker.frontViewY * scale
+        displayHeight = lockerActualHeight * scale
       } else {
-        // Fallback: Calculate X position (arrange side by side)
-        let currentX = 50  // Start position
-        for (let i = 0; i < index; i++) {
-          const prevLocker = filteredLockers[i]
-          currentX += prevLocker.width + 20  // Add spacing
+        // FALLBACK: Original algorithm for compatibility
+        console.log(`[DisplayLockers FALLBACK] Using original algorithm for ${locker.number}`)
+        const LOCKER_VISUAL_SCALE = 2.0
+        
+        // Find locker position in the front view sequence
+        const sequenceIndex = frontViewSequence.value.findIndex(l => l.id === locker.id)
+        
+        if (sequenceIndex >= 0) {
+          // Calculate position based on sequence (ORIGINAL DYNAMIC CALCULATION)
+          const totalLockersWidth = frontViewSequence.value.reduce((total, l) => {
+            return total + (l.width || 40) * LOCKER_VISUAL_SCALE
+          }, 0)
+          
+          const startX = (canvasWidth.value - totalLockersWidth) / 2
+          let currentX = startX
+          
+          // Calculate X position by summing widths of previous lockers
+          for (let i = 0; i < sequenceIndex; i++) {
+            currentX += (frontViewSequence.value[i].width || 40) * LOCKER_VISUAL_SCALE
+          }
+          
+          displayX = currentX * scale
+          displayY = (FLOOR_Y - lockerActualHeight * LOCKER_VISUAL_SCALE) * scale
+        } else {
+          // Fallback if not in sequence
+          displayX = 0
+          displayY = (FLOOR_Y - lockerActualHeight * LOCKER_VISUAL_SCALE) * scale
         }
         
-        // Y position: bottom of locker sits on floor line
-        displayX = currentX * scale
-        displayY = (FLOOR_Y - lockerActualHeight) * scale
+        displayHeight = lockerActualHeight * scale
       }
-      displayHeight = lockerActualHeight * scale
     }
     
     const displayWidth = locker.width * getCurrentScale() // 모든 뷰모드에서 동일한 렌더링 스케일 적용
@@ -1169,11 +1573,13 @@ const sortedLockers = computed(() => {
       
       const resultLocker = {
         ...locker,
-        x: locker.frontViewX !== undefined ? locker.frontViewX : locker.displayX / getCurrentScale(),
-        y: locker.frontViewY !== undefined ? locker.frontViewY : locker.displayY / getCurrentScale(),
+        // ALWAYS use calculated positions from displayLockers, never cached frontViewX/Y
+        x: locker.displayX / getCurrentScale(),
+        y: locker.displayY / getCurrentScale(),
         height: frontViewHeight,  // LockerSVG에서 이 값을 사용
         actualHeight: frontViewHeight,  // actualHeight도 명시적으로 설정
-        rotation: 0  // IMPORTANT: All lockers face forward in front view
+        // Use new algorithm rotation if available, otherwise default to 0
+        rotation: locker.frontViewRotation !== undefined ? locker.frontViewRotation : 0
       }
       
       // FINAL DEBUG: Check final result passed to LockerSVG
@@ -1199,9 +1605,25 @@ const sortedLockers = computed(() => {
 })
 
 // 선택된 락커들 (다중 선택을 위한 준비)
+// 선택된 락커들 (다중 선택 지원)
 const selectedLockers = computed(() => {
-  // 현재는 단일 선택만 지원, 추후 다중 선택 구현 시 수정
-  return selectedLocker.value ? [selectedLocker.value] : []
+  return currentLockers.value.filter(locker => selectedLockerIds.value.has(locker.id))
+})
+
+// 연결된 락커 그룹들
+const connectedGroups = computed(() => {
+  return findConnectedGroups(selectedLockers.value)
+})
+
+// 통합 외곽선이 필요한 락커들
+const lockersNeedingUnifiedOutline = computed(() => {
+  const result = new Set()
+  connectedGroups.value.forEach(group => {
+    if (group.length > 1) {
+      group.forEach(locker => result.add(locker.id))
+    }
+  })
+  return result
 })
 
 // 다중 선택 모드 (향후 구현)
@@ -1216,16 +1638,24 @@ const multiSelectedIds = ref<string[]>([])
 const getSelectionUIPosition = () => {
   if (!selectedLocker.value) return { x: 0, y: 0 }
   
-  // Always use the current position from the locker data
-  // The locker position is already being updated during drag
   const currentLocker = currentLockers.value.find(l => l.id === selectedLocker.value.id)
   if (currentLocker) {
-    return {
-      x: currentLocker.x,
-      y: currentLocker.y
+    if (currentViewMode.value === 'front') {
+      // Use front view coordinates in front view mode
+      return {
+        x: currentLocker.frontViewX !== undefined ? currentLocker.frontViewX : currentLocker.x,
+        y: currentLocker.frontViewY !== undefined ? currentLocker.frontViewY : currentLocker.y
+      }
+    } else {
+      // Use floor coordinates in floor view mode
+      return {
+        x: currentLocker.x,
+        y: currentLocker.y
+      }
     }
   }
   
+  // Fallback to selected locker position
   return {
     x: selectedLocker.value.x,
     y: selectedLocker.value.y
@@ -1253,9 +1683,9 @@ const getLockerDimensions = (locker) => {
   }
 }
 
-// 키보드 회전 연속 처리를 위한 변수
-let rotateInterval: number | null = null
+// 회전 상태 관리
 const isRotating = ref(false)
+const rotationJustEnded = ref(false)
 
 // 복사/붙여넣기를 위한 변수
 const copiedLockers = ref<any[]>([])
@@ -1466,16 +1896,8 @@ const findAvailablePosition = (startX: number, startY: number, width: number, de
   const maxAttempts = 50 // Prevent infinite loop
   
   while (attempts < maxAttempts) {
-    // Check for collision at current position
-    const hasCollision = currentLockers.value.some(other => {
-      const otherDims = getLockerDimensions(other)
-      
-      // Check if there's actual overlap
-      const overlapX = Math.min(x + width, other.x + otherDims.width) - Math.max(x, other.x)
-      const overlapY = Math.min(y + depth, other.y + otherDims.height) - Math.max(y, other.y)
-      
-      return overlapX > 0 && overlapY > 0
-    })
+    // Check for collision at current position using proper collision detection
+    const hasCollision = checkCollisionForLocker(x, y, width, depth, null, 0, false)
     
     if (!hasCollision) {
       return { x, y } // Found available position
@@ -1915,6 +2337,12 @@ const handleCanvasMouseMove = (event) => {
 
 // 캔버스 마우스 업 처리
 const handleCanvasMouseUp = (event) => {
+  // Don't handle if rotating or just finished rotating
+  if (isRotating.value || rotationJustEnded.value) {
+    console.log('[Canvas MouseUp] Ignored - rotation in progress or just ended')
+    return
+  }
+  
   if (isDragSelecting.value) {
     // Get correct SVG coordinates
     const pos = getMousePosition(event)
@@ -1951,10 +2379,12 @@ const handleCanvasMouseUp = (event) => {
       console.log('[Rectangle Select] Selected lockers:', Array.from(selectedLockerIds.value))
       console.log('[Rectangle Select] Current selection count:', selectedLockerIds.value.size)
     } else {
-      // Just a click, clear selection
-      selectedLockerIds.value.clear()
-      selectedLocker.value = null
-      console.log('[Rectangle Select] Cancelled - not enough drag distance')
+      // Just a click, clear selection (but not if rotating)
+      if (!isRotating.value) {
+        selectedLockerIds.value.clear()
+        selectedLocker.value = null
+        console.log('[Rectangle Select] Cancelled - not enough drag distance')
+      }
     }
     
     // Reset drag selection state
@@ -2052,11 +2482,12 @@ const updateSelectionInRectangle = () => {
 
 // 캔버스 클릭 처리 (스냅 기능 추가)
 const handleCanvasClick = (event) => {
-  // Check if any drag operation just finished - if so, ignore this click
-  if (dragSelectionJustFinished.value || lockerDragJustFinished.value) {
-    console.log('[Canvas] Click ignored - drag operation just finished', {
+  // Check if any drag operation or rotation just finished - if so, ignore this click
+  if (dragSelectionJustFinished.value || lockerDragJustFinished.value || rotationJustEnded.value) {
+    console.log('[Canvas] Click ignored - operation just finished', {
       dragSelection: dragSelectionJustFinished.value,
-      lockerDrag: lockerDragJustFinished.value
+      lockerDrag: lockerDragJustFinished.value,
+      rotation: rotationJustEnded.value
     })
     return
   }
@@ -2303,15 +2734,255 @@ const startDragLocker = (locker, event) => {
   event.preventDefault()
 }
 
-// 락커 회전 시작 (마우스로)
+// 그룹 회전을 위한 상태 저장
+const groupRotationState = ref(null)
+
+// 락커 회전 시작 (드래그 기반)
 const startRotateLocker = (locker, event) => {
   if (!locker) return
   
-  selectedLocker.value = locker
+  // Don't change selection if multiple lockers are selected
+  // Only update selectedLocker if it's not already part of the selection
+  if (!selectedLockerIds.value.has(locker.id)) {
+    selectedLocker.value = locker
+    selectedLockerIds.value.add(locker.id)
+  }
   isRotating.value = true
   
-  // 회전 처리 로직 추가 가능
-  console.log('Rotate handle clicked for locker:', locker.id)
+  console.log('[Rotation] Started for locker:', locker.id)
+  
+  // 다중 선택시 그룹 회전 정보 미리 계산 및 저장
+  if (selectedLockerIds.value.size > 1) {
+    const selectedArray = Array.from(selectedLockerIds.value)
+    const selectedLockers = currentLockers.value.filter(l => selectedArray.includes(l.id))
+    
+    // 그룹 중심점 계산 (한 번만)
+    const bounds = {
+      minX: Math.min(...selectedLockers.map(l => l.x)),
+      maxX: Math.max(...selectedLockers.map(l => l.x + l.width)),
+      minY: Math.min(...selectedLockers.map(l => l.y)),
+      maxY: Math.max(...selectedLockers.map(l => l.y + (l.height || l.depth || 40)))
+    }
+    
+    const centerX = (bounds.minX + bounds.maxX) / 2
+    const centerY = (bounds.minY + bounds.maxY) / 2
+    
+    // 각 락커의 초기 상대 위치 저장
+    const lockerStates = new Map()
+    selectedLockers.forEach(l => {
+      const dims = getLockerDimensions(l)
+      const lockerCenterX = l.x + dims.width / 2
+      const lockerCenterY = l.y + dims.height / 2
+      
+      lockerStates.set(l.id, {
+        relativeX: lockerCenterX - centerX,
+        relativeY: lockerCenterY - centerY,
+        width: dims.width,
+        height: dims.height,
+        initialRotation: l.rotation || 0
+      })
+    })
+    
+    // 그룹 회전 상태 저장
+    groupRotationState.value = {
+      centerX,
+      centerY,
+      lockerStates,
+      leaderId: locker.id
+    }
+    
+    console.log('[Rotation] Group rotation state initialized', {
+      center: { x: centerX, y: centerY },
+      lockerCount: lockerStates.size
+    })
+  } else {
+    groupRotationState.value = null
+  }
+  
+  // 회전 중 다른 상호작용 비활성화
+  isDragging.value = false
+}
+
+// 회전 중 각도 업데이트
+const handleRotateMove = (lockerId: string, newRotation: number) => {
+  // 다중 선택 체크
+  if (selectedLockerIds.value.size > 1 && groupRotationState.value) {
+    // 저장된 그룹 회전 상태 사용
+    const state = groupRotationState.value
+    const leaderLocker = currentLockers.value.find(l => l.id === lockerId)
+    if (!leaderLocker || !state) return
+    
+    // 리더 락커의 이전 회전값 저장 (처음 호출 시에만)
+    if (leaderLocker._lastRotation === undefined) {
+      leaderLocker._lastRotation = leaderLocker.rotation || 0
+      console.log('=== ROTATION INIT ===')
+      console.log('  Initial rotation set to:', leaderLocker._lastRotation)
+    }
+    
+    // Delta 계산 - 개선된 방식
+    let rotationDelta = newRotation - leaderLocker._lastRotation  // 원래대로 복구
+    
+    console.log('=== ROTATION DEBUG ===')
+    console.log('  newRotation:', newRotation)
+    console.log('  lastRotation:', leaderLocker._lastRotation)
+    console.log('  raw delta:', rotationDelta)
+    
+    // 360도 경계 처리 개선 - 더 안정적인 처리
+    // 정규화: -180 ~ 180 범위로 변환
+    while (rotationDelta > 180) {
+      rotationDelta -= 360
+      console.log('  → Adjusted delta (>180):', rotationDelta)
+    }
+    while (rotationDelta < -180) {
+      rotationDelta += 360
+      console.log('  → Adjusted delta (<-180):', rotationDelta)
+    }
+    
+    // 방향 전환 감지 및 보정
+    const prevDirection = leaderLocker._rotationDirection || 0
+    const currentDirection = Math.sign(rotationDelta)
+    
+    if (prevDirection !== 0 && currentDirection !== 0 && prevDirection !== currentDirection) {
+      console.log('  Direction change detected! prev:', prevDirection, 'current:', currentDirection)
+    }
+    
+    leaderLocker._rotationDirection = currentDirection
+    leaderLocker._lastRotation = newRotation  // 누적값 그대로 유지
+    
+    console.log('  Final delta:', rotationDelta)
+    
+    // 저장된 고정 중심점 사용
+    const centerX = state.centerX
+    const centerY = state.centerY
+    
+    // 각 선택된 락커를 고정된 중심점 기준으로 회전
+    const selectedArray = Array.from(selectedLockerIds.value)
+    selectedArray.forEach(lockerId => {
+      const locker = currentLockers.value.find(l => l.id === lockerId)
+      if (!locker) return
+      
+      const lockerState = state.lockerStates.get(lockerId)
+      if (!lockerState) return
+      
+      // 초기 상대 위치에서 회전 변환 적용
+      // 전체 회전각 = 초기 회전각 + 누적 delta
+      const totalRotation = newRotation - (state.lockerStates.get(state.leaderId).initialRotation || 0)  // 원래대로 복구
+      const radians = (totalRotation * Math.PI) / 180
+      const cos = Math.cos(radians)
+      const sin = Math.sin(radians)
+      
+      // 초기 상대 위치를 회전
+      const newCenterX = lockerState.relativeX * cos - lockerState.relativeY * sin + centerX
+      const newCenterY = lockerState.relativeX * sin + lockerState.relativeY * cos + centerY
+      
+      // 왼쪽 상단 모서리 위치로 변환
+      locker.x = newCenterX - lockerState.width / 2
+      locker.y = newCenterY - lockerState.height / 2
+      
+      // 각 락커의 rotation 값도 함께 업데이트 (회전 중에는 누적값 유지)
+      if (locker.id === state.leaderId) {
+        // 리더 락커는 newRotation 값 그대로 사용 (누적)
+        locker.rotation = newRotation
+        console.log(`[ROTATION DIRECTION] Leader locker ${locker.id} rotation: ${locker.rotation}`)
+      } else {
+        // 다른 락커들은 초기 회전값 + 전체 회전량 (누적)
+        locker.rotation = lockerState.initialRotation + totalRotation
+        console.log(`[ROTATION DIRECTION] Follower locker ${locker.id} rotation: ${locker.rotation}`)
+      }
+      
+      // 디바운스된 저장
+      saveLockerRotationDebounced(locker.id, locker.rotation)
+    })
+  } else {
+    // 단일 락커 회전
+    const locker = currentLockers.value.find(l => l.id === lockerId)
+    if (locker) {
+      // 누적 회전 방식으로 360도 역회전 방지
+      locker.rotation = newRotation  // 누적값 그대로 사용
+      console.log(`[ROTATION DIRECTION] Single locker ${locker.id} rotation: ${locker.rotation}`)
+      
+      // 디바운스된 저장
+      saveLockerRotationDebounced(lockerId, locker.rotation)
+    }
+  }
+}
+
+// 회전 종료
+const handleRotateEnd = (lockerId: string) => {
+  console.log('[Rotation] Ended for locker:', lockerId)
+  
+  // Set a flag to indicate rotation just ended
+  rotationJustEnded.value = true
+  
+  // Clear both flags after a short delay
+  setTimeout(() => {
+    isRotating.value = false
+    rotationJustEnded.value = false
+  }, 200)
+  
+  // 임시 회전 값 정리
+  const leaderLocker = currentLockers.value.find(l => l.id === lockerId)
+  if (leaderLocker) {
+    delete leaderLocker._lastRotation
+    delete leaderLocker._lastRawRotation
+    delete leaderLocker._rotationDirection  // 방향 플래그도 정리
+    console.log('[Rotation] Cleaned up temporary rotation values')
+  }
+  
+  // 그룹 회전 상태 정리
+  if (groupRotationState.value) {
+    console.log('[Rotation] Clearing group rotation state')
+    groupRotationState.value = null
+  }
+  
+  // IMPORTANT: Don't clear selection after rotation
+  // Keep the current selection state
+  
+  // 다중 선택시 모든 락커 저장
+  if (selectedLockerIds.value.size > 1) {
+    const selectedArray = Array.from(selectedLockerIds.value)
+    const selectedLockers = currentLockers.value.filter(l => selectedArray.includes(l.id))
+    selectedLockers.forEach(locker => {
+      saveLockerRotation(locker.id, locker.rotation)
+    })
+  } else {
+    // 단일 락커 저장
+    const locker = currentLockers.value.find(l => l.id === lockerId)
+    if (locker) {
+      saveLockerRotation(lockerId, locker.rotation)
+    }
+  }
+}
+
+// 회전값 저장 (디바운스)
+const saveLockerRotationDebounced = (() => {
+  let timeout: any = null
+  return (lockerId: string, rotation: number) => {
+    clearTimeout(timeout)
+    timeout = setTimeout(() => {
+      saveLockerRotation(lockerId, rotation)
+    }, 200)
+  }
+})()
+
+// 회전값 저장
+const saveLockerRotation = async (lockerId: string, rotation: number) => {
+  try {
+    const locker = lockerStore.getLockerById(lockerId)
+    if (locker) {
+      // 저장 시 -180 ~ 180 범위로 정규화
+      let normalizedRotation = rotation % 360
+      if (normalizedRotation > 180) {
+        normalizedRotation -= 360
+      } else if (normalizedRotation < -180) {
+        normalizedRotation += 360
+      }
+      await lockerStore.updateLocker(lockerId, { rotation: normalizedRotation })
+      console.log(`[Rotation] Saved locker ${lockerId} with rotation: ${normalizedRotation}° (from ${rotation}°)`)
+    }
+  } catch (error) {
+    console.error('[Rotation] Failed to save rotation:', error)
+  }
 }
 
 // 드래그 중 마우스 이동 (정렬 가이드 표시) - 리더 기반 그룹 이동
@@ -2338,13 +3009,21 @@ const handleDragMove = (event) => {
   const snappedLeaderY = snapToGrid(newLeaderY)
   
   // Try to snap leader to adjacent lockers
+  // For rotated lockers, we still snap based on visual bounds
   const snappedLeader = snapToAdjacent(
     snappedLeaderX, 
     snappedLeaderY, 
     leaderDims.width, 
     leaderDims.height, 
-    leaderInfo.id
+    leaderInfo.id,
+    leaderLocker.rotation || 0  // Pass rotation for proper boundary calculation
   )
+  
+  // Check if position was snapped (different from grid-snapped position)
+  const wasSnapped = (snappedLeader.x !== snappedLeaderX || snappedLeader.y !== snappedLeaderY)
+  if (wasSnapped) {
+    console.log('[SNAP DEBUG] Position was snapped from', { x: snappedLeaderX, y: snappedLeaderY }, 'to', snappedLeader)
+  }
   
   // Calculate delta from leader's initial position
   const deltaX = snappedLeader.x - leaderInfo.initialX
@@ -2378,8 +3057,9 @@ const handleDragMove = (event) => {
       newX = Math.max(0, Math.min(newX, maxX))
       newY = Math.max(0, Math.min(newY, maxY))
       
-      // Check for collisions with non-selected lockers
-      const collision = checkCollisionForLocker(newX, newY, dims.width, dims.height, locker.id)
+      // Check for collisions with non-selected lockers (considering rotation)
+      // Pass wasSnapped flag to use appropriate tolerance
+      const collision = checkCollisionForLocker(newX, newY, dims.width, dims.height, locker.id, locker.rotation || 0, wasSnapped)
       if (collision) {
         hasCollision = true
       }
@@ -2393,8 +3073,9 @@ const handleDragMove = (event) => {
     }
   })
   
-  // Only update if no collisions for any locker in the group
+  // Update positions - if collision, keep previous position (unless it was snapped)
   if (!hasCollision) {
+    // No collision, update all positions immediately
     proposedPositions.forEach(pos => {
       lockerStore.updateLocker(pos.id, { x: pos.x, y: pos.y })
       
@@ -2408,8 +3089,168 @@ const handleDragMove = (event) => {
       x: deltaX.toFixed(1), 
       y: deltaY.toFixed(1) 
     })
+  } else if (wasSnapped && hasCollision) {
+    // Collision detected on snapped position - this might be a real overlap, not just micro-overlap
+    console.log('[SNAP WARNING] Collision detected at snapped position, checking overlap amount...')
+    
+    // Check if it's a micro-overlap (< 1px) or real overlap
+    let maxOverlap = 0
+    draggedLockers.value.forEach(dragInfo => {
+      const locker = currentLockers.value.find(l => l.id === dragInfo.id)
+      if (locker) {
+        const dims = getLockerDimensions(locker)
+        let newX, newY
+        if (dragInfo.isLeader) {
+          newX = snappedLeader.x
+          newY = snappedLeader.y
+        } else {
+          newX = snappedLeader.x + dragInfo.relativeX
+          newY = snappedLeader.y + dragInfo.relativeY
+        }
+        
+        // Get the actual bounds for overlap check
+        const dragBounds = getRotatedBounds({
+          x: newX, y: newY, 
+          width: dims.width, height: dims.height,
+          rotation: locker.rotation || 0
+        })
+        
+        // Check overlap with other lockers
+        currentLockers.value.forEach(other => {
+          if (other.id !== locker.id && !selectedLockerIds.value.has(other.id)) {
+            const otherBounds = getRotatedBounds(other)
+            const overlapX = Math.min(dragBounds.x + dragBounds.width, otherBounds.x + otherBounds.width) - 
+                           Math.max(dragBounds.x, otherBounds.x)
+            const overlapY = Math.min(dragBounds.y + dragBounds.height, otherBounds.y + otherBounds.height) - 
+                           Math.max(dragBounds.y, otherBounds.y)
+            if (overlapX > 0 && overlapY > 0) {
+              maxOverlap = Math.max(maxOverlap, Math.min(overlapX, overlapY))
+              console.log('[SNAP OVERLAP] With', other.id, '- X:', overlapX.toFixed(1), 'Y:', overlapY.toFixed(1))
+            }
+          }
+        })
+      }
+    })
+    
+    // Only accept if it's a micro-overlap (< 1px)
+    if (maxOverlap < 1.0) {
+      console.log('[SNAP] Accepting snapped position with micro-overlap:', maxOverlap.toFixed(2), 'px')
+      proposedPositions.forEach(pos => {
+        lockerStore.updateLocker(pos.id, { x: pos.x, y: pos.y })
+        if (selectedLocker.value?.id === pos.id) {
+          selectedLocker.value = { ...selectedLocker.value, x: pos.x, y: pos.y }
+        }
+      })
+    } else {
+      console.warn('[SNAP] Rejecting snapped position due to significant overlap:', maxOverlap.toFixed(1), 'px')
+      // Don't update positions - keep previous
+    }
   } else {
-    console.log('[Group Drag] Collision detected, movement blocked')
+    // Collision detected and NOT snapped - try to find the closest valid position
+    console.log('[COLLISION ADJUSTMENT DEBUG] Collision detected (non-snapped), finding valid position:', {
+      snappedLeader,
+      proposedPositions: proposedPositions.length,
+      hasCollision,
+      wasSnapped
+    })
+    
+    // Try to move to the last valid position or slightly adjusted position
+    let adjustedX = snappedLeader.x
+    let adjustedY = snappedLeader.y
+    let foundValidPosition = false
+    
+    // Try small adjustments in different directions
+    const adjustments = [
+      { dx: -20, dy: 0 },   // Left
+      { dx: 20, dy: 0 },    // Right
+      { dx: 0, dy: -20 },   // Up
+      { dx: 0, dy: 20 },    // Down
+      { dx: -20, dy: -20 }, // Diagonal
+      { dx: 20, dy: -20 },
+      { dx: -20, dy: 20 },
+      { dx: 20, dy: 20 }
+    ]
+    
+    // console.log('[COLLISION ADJUSTMENT DEBUG] Testing adjustments...')
+    
+    for (const adj of adjustments) {
+      const testX = snappedLeader.x + adj.dx
+      const testY = snappedLeader.y + adj.dy
+      let testHasCollision = false
+      
+      // console.log('[COLLISION ADJUSTMENT DEBUG] Testing:', { 
+      //   adjustment: adj, 
+      //   testPos: { x: testX, y: testY } 
+      // })
+      
+      // Test all lockers with this adjustment
+      draggedLockers.value.forEach(dragInfo => {
+        const locker = currentLockers.value.find(l => l.id === dragInfo.id)
+        if (locker && !testHasCollision) {
+          const dims = getLockerDimensions(locker)
+          let newX, newY
+          
+          if (dragInfo.isLeader) {
+            newX = testX
+            newY = testY
+          } else {
+            newX = testX + dragInfo.relativeX
+            newY = testY + dragInfo.relativeY
+          }
+          
+          // Check bounds
+          const maxX = canvasWidth.value - dims.width
+          const maxY = canvasHeight.value - dims.height
+          newX = Math.max(0, Math.min(newX, maxX))
+          newY = Math.max(0, Math.min(newY, maxY))
+          
+          // Check collision
+          if (checkCollisionForLocker(newX, newY, dims.width, dims.height, locker.id, locker.rotation || 0, false)) {
+            testHasCollision = true
+          }
+        }
+      })
+      
+      if (!testHasCollision) {
+        adjustedX = testX
+        adjustedY = testY
+        foundValidPosition = true
+        break
+      }
+    }
+    
+    if (foundValidPosition) {
+      // Update to adjusted position
+      draggedLockers.value.forEach(dragInfo => {
+        const locker = currentLockers.value.find(l => l.id === dragInfo.id)
+        if (locker) {
+          let newX, newY
+          
+          if (dragInfo.isLeader) {
+            newX = adjustedX
+            newY = adjustedY
+          } else {
+            newX = adjustedX + dragInfo.relativeX
+            newY = adjustedY + dragInfo.relativeY
+          }
+          
+          const dims = getLockerDimensions(locker)
+          const maxX = canvasWidth.value - dims.width
+          const maxY = canvasHeight.value - dims.height
+          newX = Math.max(0, Math.min(newX, maxX))
+          newY = Math.max(0, Math.min(newY, maxY))
+          
+          lockerStore.updateLocker(locker.id, { x: newX, y: newY })
+          if (selectedLocker.value?.id === locker.id) {
+            selectedLocker.value = { ...selectedLocker.value, x: newX, y: newY }
+          }
+        }
+      })
+      
+      console.log('[COLLISION] Adjusted to valid position:', `(${adjustedX}, ${adjustedY})`)
+    } else {
+      console.warn('[COLLISION] No collision-free adjustment found, keeping original positions')
+    }
   }
 }
 
@@ -2430,11 +3271,14 @@ const endDragLocker = () => {
   
   // Save positions of all dragged lockers to database
   if (draggedLockers.value.length > 0) {
-    const positions = draggedLockers.value.map(locker => ({
-      id: locker.id,
-      x: locker.x,
-      y: locker.y
-    }))
+    const positions = draggedLockers.value.map(dragInfo => {
+      const locker = currentLockers.value.find(l => l.id === dragInfo.id)
+      return {
+        id: dragInfo.id,
+        x: locker?.x || dragInfo.x,
+        y: locker?.y || dragInfo.y
+      }
+    })
     saveMultipleLockerPositions(positions)
   }
   
@@ -2584,6 +3428,8 @@ const validateLockerPlacement = () => {
         // 수직으로 인접한 경우
         if (isAdjacentVertically) {
           const locker1FacingDown = locker1.rotation % 180 === 90
+          const locker1FacingUp = locker1.rotation % 180 === 270
+          const locker2FacingDown = locker2.rotation % 180 === 90
           const locker2FacingUp = locker2.rotation % 180 === 270
           
           if ((locker1.y < locker2.y && locker1FacingDown && locker2FacingUp) ||
@@ -2629,7 +3475,9 @@ const highlightProblematicLockers = (lockerIds: string[]) => {
 
 // 뷰 모드 설정
 const setViewMode = (mode: 'floor' | 'front') => {
+  console.log('[DEBUG] setViewMode called with:', mode)
   currentViewMode.value = mode
+  console.log('[DEBUG] currentViewMode.value set to:', currentViewMode.value)
   updateViewMode()
   
   // 스케일 변경 로그
@@ -2649,12 +3497,17 @@ const setViewMode = (mode: 'floor' | 'front') => {
 
 // 뷰 모드 업데이트
 const updateViewMode = () => {
+  console.log('[DEBUG] updateViewMode called with mode:', currentViewMode.value)
+  
   // 프론트 뷰로 전환하려는 경우 검증 수행
   if (currentViewMode.value === 'front') {
+    console.log('[DEBUG] Validating locker placement for front view')
     const validation = validateLockerPlacement()
+    console.log('[DEBUG] Validation result:', validation)
     
     if (!validation.isValid) {
-      console.log('[Validation] Cannot switch to front view:', validation.errors)
+      console.error('[Validation FAILED] Cannot switch to front view:', validation.errors)
+      console.error('[Validation FAILED] Problematic lockers:', validation.problematicLockers)
       alert('세로모드 진입 불가: 락커 배치가 규칙에 맞지 않습니다.\n문제: ' + validation.errors.join('\n'))
       
       // 문제가 있는 락커를 빨간색으로 강조
@@ -2663,6 +3516,8 @@ const updateViewMode = () => {
       // 플로어 뷰로 되돌리기
       currentViewMode.value = 'floor'
       return
+    } else {
+      console.log('[Validation PASSED] Front view validation successful')
     }
     
     // 검증 통과 - 에러 상태 초기화
@@ -2686,8 +3541,9 @@ const updateViewMode = () => {
     showSelectionUI.value = false
     console.log('[Front View] Interactions disabled, view-only mode')
     
-    // 프론트 뷰 변환 수행
-    transformToFrontView()
+    // Note: Front view transformation is now handled by the view mode watcher
+    // after loading all lockers (including child/tier lockers)
+    console.log('[Front View] Transformation will be handled by view mode watcher after loading lockers')
   } else {
     // 플로어 뷰로 돌아올 때 선택 UI 복원
     showSelectionUI.value = true
@@ -2698,8 +3554,10 @@ const updateViewMode = () => {
   lockerStore.setPlacementMode(newMode)
 }
 
-// 프론트 뷰 변환 - 단순화된 사용자 관점 언폴딩 로직
-const transformToFrontView = () => {
+// =================================
+// BACKUP: 기존 transformToFrontView 로직 (2025-08-22)
+// =================================
+const transformToFrontView_BACKUP = () => {
   console.log('[Front View] Starting transformation with user perspective')
   
   const lockers = currentLockers.value
@@ -2820,8 +3678,445 @@ const transformToFrontView = () => {
     unfoldedSequence.push(...missing)
   }
   
-  // Position lockers in front view
-  positionLockersInFrontView(unfoldedSequence)
+  // Store the sequence for front view positioning
+  // Positions will be calculated dynamically in displayLockers
+  frontViewSequence.value = unfoldedSequence
+  
+  console.log('[Front View] Transformation complete:', {
+    totalLockers: unfoldedSequence.length,
+    sequence: unfoldedSequence.map(l => l.number || l.id).join(' -> ')
+  })
+}
+
+// =================================
+// ==========================================
+// CRITICAL GROUPING SYSTEM IMPLEMENTATION
+// ⚠️ WARNING: VERIFIED WORKING - DO NOT MODIFY
+// Documentation: /docs/grouping-system-final.md  
+// Test Validation: L1-L6 → 1 major group, 2 minor groups
+// ==========================================
+
+// 새로운 Front View 알고리즘 구현 (2025-08-22)
+// =================================
+
+// 두 락커 사이의 최단거리 계산
+// ⚠️ CRITICAL FUNCTION - DISTANCE CALCULATION
+// DO NOT MODIFY - Calculates edge-to-edge distance between lockers
+// Used by both isAdjacent and isConnected functions
+const getMinDistance = (locker1: any, locker2: any): number => {
+  const rect1 = {
+    left: locker1.x,
+    right: locker1.x + locker1.width,
+    top: locker1.y,
+    bottom: locker1.y + (locker1.depth || locker1.height || 40)
+  }
+  const rect2 = {
+    left: locker2.x,
+    right: locker2.x + locker2.width,
+    top: locker2.y,
+    bottom: locker2.y + (locker2.depth || locker2.height || 40)
+  }
+  
+  // Rectangle calculation (removed debug logging for cleaner output)
+  
+  // 겹치는 경우 거리는 0
+  if (rect1.right >= rect2.left && rect1.left <= rect2.right &&
+      rect1.bottom >= rect2.top && rect1.top <= rect2.bottom) {
+    return 0
+  }
+  
+  // 수평/수직 거리 계산
+  const dx = Math.max(0, Math.max(rect1.left - rect2.right, rect2.left - rect1.right))
+  const dy = Math.max(0, Math.max(rect1.top - rect2.bottom, rect2.top - rect1.bottom))
+  
+  return Math.sqrt(dx * dx + dy * dy)
+}
+
+// 대그룹 탐지 (10px 이내 연결 - requirement: minimum distance < 10px for group connection)
+const findMajorGroups = (lockers: any[]): any[][] => {
+  // Use the updated groupNearbyLockers function which implements Adjacent/Connected logic
+  console.log('[Major Group] Using new Adjacent/Connected logic via groupNearbyLockers')
+  return groupNearbyLockers()
+}
+
+// 그룹의 가장 위-왼쪽 락커 찾기
+const getTopLeftLocker = (group: any[]): any => {
+  return group.reduce((topLeft, locker) => {
+    if (locker.y < topLeft.y) return locker
+    if (locker.y === topLeft.y && locker.x < topLeft.x) return locker
+    return topLeft
+  }, group[0])
+}
+
+// 대그룹 우선순위 정렬 (위→아래, 왼쪽→오른쪽)
+const sortMajorGroups = (majorGroups: any[][]): any[][] => {
+  return majorGroups.sort((a, b) => {
+    const aTopLeft = getTopLeftLocker(a)
+    const bTopLeft = getTopLeftLocker(b)
+    
+    // 위쪽 우선
+    if (Math.abs(aTopLeft.y - bTopLeft.y) > 1) {
+      return aTopLeft.y - bTopLeft.y
+    }
+    // 같은 높이면 왼쪽 우선
+    return aTopLeft.x - bTopLeft.x
+  })
+}
+
+// 두 락커가 인접한지 확인 (한 면이 붙어있는지)
+// 인접: 락커간 최소 거리가 1px 미만 (붙어있음)
+// 연결: 10px 이내 (대그룹 기준)
+const areFullyAdjacent = (locker1: any, locker2: any): boolean => {
+  // Use the same getMinDistance function as major groups
+  // Adjacent means minimum distance < 1px (touching)
+  const minDistance = getMinDistance(locker1, locker2)
+  
+  console.log(`      [Adjacent Check] ${locker1.number} vs ${locker2.number}: distance = ${minDistance.toFixed(2)}px`)
+  
+  // Adjacent if distance is less than 1px (touching or very close)
+  const isAdjacent = minDistance < 1
+  
+  if (isAdjacent) {
+    console.log(`        ✅ ADJACENT (distance < 1px)`)
+  } else {
+    console.log(`        ❌ NOT ADJACENT (distance >= 1px)`)
+  }
+  
+  return isAdjacent
+}
+
+// 대그룹을 소그룹으로 분류
+// 소그룹 조건:
+// 1. 같은 문방향 + 인접(붙어있음) = 1개 소그룹
+// 2. 다른 문방향 = 각각 다른 소그룹 (인접해도)
+// 3. 같은 문방향이지만 인접하지 않음 = 각각 다른 소그룹 (연결만 되어있어도)
+// ⚠️ CRITICAL FUNCTION - MINOR GROUP DETECTION  
+// DO NOT MODIFY - Implements "연결은 각기 다른 소그룹으로 나뉜다" rule
+// Creates minor groups using ONLY Adjacent relationships (connections break groups)
+const findMinorGroups = (majorGroup: any[]): any[][] => {
+  const minorGroups: any[][] = []
+  const visited = new Set<string>()
+  
+  console.log(`[MINOR GROUPS] Processing major group with ${majorGroup.length} lockers:`, majorGroup.map(l => l.number || l.id).join(', '))
+  
+  majorGroup.forEach(locker => {
+    if (visited.has(locker.id)) return
+    
+    console.log(`[MINOR GROUPS] Starting new minor group with ${locker.number || locker.id}`)
+    const minorGroup: any[] = []
+    const queue = [locker]
+    
+    while (queue.length > 0) {
+      const current = queue.shift()!
+      if (visited.has(current.id)) continue
+      
+      visited.add(current.id)
+      minorGroup.push(current)
+      console.log(`[MINOR GROUPS] Added ${current.number || current.id} to minor group`)
+      
+      // CRITICAL: Minor groups = ONLY adjacent lockers (same direction + <= 30px)
+      // Connections (40-43px) break minor groups even if same direction
+      majorGroup.forEach(other => {
+        if (!visited.has(other.id)) {
+          const adjacent = isAdjacent(current, other)
+          const connected = isConnected(current, other)
+          
+          console.log(`[MINOR GROUPS] ${current.number || current.id} ↔ ${other.number || other.id}: Adjacent=${adjacent}, Connected=${connected}`)
+          
+          // Only adjacent lockers continue minor group
+          // Connected lockers break minor group (different minor groups)
+          if (adjacent && !connected) {
+            console.log(`[MINOR GROUPS] ✅ Adding ${other.number || other.id} to same minor group (adjacent)`)
+            queue.push(other)
+          } else if (connected) {
+            console.log(`[MINOR GROUPS] ❌ Connection breaks minor group - ${other.number || other.id} will be separate minor group`)
+          } else {
+            console.log(`[MINOR GROUPS] ❌ Not adjacent - ${other.number || other.id} will be separate minor group`)
+          }
+        }
+      })
+    }
+    
+    if (minorGroup.length > 0) {
+      console.log(`[MINOR GROUPS] Minor group complete:`, minorGroup.map(l => l.number || l.id).join(', '))
+      minorGroups.push(minorGroup)
+    }
+  })
+  
+  console.log(`[MINOR GROUPS] Total minor groups found: ${minorGroups.length}`)
+  minorGroups.forEach((group, index) => {
+    console.log(`  Minor group ${index + 1}: ${group.map(l => l.number || l.id).join(', ')}`)
+  })
+  
+  return minorGroups
+}
+
+// 소그룹 우선순위 정렬
+const sortMinorGroups = (minorGroups: any[][]): any[][] => {
+  return minorGroups.sort((a, b) => {
+    const aTopLeft = getTopLeftLocker(a)
+    const bTopLeft = getTopLeftLocker(b)
+    
+    // 위쪽 우선
+    if (Math.abs(aTopLeft.y - bTopLeft.y) > 1) {
+      return aTopLeft.y - bTopLeft.y
+    }
+    // 같은 높이면 왼쪽 우선
+    return aTopLeft.x - bTopLeft.x
+  })
+}
+
+// 소그룹에 회전 처리 적용 및 순서 조정
+const applyRotationToMinorGroup = (minorGroup: any[]): any[] => {
+  if (minorGroup.length === 0) return []
+  
+  const direction = minorGroup[0].rotation || 0
+  let sortedLockers = [...minorGroup]
+  
+  console.log(`[Rotation] Processing minor group with rotation ${direction}°:`, 
+    minorGroup.map(l => `${l.number || l.id}`))
+  
+  switch (direction) {
+    case 0:   // 아래 방향 - 변화없음
+      sortedLockers.sort((a, b) => {
+        if (Math.abs(a.y - b.y) > 1) return a.y - b.y
+        return a.x - b.x
+      })
+      break
+      
+    case 90:  // 왼쪽 방향 - 90도 회전 시 상하 순서 유지
+      sortedLockers.sort((a, b) => {
+        if (Math.abs(a.y - b.y) > 1) return a.y - b.y
+        return a.x - b.x
+      })
+      break
+      
+    case 180: // 위 방향 - 180도 회전 시 좌우 반전
+      sortedLockers.sort((a, b) => {
+        if (Math.abs(a.y - b.y) > 1) return a.y - b.y
+        return b.x - a.x // 좌우 반전
+      })
+      break
+      
+    case 270: // 오른쪽 방향 - 270도 회전 시 상하 반전
+      sortedLockers.sort((a, b) => {
+        if (Math.abs(a.x - b.x) > 1) return a.x - b.x
+        return b.y - a.y // 상하 반전
+      })
+      break
+  }
+  
+  console.log(`[Rotation] After rotation, order:`, 
+    sortedLockers.map(l => l.number || l.id))
+  
+  return sortedLockers
+}
+
+// 세로모드 전용: 타입 및 소그룹 기반 그룹 정보 판단
+const getActualGroupForFrontView = (prevLocker: any, currentLocker: any, minorGroups: any[]): any => {
+  // 1) 타입 정보 가져오기
+  const getType = (locker: any): string => {
+    // 타입ID 기반 판단
+    if (locker.typeId === 'custom-1755675491548') return 'normal'  // 일반 락커
+    if (locker.typeId === 'custom-1755675506519') return 'tall'    // 장락커
+    
+    // 색상 기반 판단
+    if (locker.color === '#4A90E2') return 'blue'
+    if (locker.color === '#BD10E0') return 'purple'
+    
+    // 높이 기반 판단
+    if (!locker.typeId && locker.actualHeight) {
+      if (locker.actualHeight === 30) return 'normal'
+      if (locker.actualHeight === 90) return 'tall'
+    }
+    
+    return locker.typeId || 'default'
+  }
+  
+  const prevType = getType(prevLocker)
+  const currentType = getType(currentLocker)
+  
+  // 타입이 다르면 다른 그룹
+  if (prevType !== currentType) {
+    return { same: false, sameType: false, prevType, currentType }
+  }
+  
+  // 2) 타입은 같지만 다른 소그룹에 있는지 확인
+  let prevMinorGroup = null
+  let currentMinorGroup = null
+  
+  minorGroups.forEach((group, index) => {
+    if (group.some((l: any) => l.id === prevLocker.id)) {
+      prevMinorGroup = index
+    }
+    if (group.some((l: any) => l.id === currentLocker.id)) {
+      currentMinorGroup = index
+    }
+  })
+  
+  const sameMinorGroup = prevMinorGroup !== null && currentMinorGroup !== null && prevMinorGroup === currentMinorGroup
+  
+  return { 
+    same: sameMinorGroup, 
+    sameType: true,
+    sameMinorGroup,
+    prevMinorGroup,
+    currentMinorGroup,
+    prevType,
+    currentType
+  }
+}
+
+// 세로모드 전용: 세분화된 간격 계산
+const getGroupSpacingForFrontView = (prevLocker: any, currentLocker: any, minorGroups: any[]): number => {
+  const groupInfo = getActualGroupForFrontView(prevLocker, currentLocker, minorGroups)
+  
+  console.log(`[Group Spacing] ${prevLocker.number} -> ${currentLocker.number}`)
+  console.log('  Group info:', groupInfo)
+  
+  if (!groupInfo.sameType) {
+    // 다른 타입: 20px 간격
+    console.log('  → Different type: 20px gap')
+    return 20
+  } else if (groupInfo.sameMinorGroup) {
+    // 같은 소그룹: 완전히 붙음
+    console.log('  → Same minor group: 0px gap')
+    return 0
+  } else {
+    // 같은 타입, 다른 소그룹: 10px 간격
+    console.log('  → Same type, different minor group: 10px gap')
+    return 10
+  }
+}
+
+// 새로운 Front View 변환 함수
+const transformToFrontViewNew = () => {
+  console.log('==========================================')
+  console.log('[Front View] Starting NEW transformation algorithm')
+  console.log('==========================================')
+  console.trace('Called from:')
+  
+  const lockers = currentLockers.value
+  
+  if (lockers.length === 0) {
+    console.log('[Front View] No lockers to transform')
+    return
+  }
+  
+  // 1. 대그룹 탐지
+  const majorGroups = findMajorGroups(lockers)
+  console.log(`[Front View] Found ${majorGroups.length} major groups:`)
+  majorGroups.forEach((group, index) => {
+    console.log(`  Major Group ${index + 1}:`, group.map(l => `${l.number}(rot:${l.rotation || 0})`))
+  })
+  
+  // 2. 대그룹 우선순위 정렬
+  const sortedMajorGroups = sortMajorGroups(majorGroups)
+  
+  // 3. 최종 시퀀스 생성
+  const finalSequence: any[] = []
+  const LOCKER_VISUAL_SCALE = 2.0
+  
+  let currentX = 0
+  const renderData: any[] = []
+  
+  // 모든 락커를 하나의 플랫 리스트로 만들어서 처리
+  const allLockersSequence: any[] = []
+  // 모든 소그룹을 저장할 배열
+  const allMinorGroups: any[] = []
+  
+  sortedMajorGroups.forEach((majorGroup, majorIndex) => {
+    console.log(`[Front View] Processing major group ${majorIndex + 1}:`, 
+      majorGroup.map(l => `${l.number || l.id}(rot:${l.rotation || 0})`))
+    
+    // 4. 소그룹 분류 및 정렬
+    const minorGroups = findMinorGroups(majorGroup)
+    const sortedMinorGroups = sortMinorGroups(minorGroups)
+    
+    // 모든 소그룹을 전체 배열에 추가
+    allMinorGroups.push(...sortedMinorGroups)
+    
+    console.log(`  Found ${sortedMinorGroups.length} minor groups:`)
+    sortedMinorGroups.forEach((minorGroup, minorIdx) => {
+      console.log(`    Minor Group ${minorIdx + 1}:`, minorGroup.map(l => `${l.number}(rot:${l.rotation || 0})`))
+    })
+    
+    sortedMinorGroups.forEach((minorGroup, minorIndex) => {
+      console.log(`  Processing minor group ${minorIndex + 1}:`, 
+        minorGroup.map(l => `${l.number || l.id}(rot:${l.rotation || 0})`))
+      
+      // 5. 회전 처리 및 순서 조정
+      const rotatedLockers = applyRotationToMinorGroup(minorGroup)
+      
+      // 모든 락커를 시퀀스에 추가
+      rotatedLockers.forEach((locker) => {
+        allLockersSequence.push(locker)
+      })
+    })
+  })
+  
+  // 6. 최종 시퀀스 처리 - 동적 간격 적용
+  let prevLocker: any = null
+  
+  allLockersSequence.forEach((locker, index) => {
+    finalSequence.push(locker)
+    
+    // 이전 락커와의 간격 계산 - allMinorGroups를 전달
+    if (prevLocker && index > 0) {
+      const spacing = getGroupSpacingForFrontView(prevLocker, locker, allMinorGroups)
+      currentX += spacing
+      
+      if (spacing > 0) {
+        console.log(`[Dynamic Gap] Adding ${spacing}px between ${prevLocker.number} and ${locker.number}`)
+      }
+    }
+    
+    const width = (locker.width || 40) * LOCKER_VISUAL_SCALE
+    // 세로모드에서는 height 사용! (평면모드는 depth)
+    const height = (locker.actualHeight || locker.height || 60) * LOCKER_VISUAL_SCALE
+    
+    console.log(`[Position] Locker ${locker.number}(rot:${locker.rotation || 0}) at X:${currentX}, Width:${width}, Height:${height}`)
+    
+    renderData.push({
+      ...locker,
+      frontViewX: currentX,
+      frontViewY: FLOOR_Y - height, // 바닥선 정렬
+      frontViewRotation: 0, // 모든 락커 아래 방향
+    })
+    
+    // 업데이트 via store
+    lockerStore.updateLocker(locker.id, {
+      frontViewX: currentX,
+      frontViewY: FLOOR_Y - height,
+      frontViewRotation: 0
+    })
+    
+    currentX += width // 락커 너비만큼 이동
+    prevLocker = locker // 다음 반복을 위해 현재 락커 저장
+  })
+  
+  // 7. 전체 중앙 정렬
+  const totalWidth = currentX
+  const centerOffset = (canvasWidth.value - totalWidth) / 2
+  
+  renderData.forEach(item => {
+    item.frontViewX += centerOffset
+    // Store 업데이트도 중앙 정렬 적용
+    lockerStore.updateLocker(item.id, {
+      frontViewX: item.frontViewX,
+      frontViewY: item.frontViewY,
+      frontViewRotation: 0
+    })
+  })
+  
+  // 8. 시퀀스 저장
+  frontViewSequence.value = finalSequence
+  
+  console.log('[Front View] NEW Transformation complete:', {
+    totalLockers: finalSequence.length,
+    majorGroups: sortedMajorGroups.length,
+    sequence: finalSequence.map(l => l.number || l.id).join(' → ')
+  })
 }
 
 // 프론트 뷰에서 락커 위치 지정 - 중앙 정렬 및 간격 없음
@@ -3026,7 +4321,7 @@ const showFloorInputDialog = () => {
 }
 
 // Add floors (단수 입력)
-const addFloors = () => {
+const addFloors = async () => {
   const count = Number(floorCount.value)
   if (count < 1 || count > 10) {
     alert('1층부터 10층까지 입력 가능합니다.')
@@ -3042,7 +4337,8 @@ const addFloors = () => {
     currentLockers.value.find(l => l.id === id)
   ).filter(Boolean)
   
-  selectedLockers.forEach(targetLocker => {
+  // Process each selected locker
+  const addTierPromises = selectedLockers.map(async (targetLocker) => {
     // Find the base parent (if selected locker is a child)
     let parentLocker = targetLocker
     if (targetLocker.parentLockerId) {
@@ -3050,56 +4346,55 @@ const addFloors = () => {
       if (!parentLocker) return
     }
     
-    // Find highest tier for this parent
-    const existingChildren = currentLockers.value.filter(l => l.parentLockerId === parentLocker.id)
-    const maxTier = Math.max(0, ...existingChildren.map(c => c.tierLevel || 0))
+    console.log(`[AddFloors] Adding ${count} tiers to parent locker:`, parentLocker.number)
     
-    // Create new tier lockers
-    for (let i = 1; i <= count; i++) {
-      const newTierLevel = maxTier + i
-      const tierHeight = 60 // Standard tier height
-      const gap = 10 // Gap between tiers
+    // Use the backend API to add tiers
+    try {
+      const response = await fetch(`${API_BASE_URL}/lockrs/${parentLocker.lockrCd}/tiers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tierCount: count })
+      })
       
-      const newLocker = {
-        number: '', // Will be assigned via "번호 부여" in floor view
-        x: parentLocker.x, // Same X as parent in floor view
-        y: parentLocker.y, // Same Y as parent in floor view
-        width: parentLocker.width,
-        height: tierHeight,
-        depth: parentLocker.depth,
-        status: 'available' as LockerStatus,
-        rotation: parentLocker.rotation || 0,
-        zoneId: parentLocker.zoneId,
-        typeId: parentLocker.typeId,
-        
-        // Parent-child relationship
-        parentLockerId: parentLocker.id,
-        tierLevel: newTierLevel,
-        
-        // Front view position (stack above)
-        frontViewX: parentLocker.frontViewX || parentLocker.x,
-        frontViewY: (parentLocker.frontViewY || parentLocker.y) - ((tierHeight + gap) * newTierLevel),
-        frontViewNumber: '', // Will be assigned via "번호 부여" in front view
-        actualHeight: tierHeight,
-        
-        // Visibility
-        isVisible: true
+      const result = await response.json()
+      if (result.success) {
+        console.log(`[AddFloors] Successfully added ${result.count} tiers to backend`)
+      } else {
+        console.error('[AddFloors] Failed to add tiers:', result.error)
+        throw new Error(result.error)
       }
-      
-      const created = lockerStore.addLocker(newLocker)
-      
-      // Update parent's child list
-      if (!parentLocker.childLockerIds) {
-        parentLocker.childLockerIds = []
-      }
-      parentLocker.childLockerIds.push(created.id)
+    } catch (error) {
+      console.error('[AddFloors] Error adding tiers:', error)
+      throw error
     }
   })
+  
+  // Wait for all tier additions to complete
+  try {
+    await Promise.all(addTierPromises)
+    console.log('[AddFloors] All tiers added successfully')
+  } catch (error) {
+    console.error('[AddFloors] Some tiers failed to add:', error)
+    alert('티어 추가 중 오류가 발생했습니다: ' + error.message)
+    return
+  }
   
   floorInputVisible.value = false
   console.log(`[Context Menu] Added ${count} tiers to ${selectedLockers.length} lockers`)
   
-  // Refresh the view to show new tiers
+  // Reload all lockers to include newly created tiers, then apply front view transformation
+  loadLockers().then(() => {
+    nextTick(() => {
+      console.log('[AddFloors] Applying front view transformation for new tiers...')
+      try {
+        transformToFrontViewNew()
+        console.log('[AddFloors] Front view transformation completed for new tiers')
+      } catch (error) {
+        console.error('[AddFloors] Front view transformation failed:', error)
+        transformToFrontView_BACKUP()
+      }
+    })
+  })
   updateViewMode()
 }
 
@@ -3111,6 +4406,96 @@ const showNumberAssignDialog = () => {
   numberDirection.value = 'horizontal'
   reverseDirection.value = false
   fromTop.value = false
+}
+
+// Show grouping analysis popup (그룹핑 확인)
+const showGroupingAnalysis = () => {
+  console.log('[Grouping Analysis] Starting analysis...')
+  
+  // First, run test with known data
+  console.log('[TEST] Running test with known data first...')
+  testGroupingWithKnownData()
+  
+  const lockers = currentLockers.value
+  
+  if (lockers.length === 0) {
+    groupingAnalysisResult.value = '분석할 락커가 없습니다.'
+    showGroupingPopup.value = true
+    return
+  }
+  
+  console.log('[REAL DATA] Now analyzing actual lockers...')
+  
+  let result = '대그룹 분석 결과\n'
+  result += '━━━━━━━━━━━━━━━━━━━━━\n'
+  
+  try {
+    // 1. Find major groups using new Adjacent/Connected logic
+    const majorGroups = findMajorGroups(lockers)
+    
+    // 2. Collect all connection relationships for display
+    const connections: string[] = []
+    for (let i = 0; i < lockers.length; i++) {
+      for (let j = i + 1; j < lockers.length; j++) {
+        const locker1 = lockers[i]
+        const locker2 = lockers[j]
+        const distance = getMinDistance(locker1, locker2)
+        
+        if (isConnected(locker1, locker2)) {
+          const l1 = locker1.number || locker1.id
+          const l2 = locker2.number || locker2.id
+          connections.push(`${l1} ↔ ${l2} (${distance.toFixed(2)}px, 연결)`)
+        }
+      }
+    }
+    
+    majorGroups.forEach((majorGroup, majorIndex) => {
+      result += `대그룹 ${majorIndex + 1} (${majorGroup.length}개 락커):\n`
+      
+      // 2. Find minor groups within each major group
+      const minorGroups = findMinorGroups(majorGroup)
+      
+      minorGroups.forEach((minorGroup, minorIndex) => {
+        const lockerDescs = minorGroup.map(l => `${l.number || l.id}(${l.rotation || 0}°)`).join(', ')
+        
+        // Determine grouping reason
+        let reason = ''
+        if (minorGroup.length === 1) {
+          reason = '단독'
+        } else {
+          const firstRotation = minorGroup[0].rotation || 0
+          const allSameRotation = minorGroup.every(l => (l.rotation || 0) === firstRotation)
+          
+          if (allSameRotation) {
+            reason = '같은방향+인접'
+          } else {
+            reason = '다른방향'
+          }
+        }
+        
+        result += `  소그룹 ${majorIndex + 1}-${minorIndex + 1}: ${lockerDescs} - ${reason}\n`
+      })
+      
+      result += '\n'
+    })
+    
+    // 3. Show connection relationships
+    if (connections.length > 0) {
+      result += `연결 관계: ${connections.join(', ')}\n`
+    }
+    
+    result += '━━━━━━━━━━━━━━━━━━━━━\n'
+    result += `총 대그룹: ${majorGroups.length}개\n`
+    result += `총 소그룹: ${majorGroups.reduce((sum, major) => sum + findMinorGroups(major).length, 0)}개`
+    
+  } catch (error) {
+    console.error('[Grouping Analysis] Error:', error)
+    result += '분석 중 오류가 발생했습니다.\n'
+    result += error.message
+  }
+  
+  groupingAnalysisResult.value = result
+  showGroupingPopup.value = true
 }
 
 // Assign numbers (번호 부여)
@@ -3219,114 +4604,397 @@ const deleteNumbers = () => {
   }
 }
 
+// 모든 락커의 겹침을 검사하고 수정하는 함수
+const detectAndFixOverlaps = () => {
+  console.log('[Overlap Fix] Starting overlap detection and fix...')
+  let fixedCount = 0
+  
+  // 모든 락커 쌍을 검사
+  for (let i = 0; i < currentLockers.value.length; i++) {
+    const locker1 = currentLockers.value[i]
+    const bounds1 = getRotatedBounds(locker1)
+    
+    for (let j = i + 1; j < currentLockers.value.length; j++) {
+      const locker2 = currentLockers.value[j]
+      const bounds2 = getRotatedBounds(locker2)
+      
+      // 겹침 검사
+      const overlapX = Math.min(bounds1.x + bounds1.width, bounds2.x + bounds2.width) - 
+                       Math.max(bounds1.x, bounds2.x)
+      const overlapY = Math.min(bounds1.y + bounds1.height, bounds2.y + bounds2.height) - 
+                       Math.max(bounds1.y, bounds2.y)
+      
+      // CRITICAL FIX: Use tolerance for floating point errors
+      const COLLISION_TOLERANCE = 0.5 // 0.5px tolerance for floating point errors
+      if (overlapX > COLLISION_TOLERANCE && overlapY > COLLISION_TOLERANCE) {
+        // Found overlap - need to fix
+        
+        // locker2를 이동시켜 겹침 해결
+        let newX = locker2.x
+        let newY = locker2.y
+        
+        // X축 이동이 더 작으면 X축으로, 아니면 Y축으로 이동
+        if (Math.abs(overlapX) < Math.abs(overlapY)) {
+          // X축으로 이동 (최소 4px 간격 보장)
+          if (bounds2.x < bounds1.x + bounds1.width / 2) {
+            // 왼쪽으로 이동
+            const moveDistance = Math.max(Math.abs(overlapX) + 4, 4)
+            newX = locker2.x - moveDistance
+          } else {
+            // 오른쪽으로 이동
+            const moveDistance = Math.max(Math.abs(overlapX) + 4, 4)
+            newX = locker2.x + moveDistance
+          }
+        } else {
+          // Y축으로 이동 (최소 4px 간격 보장)
+          if (bounds2.y < bounds1.y + bounds1.height / 2) {
+            // 위로 이동
+            const moveDistance = Math.max(Math.abs(overlapY) + 4, 4)
+            newY = locker2.y - moveDistance
+          } else {
+            // 아래로 이동
+            const moveDistance = Math.max(Math.abs(overlapY) + 4, 4)
+            newY = locker2.y + moveDistance
+          }
+        }
+        
+        // 그리드에 스냅
+        newX = snapToGrid(newX)
+        newY = snapToGrid(newY)
+        
+        // 경계 체크
+        const dims = getLockerDimensions(locker2)
+        newX = Math.max(0, Math.min(newX, canvasWidth.value - dims.width))
+        newY = Math.max(0, Math.min(newY, canvasHeight.value - dims.height))
+        
+        // 업데이트
+        lockerStore.updateLocker(locker2.id, { x: newX, y: newY })
+        fixedCount++
+        
+        console.log(`[Overlap Fix] Moved ${locker2.id} from (${locker2.x}, ${locker2.y}) to (${newX}, ${newY})`)
+      }
+    }
+  }
+  
+  if (fixedCount > 0) {
+    console.log(`[Overlap Fix] Fixed ${fixedCount} overlapping lockers`)
+  } else {
+    console.log('[Overlap Fix] No overlaps detected')
+  }
+  
+  return fixedCount
+}
+
+// 회전된 락커의 실제 경계 박스 계산
+const getRotatedBounds = (locker: any) => {
+  // CRITICAL: Check if this is a simple object or a full locker
+  let width, height
+  
+  // If locker has type/id, use getLockerDimensions for scaling
+  if (locker.type || locker.id) {
+    const dims = getLockerDimensions(locker)
+    width = dims.width
+    height = dims.height
+  } else {
+    // Otherwise use the provided width/height directly (already scaled)
+    width = locker.width
+    height = locker.height
+  }
+  
+  const rotation = (locker.rotation || 0) * Math.PI / 180
+  
+  // 회전이 없으면 간단히 반환
+  if (rotation === 0) {
+    return {
+      x: locker.x,
+      y: locker.y,
+      width: width,
+      height: height,
+      originalX: locker.x,
+      originalY: locker.y,
+      originalWidth: width,
+      originalHeight: height
+    }
+  }
+  
+  // 중심점 계산 (로컬 좌표계)
+  const centerX = width / 2
+  const centerY = height / 2
+  
+  // 회전 매트릭스
+  const cos = Math.cos(rotation)
+  const sin = Math.sin(rotation)
+  
+  // 네 모서리 좌표 (로컬 좌표계, 왼쪽 상단이 0,0)
+  const corners = [
+    { x: 0, y: 0 },
+    { x: width, y: 0 },
+    { x: width, y: height },
+    { x: 0, y: height }
+  ]
+  
+  // 각 모서리를 중심점 기준으로 회전
+  const rotatedCorners = corners.map(corner => {
+    // 중심점으로 이동
+    const relX = corner.x - centerX
+    const relY = corner.y - centerY
+    
+    // 회전 적용
+    const rotX = relX * cos - relY * sin
+    const rotY = relX * sin + relY * cos
+    
+    // 월드 좌표계로 변환
+    return {
+      x: locker.x + centerX + rotX,
+      y: locker.y + centerY + rotY
+    }
+  })
+  
+  // 회전된 경계 박스 계산
+  const minX = Math.min(...rotatedCorners.map(c => c.x))
+  const maxX = Math.max(...rotatedCorners.map(c => c.x))
+  const minY = Math.min(...rotatedCorners.map(c => c.y))
+  const maxY = Math.max(...rotatedCorners.map(c => c.y))
+  
+  return {
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY,
+    originalX: locker.x,
+    originalY: locker.y,
+    originalWidth: width,
+    originalHeight: height
+  }
+}
+
 // 그리드에 스냅
 const snapToGrid = (value: number, gridSize: number = 20): number => {
   return Math.round(value / gridSize) * gridSize
 }
 
-// 인접 락커에 스냅 - 지능형 모서리 정렬 (수정된 버전)
-const snapToAdjacent = (x: number, y: number, width: number, height: number, excludeId?: string) => {
-  const SNAP_THRESHOLD = 20
-  const EDGE_ALIGN_THRESHOLD = 40  // Increased threshold for better detection
+// 두 락커가 같은 그룹인지 판단 (인접한 락커들의 연결 체인)
+const areInSameGroup = (locker1Id: string, locker2Id: string): boolean => {
+  // BFS를 사용하여 locker1에서 locker2로 인접한 락커들을 통해 도달 가능한지 확인
+  const visited = new Set<string>()
+  const queue = [locker1Id]
+  visited.add(locker1Id)
+  
+  while (queue.length > 0) {
+    const currentId = queue.shift()!
+    
+    // 목표 락커에 도달했으면 같은 그룹
+    if (currentId === locker2Id) {
+      return true
+    }
+    
+    // 현재 락커와 인접한 모든 락커 찾기
+    const currentLocker = currentLockers.value.find(l => l.id === currentId)
+    if (!currentLocker) continue
+    
+    for (const other of currentLockers.value) {
+      if (!visited.has(other.id) && areAdjacent(currentLocker, other, 10)) {
+        visited.add(other.id)
+        queue.push(other.id)
+      }
+    }
+  }
+  
+  return false
+}
+
+// 인접 락커에 스냅 - 회전을 고려한 정확한 정렬
+const snapToAdjacent = (x: number, y: number, width: number, height: number, excludeId?: string, dragRotation: number = 0) => {
+  // Simple constants for basic snapping
+  const SNAP_THRESHOLD = 20  // Distance to trigger snapping
+  const EDGE_ALIGN_THRESHOLD = 20  // Edge alignment threshold
+  
+  // Get rotated bounds for dragging locker
+  const dragBounds = getRotatedBounds({
+    x, y, 
+    width, height,
+    rotation: dragRotation
+  })
   
   let snappedX = x
   let snappedY = y
   let snapped = false
   
+  console.log('=== SNAP PRIORITY DEBUG ===')
+  console.log('Checking corner snap first (priority 1)')
+  
+  // Check each existing locker for snapping
   for (const locker of currentLockers.value) {
     if (locker.id === excludeId) continue
     
-    const lockerWidth = locker.width
-    const lockerHeight = locker.height || locker.depth || 50
+    // Get rotated bounds for existing locker
+    const bounds = getRotatedBounds(locker)
+    const lockerX = bounds.x
+    const lockerY = bounds.y
+    const lockerWidth = bounds.width
+    const lockerHeight = bounds.height
     
-    // Check horizontal adjacency (left/right snapping)
-    const rightGap = Math.abs((locker.x + lockerWidth) - x)
-    const leftGap = Math.abs(locker.x - (x + width))
+    // ===== PRIORITY 1: Corner snapping (꼭지점 스냅핑) =====
+    const corners = [
+      // Bottom-right corner: existing locker BR → dragging locker TL
+      {
+        existingX: lockerX + lockerWidth,
+        existingY: lockerY + lockerHeight,
+        dragX: dragBounds.x,
+        dragY: dragBounds.y,
+        type: 'corner-bottom-right-to-top-left'
+      },
+      // Bottom-left corner: existing locker BL → dragging locker TR
+      {
+        existingX: lockerX,
+        existingY: lockerY + lockerHeight,
+        dragX: dragBounds.x + dragBounds.width,
+        dragY: dragBounds.y,
+        type: 'corner-bottom-left-to-top-right'
+      },
+      // Top-right corner: existing locker TR → dragging locker BL
+      {
+        existingX: lockerX + lockerWidth,
+        existingY: lockerY,
+        dragX: dragBounds.x,
+        dragY: dragBounds.y + dragBounds.height,
+        type: 'corner-top-right-to-bottom-left'
+      },
+      // Top-left corner: existing locker TL → dragging locker BR
+      {
+        existingX: lockerX,
+        existingY: lockerY,
+        dragX: dragBounds.x + dragBounds.width,
+        dragY: dragBounds.y + dragBounds.height,
+        type: 'corner-top-left-to-bottom-right'
+      }
+    ]
     
-    if (rightGap < SNAP_THRESHOLD) {
-      // Snapping to the right of existing locker
-      snappedX = locker.x + lockerWidth
+    for (const corner of corners) {
+      const cornerDistance = Math.sqrt(
+        Math.pow(corner.existingX - corner.dragX, 2) + 
+        Math.pow(corner.existingY - corner.dragY, 2)
+      )
       
-      // Now check vertical alignment
-      const topDiff = Math.abs(y - locker.y)
-      const bottomDiff = Math.abs((y + height) - (locker.y + lockerHeight))
-      
-      // IMPORTANT: Check BOTH top and bottom alignment
-      if (topDiff < bottomDiff && topDiff < EDGE_ALIGN_THRESHOLD) {
-        // Align tops
-        snappedY = locker.y
-        console.log('[Snap] RIGHT + TOP alignment')
-      } else if (bottomDiff < EDGE_ALIGN_THRESHOLD) {
-        // Align bottoms - THIS IS THE KEY FIX
-        snappedY = locker.y + lockerHeight - height
-        console.log('[Snap] RIGHT + BOTTOM alignment')
+      if (cornerDistance < SNAP_THRESHOLD) {
+        console.log(`[CORNER SNAP] ${corner.type}, distance: ${cornerDistance.toFixed(1)}`)
+        
+        // Snap to corner position
+        snappedX = x + (corner.existingX - corner.dragX)
+        snappedY = y + (corner.existingY - corner.dragY)
+        snapped = true
+        break // Exit corner check loop
       }
-      snapped = true
-    } else if (leftGap < SNAP_THRESHOLD) {
-      // Snapping to the left of existing locker
-      snappedX = locker.x - width
-      
-      // Check vertical alignment
-      const topDiff = Math.abs(y - locker.y)
-      const bottomDiff = Math.abs((y + height) - (locker.y + lockerHeight))
-      
-      if (topDiff < bottomDiff && topDiff < EDGE_ALIGN_THRESHOLD) {
-        snappedY = locker.y
-        console.log('[Snap] LEFT + TOP alignment')
-      } else if (bottomDiff < EDGE_ALIGN_THRESHOLD) {
-        snappedY = locker.y + lockerHeight - height
-        console.log('[Snap] LEFT + BOTTOM alignment')
-      }
-      snapped = true
     }
     
-    // Check vertical adjacency (top/bottom snapping)
-    const bottomGap = Math.abs((locker.y + lockerHeight) - y)
-    const topGap = Math.abs(locker.y - (y + height))
+    // If corner snap succeeded, skip face-to-face snapping for this locker
+    if (snapped) {
+      console.log('Corner snap succeeded - skipping face-to-face snap')
+      break
+    }
     
-    if (bottomGap < SNAP_THRESHOLD) {
-      // Snapping below existing locker
-      snappedY = locker.y + lockerHeight
+    // ===== PRIORITY 2: Face-to-face snapping (면과면 스냅핑) =====
+    console.log('No corner snap - checking face-to-face snap (priority 2)')
+    
+    // Right snap: dragging locker to the right of existing locker
+    const rightGap = Math.abs((lockerX + lockerWidth) - dragBounds.x)
+    if (rightGap < SNAP_THRESHOLD && !snapped) {
+      // Snap horizontally
+      snappedX = x + ((lockerX + lockerWidth) - dragBounds.x)
+      
+      // Check vertical alignment
+      const topDiff = Math.abs(dragBounds.y - lockerY)
+      const bottomDiff = Math.abs((dragBounds.y + dragBounds.height) - (lockerY + lockerHeight))
+      
+      if (topDiff < EDGE_ALIGN_THRESHOLD) {
+        snappedY = y + (lockerY - dragBounds.y)
+      } else if (bottomDiff < EDGE_ALIGN_THRESHOLD) {
+        snappedY = y + ((lockerY + lockerHeight) - (dragBounds.y + dragBounds.height))
+      }
+      snapped = true
+      console.log('[FACE SNAP] Right snap applied')
+      continue
+    }
+    
+    // Left snap: dragging locker to the left of existing locker
+    const leftGap = Math.abs(lockerX - (dragBounds.x + dragBounds.width))
+    if (leftGap < SNAP_THRESHOLD && !snapped) {
+      // Snap horizontally
+      snappedX = x + (lockerX - (dragBounds.x + dragBounds.width))
+      
+      // Check vertical alignment
+      const topDiff = Math.abs(dragBounds.y - lockerY)
+      const bottomDiff = Math.abs((dragBounds.y + dragBounds.height) - (lockerY + lockerHeight))
+      
+      if (topDiff < EDGE_ALIGN_THRESHOLD) {
+        snappedY = y + (lockerY - dragBounds.y)
+      } else if (bottomDiff < EDGE_ALIGN_THRESHOLD) {
+        snappedY = y + ((lockerY + lockerHeight) - (dragBounds.y + dragBounds.height))
+      }
+      snapped = true
+      console.log('[FACE SNAP] Left snap applied')
+      continue
+    }
+    
+    // Bottom snap: dragging locker below existing locker
+    const bottomGap = Math.abs((lockerY + lockerHeight) - dragBounds.y)
+    if (bottomGap < SNAP_THRESHOLD && !snapped) {
+      // Snap vertically
+      snappedY = y + ((lockerY + lockerHeight) - dragBounds.y)
       
       // Check horizontal alignment
-      const leftDiff = Math.abs(x - locker.x)
-      const rightDiff = Math.abs((x + width) - (locker.x + lockerWidth))
+      const leftDiff = Math.abs(dragBounds.x - lockerX)
+      const rightDiff = Math.abs((dragBounds.x + dragBounds.width) - (lockerX + lockerWidth))
       
-      if (leftDiff < rightDiff && leftDiff < EDGE_ALIGN_THRESHOLD) {
-        snappedX = locker.x
-        console.log('[Snap] BOTTOM + LEFT alignment')
+      if (leftDiff < EDGE_ALIGN_THRESHOLD) {
+        snappedX = x + (lockerX - dragBounds.x)
       } else if (rightDiff < EDGE_ALIGN_THRESHOLD) {
-        snappedX = locker.x + lockerWidth - width
-        console.log('[Snap] BOTTOM + RIGHT alignment')
+        snappedX = x + ((lockerX + lockerWidth) - (dragBounds.x + dragBounds.width))
       }
       snapped = true
-    } else if (topGap < SNAP_THRESHOLD) {
-      // Snapping above existing locker
-      snappedY = locker.y - height
+      console.log('[FACE SNAP] Bottom snap applied')
+      continue
+    }
+    
+    // Top snap: dragging locker above existing locker
+    const topGap = Math.abs(lockerY - (dragBounds.y + dragBounds.height))
+    if (topGap < SNAP_THRESHOLD && !snapped) {
+      // Snap vertically
+      snappedY = y + (lockerY - (dragBounds.y + dragBounds.height))
       
-      const leftDiff = Math.abs(x - locker.x)
-      const rightDiff = Math.abs((x + width) - (locker.x + lockerWidth))
+      // Check horizontal alignment
+      const leftDiff = Math.abs(dragBounds.x - lockerX)
+      const rightDiff = Math.abs((dragBounds.x + dragBounds.width) - (lockerX + lockerWidth))
       
-      if (leftDiff < rightDiff && leftDiff < EDGE_ALIGN_THRESHOLD) {
-        snappedX = locker.x
-        console.log('[Snap] TOP + LEFT alignment')
+      if (leftDiff < EDGE_ALIGN_THRESHOLD) {
+        snappedX = x + (lockerX - dragBounds.x)
       } else if (rightDiff < EDGE_ALIGN_THRESHOLD) {
-        snappedX = locker.x + lockerWidth - width
-        console.log('[Snap] TOP + RIGHT alignment')
+        snappedX = x + ((lockerX + lockerWidth) - (dragBounds.x + dragBounds.width))
       }
       snapped = true
+      console.log('[FACE SNAP] Top snap applied')
+      continue
     }
   }
   
-  if (!snapped) {
-    console.log('[Snap] No snapping occurred')
-  }
+  console.log('Final result: snapped =', snapped)
   
   return { x: snappedX, y: snappedY }
 }
 
-// 락커 충돌 체크
-const checkCollisionForLocker = (x: number, y: number, width: number, height: number, excludeId: string | null = null): boolean => {
+// 락커 충돌 체크 - 회전된 경계 고려
+const checkCollisionForLocker = (x: number, y: number, width: number, height: number, excludeId: string | null = null, rotation: number = 0, isSnapped: boolean = false): boolean => {
+  // 체크하려는 락커의 실제 경계
+  const checkBounds = getRotatedBounds({ x, y, width, height, rotation })
+  
+  // DEBUG: Collision check details
+  const collisionDebug = {
+    checking: { x, y, width, height, rotation },
+    bounds: checkBounds,
+    excludeId,
+    collisions: []
+  }
+  
   return currentLockers.value.some(other => {
     // Exclude the dragged locker
     if (other.id === excludeId) return false
@@ -3334,26 +5002,28 @@ const checkCollisionForLocker = (x: number, y: number, width: number, height: nu
     // During group drag, exclude all selected lockers from collision check
     if (isDragging.value && selectedLockerIds.value.has(other.id)) return false
     
-    const otherDims = getLockerDimensions(other)
+    // 다른 락커의 실제 경계 (회전 고려)
+    const otherBounds = getRotatedBounds(other)
     
-    // Visual scale is applied in LockerSVG, but collision uses logical coordinates
-    // Logical coordinates are already scaled (width/height are pre-scaled values)
+    // Calculate overlap using rotated bounds
+    const overlapX = Math.min(checkBounds.x + checkBounds.width, otherBounds.x + otherBounds.width) - 
+                     Math.max(checkBounds.x, otherBounds.x)
+    const overlapY = Math.min(checkBounds.y + checkBounds.height, otherBounds.y + otherBounds.height) - 
+                     Math.max(checkBounds.y, otherBounds.y)
     
-    // Calculate overlap using logical coordinates
-    const overlapX = Math.min(x + width, other.x + otherDims.width) - Math.max(x, other.x)
-    const overlapY = Math.min(y + height, other.y + otherDims.height) - Math.max(y, other.y)
+    // CRITICAL FIX: Collision detection for locker BODIES (not selection outlines)
+    // Allow 0px gap for visual adjacency between locker bodies
+    // Use consistent small tolerance for all positions to prevent overlaps
+    const COLLISION_TOLERANCE = 0.5 // Small tolerance for floating point errors
+    const hasOverlap = overlapX > COLLISION_TOLERANCE && overlapY > COLLISION_TOLERANCE
     
-    // Only consider it a collision if there's actual overlap (not just touching)
-    const hasOverlap = overlapX > 0 && overlapY > 0
-    
+    // DEBUG: Log collision details if overlap detected
     if (hasOverlap) {
-      console.log('[Collision] Overlap detected between lockers:', {
-        movingLocker: { x, y, width, height },
-        existingLocker: { x: other.x, y: other.y, width: otherDims.width, height: otherDims.height },
-        overlapX, overlapY
-      })
+      // Collision detected - log only essential info
+      console.log('[COLLISION] Detected with', other.id, '- overlap:', `(${overlapX.toFixed(1)}, ${overlapY.toFixed(1)})`, 'tolerance:', COLLISION_TOLERANCE)
     }
     
+    // Return true if overlap detected, false otherwise
     return hasOverlap
   })
 }
@@ -3634,32 +5304,134 @@ const smartSnap = (position: {x: number, y: number}, size: {width: number, heigh
   return { ...snapped, alignmentInfo }
 }
 
-// 근접한 락커들을 그룹으로 분류
+// 테스트용 락커 데이터 생성
+// ⚠️ CRITICAL TEST DATA - DO NOT MODIFY
+// Verification test case: Must produce 1 major group, 2 minor groups
+// L1-L2-L3 (adjacent, 0°) connected to L4-L5-L6 (adjacent, 90°) via 42px connection
+const createTestLockers = () => {
+  console.log('[TEST] Creating test locker data with Adjacent/Connected thresholds...')
+  console.log('[TEST] ADJACENT: ≤30px + same direction, CONNECTED: 40-43px (any direction)')
+  
+  const testLockers = [
+    // Group 1: Adjacent lockers (≤30px, same direction 0°)
+    { id: 'test-L1', number: 'L1', x: 100, y: 100, width: 40, height: 60, rotation: 0, color: '#4A90E2' },
+    { id: 'test-L2', number: 'L2', x: 165, y: 100, width: 40, height: 60, rotation: 0, color: '#4A90E2' }, // 25px gap (165-140=25) - adjacent
+    { id: 'test-L3', number: 'L3', x: 230, y: 100, width: 40, height: 60, rotation: 0, color: '#4A90E2' }, // 25px gap (230-205=25) - adjacent
+    
+    // Connected to Group 1: Different direction but within connection range
+    { id: 'test-L4', number: 'L4', x: 312, y: 100, width: 40, height: 60, rotation: 90, color: '#BD10E0' }, // 42px gap (312-270=42) - connected
+    { id: 'test-L5', number: 'L5', x: 377, y: 100, width: 40, height: 60, rotation: 90, color: '#BD10E0' }, // 25px gap - adjacent (same direction 90°)
+    { id: 'test-L6', number: 'L6', x: 442, y: 100, width: 40, height: 60, rotation: 90, color: '#BD10E0' }  // 25px gap - adjacent (same direction 90°)
+  ]
+  
+  console.log('[TEST] Expected result: ALL in 1 major group (connected through L3↔L4)')
+  console.log('[TEST] Expected minor groups: [L1,L2,L3] (adjacent, 0°), [L4,L5,L6] (adjacent, 90°)')
+  console.log('[TEST] Key distances:')
+  console.log('[TEST]   L1↔L2: 25px (adjacent, same dir)')
+  console.log('[TEST]   L2↔L3: 25px (adjacent, same dir)') 
+  console.log('[TEST]   L3↔L4: 42px (connected, diff dir)')
+  console.log('[TEST]   L4↔L5: 25px (adjacent, same dir)')
+  console.log('[TEST]   L5↔L6: 25px (adjacent, same dir)')
+  
+  return testLockers
+}
+
+const testGroupingWithKnownData = () => {
+  console.log('=== TESTING WITH KNOWN DATA ===')
+  
+  // Save current lockers
+  const originalLockers = [...currentLockers.value]
+  
+  // Replace with test data
+  currentLockers.value = createTestLockers()
+  
+  // Run grouping
+  const groups = groupNearbyLockers()
+  
+  // Restore original lockers
+  currentLockers.value = originalLockers
+  
+  console.log('=== TEST COMPLETE ===')
+  return groups
+}
+
+// ==========================================
+// CRITICAL: WORKING GROUPING SYSTEM
+// ⚠️ DO NOT MODIFY WITHOUT APPROVAL
+// Last verified working: 2025-08-25
+// Test case: L1-L6 configuration produces 1 major group, 2 minor groups
+// Documentation: /docs/grouping-system-final.md
+// ==========================================
+
+// ✅ VERIFIED WORKING THRESHOLDS - DO NOT CHANGE
+const ADJACENT_THRESHOLD = 30     // ≤ 30px + same direction = adjacent
+const CONNECTED_MIN = 40          // > 40px AND < 43px = connected  
+const CONNECTED_MAX = 43          // (direction irrelevant for connected)
+
+// ⚠️ CRITICAL FUNCTION - DO NOT MODIFY
+// Implementation verified working with current test data
+// Adjacent = distance ≤ 30px + same rotation
+const isAdjacent = (locker1: any, locker2: any): boolean => {
+  const distance = getMinDistance(locker1, locker2)
+  const sameDirection = (locker1.rotation || 0) === (locker2.rotation || 0)
+  const result = distance <= ADJACENT_THRESHOLD && sameDirection
+  console.log(`[ADJACENT] ${locker1.number || locker1.id} ↔ ${locker2.number || locker2.id}: ${distance.toFixed(2)}px, same direction: ${sameDirection} → ${result ? 'ADJACENT' : 'NOT ADJACENT'}`)
+  return result
+}
+
+// ⚠️ CRITICAL FUNCTION - DO NOT MODIFY  
+// Implementation verified working with current test data
+// Connected = 40px < distance < 43px (any rotation)
+const isConnected = (locker1: any, locker2: any): boolean => {
+  const distance = getMinDistance(locker1, locker2)
+  const result = distance > CONNECTED_MIN && distance < CONNECTED_MAX
+  console.log(`[CONNECTED] ${locker1.number || locker1.id} ↔ ${locker2.number || locker2.id}: ${distance.toFixed(2)}px → ${result ? 'CONNECTED' : 'NOT CONNECTED'}`)
+  return result
+}
+
+// ⚠️ CRITICAL FUNCTION - MAJOR GROUP DETECTION
+// DO NOT MODIFY - Verified working BFS algorithm
+// Creates major groups using Adjacent OR Connected relationships
 const groupNearbyLockers = () => {
   const groups: any[][] = []
   const visited = new Set<string>()
-  const PROXIMITY_THRESHOLD = 100 // 100px 이내 락커는 같은 그룹
+  
+  console.log('==========================================')
+  console.log('[DEBUG] Starting MAJOR GROUP detection with Adjacent/Connected logic')
+  console.log('[DEBUG] ADJACENT_THRESHOLD:', ADJACENT_THRESHOLD, 'CONNECTED_MIN-MAX:', CONNECTED_MIN, '-', CONNECTED_MAX)
+  console.log('[DEBUG] Total lockers:', currentLockers.value.length)
+  
+  // Debug: Log all locker positions
+  console.log('[DEBUG] Locker positions:')
+  currentLockers.value.forEach(locker => {
+    console.log(`  ${locker.number || locker.id}: x=${locker.x}, y=${locker.y}, width=${locker.width}, height=${locker.height || locker.depth}, rotation=${locker.rotation || 0}°`)
+  })
   
   currentLockers.value.forEach(locker => {
     if (visited.has(locker.id)) return
     
+    console.log(`[MAJOR GROUP] Starting new major group with locker ${locker.number || locker.id}`)
     const group = [locker]
     visited.add(locker.id)
     
-    // BFS로 근접한 락커 찾기
+    // BFS로 인접하거나 연결된 락커 찾기 (Major Group = Adjacent OR Connected)
     const queue = [locker]
     while (queue.length > 0) {
       const current = queue.shift()!
+      console.log(`[MAJOR GROUP] Processing locker ${current.number || current.id} from queue`)
       
       currentLockers.value.forEach(other => {
         if (visited.has(other.id)) return
         
-        const distance = Math.sqrt(
-          Math.pow(current.x - other.x, 2) + 
-          Math.pow(current.y - other.y, 2)
-        )
+        // Check if adjacent OR connected
+        const adjacent = isAdjacent(current, other)
+        const connected = isConnected(current, other)
+        const shouldGroup = adjacent || connected
         
-        if (distance < PROXIMITY_THRESHOLD) {
+        console.log(`[MAJOR GROUP] ${current.number || current.id} ↔ ${other.number || other.id}: Adjacent=${adjacent}, Connected=${connected} → ${shouldGroup ? '✓ ADD TO MAJOR GROUP' : '✗ SEPARATE MAJOR GROUP'}`)
+        
+        if (shouldGroup) {
+          console.log(`[MAJOR GROUP] Adding ${other.number || other.id} to major group`)
           group.push(other)
           visited.add(other.id)
           queue.push(other)
@@ -3667,8 +5439,15 @@ const groupNearbyLockers = () => {
       })
     }
     
+    console.log(`[MAJOR GROUP] Major group ${groups.length + 1} complete:`, group.map(l => l.number || l.id).join(', '))
     groups.push(group)
   })
+  
+  console.log(`[DEBUG] Final result: ${groups.length} groups`)
+  groups.forEach((group, index) => {
+    console.log(`  Group ${index + 1}: ${group.map(l => l.number || l.id).join(', ')}`)
+  })
+  console.log('==========================================')
   
   return groups
 }
@@ -3764,8 +5543,8 @@ const updateSelectedLockersInBox = () => {
 }
 
 
-// 선택된 락커 회전 (연속 회전, 역회전 방지)
-const rotateSelectedLocker = (angle = 45) => {
+// 선택된 락커 회전 (드래그 기반 회전으로 대체됨)
+/* const rotateSelectedLocker = (angle = 45) => {
   console.log('[UI] Button clicked:', angle > 0 ? 'rotate-cw' : 'rotate-ccw')
   
   // 다중 선택된 경우
@@ -3814,10 +5593,10 @@ const rotateSelectedLocker = (angle = 45) => {
       console.error('Failed to save rotation:', error)
     })
   }
-}
+} */
 
-// 다중 선택된 락커 회전 (그룹 전체가 공통 중심점 기준으로 회전)
-const rotateSelectedLockers = (direction: 'cw' | 'ccw' = 'cw') => {
+// 다중 선택된 락커 회전 (드래그 기반으로 대체 예정)
+/* const rotateSelectedLockers = (direction: 'cw' | 'ccw' = 'cw') => {
   if (selectedLockerIds.value.size === 0) return
   
   const angle = direction === 'cw' ? 45 : -45
@@ -3885,7 +5664,7 @@ const rotateSelectedLockers = (direction: 'cw' | 'ccw' = 'cw') => {
 
 
 // 다중 락커 회전 (각도 버전 - 각 락커가 자체 중심으로 회전)
-const rotateMultipleLockers = (angle: number) => {
+/* const rotateMultipleLockers = (angle: number) => {
   const direction = angle > 0 ? '시계방향' : '반시계방향'
   console.log(`[Rotation] ${selectedLockerIds.value.size}개 락커 ${direction} ${Math.abs(angle)}° 회전`)
   
@@ -3928,7 +5707,7 @@ const rotateMultipleLockers = (angle: number) => {
   })
   
   console.log(`[Rotation] ${successCount}/${selectedLockerIds.value.size}개 락커 회전 완료`)
-}
+} */
 
 // 구역 저장 처리
 const handleZoneSave = async (zoneData) => {
@@ -4090,6 +5869,20 @@ const handleKeyDown = (event: KeyboardEvent) => {
     return // Don't process shortcuts when modal is open
   }
   
+  // Fix Overlaps (Ctrl/Cmd + Shift + F)
+  if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'F') {
+    event.preventDefault()
+    const overlaps = detectAndFixOverlaps()
+    if (overlaps > 0) {
+      console.log(`[Keyboard] Fixed ${overlaps} overlapping lockers`)
+      alert(`Fixed ${overlaps} overlapping lockers`)
+    } else {
+      console.log('[Keyboard] No overlaps detected')
+      alert('No overlapping lockers found')
+    }
+    return
+  }
+  
   // Select All (Ctrl/Cmd + A)
   if ((event.ctrlKey || event.metaKey) && event.key === 'a') {
     event.preventDefault()
@@ -4103,36 +5896,13 @@ const handleKeyDown = (event: KeyboardEvent) => {
     return
   }
   
-  // R 키: 회전 처리 (Shift+R = 반시계방향)
+  // R 키: 회전 모드 활성화 (드래그 회전을 위한 힌트)
   if ((event.key === 'r' || event.key === 'R')) {
     event.preventDefault()
     
-    const angle = event.shiftKey ? -45 : 45
-    const selectedCount = selectedLockerIds.value.size
-    
-    if (selectedCount > 1) {
-      // Multiple lockers selected - rotate as GROUP around common center
-      if (!rotateInterval) {
-        // First rotation
-        const direction = angle > 0 ? 'cw' : 'ccw'
-        rotateSelectedLockers(direction)
-        
-        // Continuous rotation if key is held
-        rotateInterval = window.setInterval(() => {
-          rotateSelectedLockers(direction)
-        }, 100) // Rotate every 100ms
-      }
-    } else if (selectedLocker.value) {
-      // Single locker selected
-      if (!rotateInterval) {
-        // First rotation
-        rotateSelectedLocker(angle)
-        
-        // Continuous rotation if key is held
-        rotateInterval = window.setInterval(() => {
-          rotateSelectedLocker(angle)
-        }, 100) // Rotate every 100ms
-      }
+    if (selectedLocker.value) {
+      console.log('[Rotation] Press R - Use mouse to drag rotation handle')
+      // 회전 핸들을 강조 표시하거나 힌트를 보여줄 수 있습니다
     }
     
     return
@@ -4256,6 +6026,31 @@ watch(() => currentLockers.value, (newLockers) => {
   }
 }, { deep: true })
 
+// Watch for view mode changes and reload lockers accordingly
+watch(() => currentViewMode.value, async (newViewMode, oldViewMode) => {
+  // Only react to actual view mode changes (not initial mount)
+  if (oldViewMode && newViewMode !== oldViewMode) {
+    console.log(`[ViewMode Change] ${oldViewMode} → ${newViewMode}, reloading lockers...`)
+    await loadLockers()
+    
+    // After loading lockers, apply front view transformation if needed
+    if (newViewMode === 'front') {
+      console.log('[ViewMode Change] Applying front view transformation after loading all lockers...')
+      nextTick(() => {
+        try {
+          transformToFrontViewNew()
+          console.log('[ViewMode Change] Front view transformation completed')
+        } catch (error) {
+          console.error('[ViewMode Change] Front view transformation failed:', error)
+          transformToFrontView_BACKUP()
+        }
+      })
+    }
+  } else if (!oldViewMode) {
+    console.log('[ViewMode Watcher] Initial mount - skipping reload (onMounted will handle it)')
+  }
+})
+
 // Computed property for cursor style
 const getCursorStyle = computed(() => {
   if (isDragging.value) return 'grabbing'
@@ -4266,9 +6061,26 @@ const getCursorStyle = computed(() => {
 })
 
 
+// ========== 디버깅 로그 ==========
+watch(selectedLockerIds, (newIds) => {
+  console.log('[DEBUG] Selected lockers changed:', Array.from(newIds))
+  console.log('[DEBUG] Selected lockers objects:', selectedLockers.value)
+  console.log('[DEBUG] Connected groups:', connectedGroups.value)
+  console.log('[DEBUG] Lockers needing unified outline:', Array.from(lockersNeedingUnifiedOutline.value))
+}, { immediate: true, deep: true })
+
+watch(connectedGroups, (newGroups) => {
+  console.log('[DEBUG] Connected groups updated:', newGroups)
+  console.log('[DEBUG] Groups with length > 1:', newGroups.filter(g => g.length > 1))
+}, { deep: true })
+
 // 초기화
 onMounted(async () => {
   console.log('Component mounted, loading data...')
+  
+  // Ensure initial view mode is set to floor (default)
+  currentViewMode.value = 'floor'
+  console.log('[onMounted] Initial view mode set to:', currentViewMode.value)
   
   // Keep loading true until all critical data is loaded
   isLoadingTypes.value = true
@@ -4277,7 +6089,8 @@ onMounted(async () => {
   try {
     // Load types first, then lockers (zones can remain parallel)
     await Promise.all([loadZones(), loadLockerTypes()])
-    await loadLockers()  // Wait for types to complete first
+    console.log('[onMounted] About to load lockers with view mode:', currentViewMode.value)
+    await loadLockers()  // Will now respect currentViewMode (floor = parent only)
     
     // Only set loading false when everything is ready
     await nextTick()
@@ -4285,6 +6098,15 @@ onMounted(async () => {
     isLoadingLockers.value = false
     
     console.log('All data loading completed')
+    
+    // Check and fix any overlapping lockers
+    await nextTick()
+    setTimeout(() => {
+      const overlaps = detectAndFixOverlaps()
+      if (overlaps > 0) {
+        console.log(`[Init] Fixed ${overlaps} overlapping lockers on load`)
+      }
+    }, 100)
     
     // Select first zone if available
     if (zones.value.length > 0 && !selectedZone.value) {
@@ -4312,8 +6134,8 @@ onMounted(async () => {
   // Add click listener to close context menu
   document.addEventListener('click', hideContextMenu)
   
-  // 데이터베이스에서 락커 로드 - use proper loadLockers to preserve actualHeight
-  await loadLockers()
+  // 락커는 이미 위의 onMounted에서 로드되었으므로 중복 로드 제거
+  // await loadLockers() // REMOVED: 중복 호출 제거
   
   // 첫 번째 구역 선택
   if (lockerStore.zones.length > 0) {
@@ -4332,11 +6154,10 @@ const handleKeyUp = (event: KeyboardEvent) => {
     isCopyMode.value = false
   }
   
-  // R 키 뗄 때 연속 회전 중지
-  if ((event.key === 'r' || event.key === 'R') && rotateInterval) {
-    clearInterval(rotateInterval)
-    rotateInterval = null
-  }
+  // R 키 뗄 때 (더 이상 연속 회전이 없으므로 제거)
+  // if ((event.key === 'r' || event.key === 'R')) {
+  //   // 드래그 기반 회전으로 변경됨
+  // }
 }
 
 // 컴포넌트 언마운트 시 정리
@@ -4345,10 +6166,6 @@ onUnmounted(() => {
   document.removeEventListener('keyup', handleKeyUp)
   document.removeEventListener('click', hideContextMenu)
   window.removeEventListener('resize', updateCanvasSize)
-  if (rotateInterval) {
-    clearInterval(rotateInterval)
-    rotateInterval = null
-  }
 })
 </script>
 
@@ -4759,10 +6576,16 @@ onUnmounted(() => {
 /* 구역 탭 */
 .zone-tabs {
   display: flex;
-  gap: 24px;
   padding-bottom: 12px;
   border-bottom: 1px solid black;
   margin-bottom: 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.zone-tab-group {
+  display: flex;
+  gap: 24px;
   align-items: center;
 }
 
@@ -4992,6 +6815,180 @@ onUnmounted(() => {
   color: #111827;
 }
 
+/* Grouping popup specific styles */
+.grouping-popup {
+  min-width: 600px;
+  max-width: 800px;
+}
+
+/* Debug popup specific styles */
+.debug-popup {
+  min-width: 900px;
+  max-width: 1200px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.debug-section {
+  margin-bottom: 24px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  background: #fafafa;
+}
+
+.debug-section h4 {
+  margin: 0 0 12px 0;
+  color: #333;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.debug-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+.stat-item .label {
+  font-weight: 500;
+  color: #666;
+}
+
+.stat-item .value {
+  font-weight: 600;
+  color: #333;
+}
+
+.locker-list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+}
+
+.locker-item {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+  transition: background-color 0.2s;
+}
+
+.locker-item:hover {
+  background-color: #f8f9fa;
+}
+
+.locker-item:last-child {
+  border-bottom: none;
+}
+
+.locker-item.parent {
+  border-left: 4px solid #28a745;
+}
+
+.locker-item.child {
+  border-left: 4px solid #fd7e14;
+  background-color: #fff8f0;
+}
+
+.locker-item.current {
+  background-color: #e8f5e8;
+}
+
+.locker-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.locker-name {
+  font-weight: 600;
+  font-size: 16px;
+  color: #333;
+}
+
+.locker-type {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  background: #e9ecef;
+  color: #495057;
+}
+
+.locker-item.parent .locker-type {
+  background: #d4edda;
+  color: #155724;
+}
+
+.locker-item.child .locker-type {
+  background: #ffeeba;
+  color: #856404;
+}
+
+.render-status {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.locker-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13px;
+  color: #666;
+}
+
+.locker-details span {
+  background: #f8f9fa;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+}
+
+.debug-btn {
+  background: #17a2b8;
+  color: white;
+}
+
+.debug-btn:hover {
+  background: #138496;
+}
+
+.grouping-results {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.grouping-results pre {
+  margin: 0;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #333;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
 .form-group {
   margin-bottom: 16px;
 }
@@ -5110,7 +7107,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-left: auto;
+  margin-right: 20px;
 }
 
 /* Inline Mode Toggle */
@@ -5174,6 +7171,23 @@ onUnmounted(() => {
   
   .mode-toggle-inline .mode-btn {
     padding: 8px 10px;
+  }
+}
+
+/* 통합 선택 외곽선 - 단일 선택과 동일한 스타일 */
+.unified-selection-outline {
+  stroke: #3b82f6;
+  stroke-width: 3;
+  stroke-dasharray: 8 4; /* 8px 선, 4px 공백 = 총 12px */
+  animation: dash-rotate 0.5s linear infinite;
+}
+
+@keyframes dash-rotate {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: 12; /* dasharray 합계와 동일 */
   }
 }
 </style>

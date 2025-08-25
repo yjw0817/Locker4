@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Unified Outline</title>
+</head>
+<body>
+    <h1>Unified Outline Test Instructions</h1>
+    <ol>
+        <li>Open the development server at <a href="http://localhost:5174/locker-placement-figma" target="_blank">http://localhost:5174/locker-placement-figma</a></li>
+        <li>Open the browser console (F12)</li>
+        <li>Copy and paste the following test script into the console:</li>
+    </ol>
+    
+    <pre style="background: #f4f4f4; padding: 15px; border-radius: 5px;">
+// Test script for unified outline functionality
+function testUnifiedOutline() {
+  console.log('=== Testing Unified Outline Functionality ===');
+  
+  // Get all locker elements
+  const lockers = document.querySelectorAll('[data-locker-id]');
+  console.log(`Found ${lockers.length} lockers on the page`);
+  
+  if (lockers.length < 2) {
+    console.log('Need at least 2 lockers to test multi-selection');
+    return;
+  }
+  
+  // Clear any existing selection first
+  document.body.click();
+  
+  setTimeout(() => {
+    // Select first locker with Ctrl
+    console.log('\n1. Selecting first locker with Ctrl...');
+    const firstLocker = lockers[0];
+    const firstEvent = new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+      ctrlKey: true
+    });
+    firstLocker.dispatchEvent(firstEvent);
+    
+    setTimeout(() => {
+      // Select second locker with Ctrl
+      console.log('2. Adding second locker to selection...');
+      const secondLocker = lockers[1];
+      const secondEvent = new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+        ctrlKey: true
+      });
+      secondLocker.dispatchEvent(secondEvent);
+      
+      setTimeout(() => {
+        // Check results
+        console.log('\n=== RESULTS ===');
+        
+        // Check for unified outline
+        const unifiedOutlines = document.querySelectorAll('.unified-selection-outline');
+        console.log(`Unified outlines found: ${unifiedOutlines.length}`);
+        
+        if (unifiedOutlines.length > 0) {
+          console.log('✅ Unified outline is being rendered!');
+          unifiedOutlines.forEach((outline, index) => {
+            const x = outline.getAttribute('x');
+            const y = outline.getAttribute('y');
+            const width = outline.getAttribute('width');
+            const height = outline.getAttribute('height');
+            console.log(`  Outline ${index + 1}: x=${x}, y=${y}, width=${width}, height=${height}`);
+          });
+        } else {
+          console.log('❌ No unified outline found');
+        }
+        
+        // Check individual outlines
+        const individualOutlines = document.querySelectorAll('.selection-outline');
+        console.log(`Individual selection outlines visible: ${individualOutlines.length}`);
+        
+        // Log selected lockers info
+        const selectedCount = document.querySelectorAll('.locker-selected').length;
+        console.log(`Selected lockers: ${selectedCount}`);
+        
+      }, 500);
+    }, 500);
+  }, 500);
+}
+
+// Run the test
+testUnifiedOutline();
+    </pre>
+    
+    <h2>What to look for:</h2>
+    <ul>
+        <li>When selecting adjacent lockers, there should be ONE unified outline around the group</li>
+        <li>Individual dotted outlines should be hidden for lockers in the unified group</li>
+        <li>The unified outline should properly encompass all selected adjacent lockers</li>
+        <li>Check the console for debug messages about adjacency detection</li>
+    </ul>
+    
+    <h2>Manual Testing:</h2>
+    <ul>
+        <li>Try selecting two adjacent lockers with Ctrl+Click</li>
+        <li>The unified outline should appear at the correct position and size</li>
+        <li>Try selecting non-adjacent lockers - they should show individual outlines</li>
+    </ul>
+</body>
+</html>

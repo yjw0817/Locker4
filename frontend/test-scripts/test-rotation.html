@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>락커 드래그 회전 테스트</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #0768AE;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-item {
+            margin: 15px 0;
+            padding: 10px;
+            border-left: 3px solid #0768AE;
+            background: #f9f9f9;
+        }
+        .test-item h3 {
+            margin: 0 0 10px 0;
+            color: #0768AE;
+        }
+        .test-steps {
+            margin: 10px 0;
+        }
+        .test-steps li {
+            margin: 5px 0;
+        }
+        .expected {
+            background: #e8f5e9;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .keyboard-shortcuts {
+            background: #fff3e0;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        kbd {
+            background: #333;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .pass { background: #4caf50; color: white; }
+        .fail { background: #f44336; color: white; }
+        .pending { background: #ff9800; color: white; }
+    </style>
+</head>
+<body>
+    <h1>🔄 락커 드래그 기반 회전 시스템 테스트</h1>
+    
+    <div class="test-section">
+        <h2>📋 테스트 체크리스트</h2>
+        
+        <div class="test-item">
+            <h3>1. 기본 회전 기능</h3>
+            <div class="test-steps">
+                <ol>
+                    <li>락커를 선택하여 회전 핸들이 표시되는지 확인</li>
+                    <li>회전 핸들을 드래그하여 자유롭게 회전 가능한지 확인</li>
+                    <li>회전 중 실시간으로 각도가 표시되는지 확인</li>
+                </ol>
+            </div>
+            <div class="expected">
+                <strong>예상 결과:</strong> 락커가 마우스 움직임에 따라 부드럽게 회전하며, 현재 각도가 실시간으로 표시됨
+            </div>
+        </div>
+        
+        <div class="test-item">
+            <h3>2. 스냅 기능</h3>
+            <div class="test-steps">
+                <ol>
+                    <li>회전 핸들을 드래그하여 0°, 45°, 90° 등 주요 각도 근처로 이동</li>
+                    <li>5도 범위 내에서 자동으로 스냅되는지 확인</li>
+                    <li>스냅될 때 녹색 원이 표시되는지 확인</li>
+                </ol>
+            </div>
+            <div class="expected">
+                <strong>예상 결과:</strong> 주요 각도(0°, 45°, 90°, 135°, 180°, 225°, 270°, 315°)에서 자동 정렬되고 시각적 피드백 제공
+            </div>
+        </div>
+        
+        <div class="test-item">
+            <h3>3. 키보드 수정자</h3>
+            <div class="test-steps">
+                <ol>
+                    <li><kbd>Shift</kbd> + 드래그: 15도 단위로 제한되는지 확인</li>
+                    <li><kbd>Alt</kbd> + 드래그: 스냅 기능이 비활성화되는지 확인</li>
+                    <li>일반 드래그: 5도 범위에서 스냅이 작동하는지 확인</li>
+                </ol>
+            </div>
+            <div class="expected">
+                <strong>예상 결과:</strong> 각 수정자 키에 따라 회전 동작이 다르게 작동
+            </div>
+        </div>
+        
+        <div class="test-item">
+            <h3>4. 시각적 피드백</h3>
+            <div class="test-steps">
+                <ol>
+                    <li>회전 중 락커가 약간 투명해지는지 확인 (opacity: 0.8)</li>
+                    <li>회전 핸들 커서가 grab → grabbing으로 변경되는지 확인</li>
+                    <li>각도 표시 배경이 흰색 박스로 표시되는지 확인</li>
+                    <li>스냅 시 녹색 원 애니메이션이 작동하는지 확인</li>
+                </ol>
+            </div>
+            <div class="expected">
+                <strong>예상 결과:</strong> 모든 시각적 피드백이 정상 작동
+            </div>
+        </div>
+        
+        <div class="test-item">
+            <h3>5. 데이터 저장</h3>
+            <div class="test-steps">
+                <ol>
+                    <li>락커를 회전시킨 후 마우스를 놓기</li>
+                    <li>콘솔에서 회전 저장 로그 확인</li>
+                    <li>페이지 새로고침 후 회전 상태 유지 확인</li>
+                </ol>
+            </div>
+            <div class="expected">
+                <strong>예상 결과:</strong> 회전값이 서버에 저장되고 새로고침 후에도 유지됨
+            </div>
+        </div>
+    </div>
+    
+    <div class="test-section keyboard-shortcuts">
+        <h2>⌨️ 키보드 단축키</h2>
+        <ul>
+            <li><kbd>R</kbd> - 회전 모드 힌트 (콘솔에 메시지 표시)</li>
+            <li><kbd>Shift</kbd> + 드래그 - 15도 단위로 제한</li>
+            <li><kbd>Alt</kbd> + 드래그 - 스냅 기능 비활성화</li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h2>🐛 알려진 이슈 및 개선사항</h2>
+        <ul>
+            <li>✅ 버튼 기반 회전 제거 완료</li>
+            <li>✅ 드래그 기반 회전 구현 완료</li>
+            <li>✅ 스냅 기능 구현 완료</li>
+            <li>✅ 시각적 피드백 추가 완료</li>
+            <li>⏳ 다중 선택 락커 그룹 회전 (향후 구현 예정)</li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h2>📊 테스트 결과</h2>
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #0768AE; color: white;">
+                    <th style="padding: 10px; text-align: left;">테스트 항목</th>
+                    <th style="padding: 10px; text-align: center;">상태</th>
+                    <th style="padding: 10px; text-align: left;">비고</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">드래그 회전</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center;">
+                        <span class="status pending">PENDING</span>
+                    </td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">테스트 대기</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">스냅 기능</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center;">
+                        <span class="status pending">PENDING</span>
+                    </td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">테스트 대기</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">키보드 수정자</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center;">
+                        <span class="status pending">PENDING</span>
+                    </td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">테스트 대기</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">시각적 피드백</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center;">
+                        <span class="status pending">PENDING</span>
+                    </td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">테스트 대기</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">데이터 저장</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center;">
+                        <span class="status pending">PENDING</span>
+                    </td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">테스트 대기</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="test-section">
+        <h2>🚀 테스트 방법</h2>
+        <ol>
+            <li>개발 서버 실행: <code>npm run dev</code></li>
+            <li>브라우저에서 <a href="http://localhost:5174/locker-placement-figma" target="_blank">http://localhost:5174/locker-placement-figma</a> 열기</li>
+            <li>위 체크리스트에 따라 각 기능 테스트</li>
+            <li>콘솔에서 디버그 메시지 확인</li>
+        </ol>
+    </div>
+</body>
+</html>

@@ -443,16 +443,23 @@ export const useLockerStore = defineStore('locker', () => {
 
   // Database integration methods
   const loadLockersFromDatabase = async () => {
+    console.log(`[STORE] 🔥 loadLockersFromDatabase() called!`)
+    console.log(`[STORE] isOnlineMode: ${isOnlineMode.value}`)
+    console.log(`[STORE] Stack trace:`, new Error().stack)
+    
     if (!isOnlineMode.value) return
     
     isSyncing.value = true
     try {
+      console.log(`[STORE] Calling lockerApi.getAllLockers()`)
       const dbLockers = await lockerApi.getAllLockers()
+      console.log(`[STORE] Got ${dbLockers.length} lockers from API`)
+      
       if (dbLockers.length > 0) {
         lockers.value = dbLockers
         lastSyncTime.value = new Date()
         connectionStatus.value = 'connected'
-        console.log(`[Store] Loaded ${dbLockers.length} lockers from database`)
+        console.log(`[Store] ✅ Loaded ${dbLockers.length} lockers from database`)
       } else {
         console.log('[Store] No lockers found in database')
         connectionStatus.value = 'connected'

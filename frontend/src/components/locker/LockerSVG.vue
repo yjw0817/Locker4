@@ -15,12 +15,9 @@
     style="cursor: move;"
   >
     <!-- 선택 상태 하이라이트 -->
-    <rect 
-      v-if="isSelected || isMultiSelected"
-      :x="-5"
-      :y="-5"
-      :width="logicalDimensions.width + 10"
-      :height="logicalDimensions.height + 10"
+    <path 
+      v-if="(isSelected || isMultiSelected) && !shouldHideIndividualOutline"
+      :d="selectionOutlinePath"
       fill="none"
       stroke="#0768AE"
       stroke-width="2"
@@ -33,7 +30,7 @@
         dur="0.5s" 
         repeatCount="indefinite"
       />
-    </rect>
+    </path>
     
     <!-- 락커 본체 (독립적인 경계선) -->
     <rect
@@ -47,18 +44,21 @@
       :rx="cornerRadius"
       :ry="cornerRadius"
       shape-rendering="crispEdges"
+      :opacity="isRotating ? 0.8 : 1"
+      :style="{ transition: 'opacity 0.2s ease' }"
     />
     
     <!-- 전면 표시선 (하단) - 피그마 디자인 준수 - floor view에서만 표시 -->
     <line
       v-if="viewMode === 'floor'"
-      :x1="6"
-      :y1="logicalDimensions.height - 6"
-      :x2="logicalDimensions.width - 6"
-      :y2="logicalDimensions.height - 6"
+      :x1="10"
+      :y1="logicalDimensions.height - 4"
+      :x2="logicalDimensions.width - 10"
+      :y2="logicalDimensions.height - 4"
       :stroke="lockerStroke"
-      stroke-width="2"
-      opacity="0.8"
+      stroke-width="4"
+      opacity="0.9"
+      stroke-linecap="square"
       class="front-indicator"
     />
     
@@ -79,23 +79,71 @@
     </text>
     
     <!-- 회전 핸들 (선택 시만 표시) -->
-    <g v-if="isSelected && showRotateHandle">
+    <g v-if="isSelected && showRotateHandle" class="rotation-handle">
       <line
         :x1="logicalDimensions.width / 2"
         :y1="0"
         :x2="logicalDimensions.width / 2"
-        :y2="-20"
+        :y2="-25"
         stroke="#0768AE"
-        stroke-width="1"
+        stroke-width="2"
+        opacity="0.8"
       />
       <circle
         :cx="logicalDimensions.width / 2"
-        :cy="-20"
-        r="5"
+        :cy="-25"
+        r="8"
         fill="#0768AE"
-        style="cursor: grab;"
+        stroke="#ffffff"
+        stroke-width="2"
+        :style="{ cursor: isRotating ? 'grabbing' : 'grab' }"
         @mousedown.stop="handleRotateStart"
       />
+      
+      <!-- 회전 중 각도 표시 -->
+      <g v-if="isRotating">
+        <!-- 각도 표시 배경 -->
+        <rect
+          :x="logicalDimensions.width / 2 - 25"
+          :y="-50"
+          width="50"
+          height="20"
+          rx="10"
+          fill="white"
+          stroke="#0768AE"
+          stroke-width="1"
+          opacity="0.95"
+        />
+        <text
+          :x="logicalDimensions.width / 2"
+          :y="-36"
+          text-anchor="middle"
+          font-size="12"
+          fill="#0768AE"
+          font-weight="600"
+        >
+          {{ Math.round(((locker.rotation || 0) % 360 + 360) % 360) }}°
+        </text>
+        
+        <!-- 스냅 인디케이터 (주요 각도에서 표시) -->
+        <circle
+          v-if="isSnapped"
+          :cx="logicalDimensions.width / 2"
+          :cy="-25"
+          r="10"
+          fill="none"
+          stroke="#10b981"
+          stroke-width="2"
+          opacity="0.8"
+        >
+          <animate
+            attributeName="r"
+            values="8;12;8"
+            dur="0.3s"
+            begin="0s"
+          />
+        </circle>
+      </g>
     </g>
     
   </g>
@@ -114,6 +162,8 @@ const props = defineProps<{
   showNumber?: boolean
   showRotateHandle?: boolean
   hasError?: boolean
+  shouldHideIndividualOutline?: boolean  // 개별 외곽선 숨김 여부
+  adjacentSides?: string[]  // 인접한 면 정보 ['top', 'bottom', 'left', 'right']
 }>()
 
 const emit = defineEmits<{
@@ -121,9 +171,16 @@ const emit = defineEmits<{
   select: [id: string]
   dragstart: [locker: Locker, event: MouseEvent]
   rotatestart: [locker: Locker, event: MouseEvent]
+  rotate: [id: string, angle: number]
+  rotateend: [id: string]
 }>()
 
 const isHovered = ref(false)
+const isRotating = ref(false)
+const rotationStartAngle = ref(0)
+const rotationStartMouseAngle = ref(0)
+const isSnapped = ref(false)
+const cumulativeRotation = ref(0) // 누적 회전 추적
 
 // Visual scale for lockers only (canvas stays original, lockers get bigger)
 const LOCKER_VISUAL_SCALE = 2.0
@@ -131,6 +188,44 @@ const LOCKER_VISUAL_SCALE = 2.0
 // Note: Display scaling is handled by the parent SVG viewBox/size
 // All dimensions here are in logical units
 // Logical dimensions (all coordinates in SVG are logical)
+// 선택 외곽선 경로 계산 (인접한 변 제외)
+const selectionOutlinePath = computed(() => {
+  const x = -5
+  const y = -5
+  const width = logicalDimensions.value.width + 10
+  const height = logicalDimensions.value.height + 10
+  
+  // 드래그 중이고 인접한 면이 있으면 그 면은 그리지 않음
+  if (props.isDragging && props.adjacentSides && props.adjacentSides.length > 0) {
+    const segments = []
+    const corners = {
+      topLeft: `${x},${y}`,
+      topRight: `${x + width},${y}`,
+      bottomRight: `${x + width},${y + height}`,
+      bottomLeft: `${x},${y + height}`
+    }
+    
+    // 각 변을 체크하여 그릴지 결정
+    if (!props.adjacentSides.includes('top')) {
+      segments.push(`M ${corners.topLeft} L ${corners.topRight}`)
+    }
+    if (!props.adjacentSides.includes('right')) {
+      segments.push(`M ${corners.topRight} L ${corners.bottomRight}`)
+    }
+    if (!props.adjacentSides.includes('bottom')) {
+      segments.push(`M ${corners.bottomRight} L ${corners.bottomLeft}`)
+    }
+    if (!props.adjacentSides.includes('left')) {
+      segments.push(`M ${corners.bottomLeft} L ${corners.topLeft}`)
+    }
+    
+    return segments.join(' ')
+  }
+  
+  // 기본 사각형 경로
+  return `M ${x},${y} L ${x + width},${y} L ${x + width},${y + height} L ${x},${y + height} Z`
+})
+
 const logicalDimensions = computed(() => {
   // ✅ CRITICAL FIX: Add defensive programming with fallbacks for all values
   if (!props.locker) {
@@ -179,53 +274,85 @@ const cornerRadius = computed(() => {
 const lockerFill = computed(() => {
   // 에러가 있는 락커는 빨간색 배경
   if (props.hasError || props.locker.hasError) return '#fee2e2'
-  if (isHovered.value) return '#F0F8FF'
-  if (props.isSelected) return '#E6F4FF'
   
-  // Apply locker type color if available
+  // Get base color based on locker type or status
+  let baseColor = '#FFFFFF'
+  
   if (props.locker.color) {
-    // Use color with low opacity for fill
-    return props.locker.color + '20' // 20 is hex for ~12% opacity
+    // Use locker type color with opacity
+    baseColor = props.locker.color + '20' // 20 is hex for ~12% opacity
+  } else {
+    // Use status-based colors
+    switch (props.locker.status) {
+      case 'available': baseColor = '#FFFFFF'; break
+      case 'occupied': baseColor = '#FFF7ED'; break
+      case 'expired': baseColor = '#FEF2F2'; break
+      case 'maintenance': baseColor = '#F9FAFB'; break
+      default: baseColor = '#FFFFFF'
+    }
   }
   
-  switch (props.locker.status) {
-    case 'available': return '#FFFFFF'
-    case 'occupied': return '#FFF7ED'
-    case 'expired': return '#FEF2F2'
-    case 'maintenance': return '#F9FAFB'
-    default: return '#FFFFFF'
+  // Apply hover/selection effects while preserving base color
+  if (props.isSelected) {
+    // For selection, slightly lighten the base color or add blue tint
+    if (props.locker.color) {
+      // Keep the locker color but increase opacity slightly
+      return props.locker.color + '30' // Slightly more opaque when selected
+    }
+    // For status-based colors, add a slight blue tint
+    return baseColor === '#FFFFFF' ? '#E6F4FF' : baseColor
   }
+  
+  if (isHovered.value) {
+    // For hover, similar approach
+    if (props.locker.color) {
+      return props.locker.color + '25' // Slightly more opaque when hovered
+    }
+    return baseColor === '#FFFFFF' ? '#F0F8FF' : baseColor
+  }
+  
+  return baseColor
 })
 
 const lockerStroke = computed(() => {
   // 에러가 있는 락커는 빨간색 테두리
   if (props.hasError || props.locker.hasError) return '#ef4444'
-  if (props.isSelected) return '#0768AE'
-  if (props.isMultiSelected) return '#0768AE'  // Also blue for multi-selected
+  
+  // Get base stroke color
+  let baseStroke = '#D1D5DB'
+  
+  if (props.locker.color) {
+    baseStroke = props.locker.color
+  } else {
+    switch (props.locker.status) {
+      case 'available': baseStroke = '#D1D5DB'; break
+      case 'occupied': baseStroke = '#FB923C'; break
+      case 'expired': baseStroke = '#EF4444'; break
+      case 'maintenance': baseStroke = '#6B7280'; break
+      default: baseStroke = '#D1D5DB'
+    }
+  }
+  
+  // Selection takes priority but keeps the color scheme
+  if (props.isSelected || props.isMultiSelected) {
+    // Keep the locker's original color for stroke when selected
+    // This maintains visual consistency with the locker type
+    return baseStroke
+  }
+  
   if (isHovered.value) {
     // Use locker type color for hover if available
-    return props.locker.color || '#374151'
+    return props.locker.color || baseStroke
   }
   
-  // Apply locker type color if available
-  if (props.locker.color) {
-    return props.locker.color
-  }
-  
-  switch (props.locker.status) {
-    case 'available': return '#D1D5DB'
-    case 'occupied': return '#FB923C'
-    case 'expired': return '#EF4444'
-    case 'maintenance': return '#6B7280'
-    default: return '#D1D5DB'
-  }
+  return baseStroke
 })
 
 const strokeWidth = computed(() => {
   // 에러가 있는 락커는 두꺼운 테두리 (스케일 적용)
   if (props.hasError || props.locker.hasError) return 2 * LOCKER_VISUAL_SCALE
-  if (props.isSelected) return 2 * LOCKER_VISUAL_SCALE
-  if (props.isMultiSelected) return 1.5 * LOCKER_VISUAL_SCALE  // Slightly thinner for multi-selected
+  // 선택된 경우에도 원래 테두리 두께 유지 (선택 표시는 별도 점선으로)
+  if (props.isSelected || props.isMultiSelected) return 1 * LOCKER_VISUAL_SCALE
   if (isHovered.value) return 1 * LOCKER_VISUAL_SCALE
   return 0.5 * LOCKER_VISUAL_SCALE  // Thinner default border
 })
@@ -272,9 +399,138 @@ const handleMouseDown = (e: MouseEvent) => {
   emit('dragstart', props.locker, e)
 }
 
+// 마우스 각도 계산 (락커 중심 기준)
+const calculateMouseAngle = (event: MouseEvent, centerX: number, centerY: number) => {
+  const deltaX = event.clientX - centerX
+  const deltaY = event.clientY - centerY
+  // atan2를 사용하여 각도 계산 (라디안 → 도)
+  let angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI) + 90 // +90 to align with top as 0°
+  // 0-360 범위로 정규화
+  if (angle < 0) angle += 360
+  return angle
+}
+
+// 각도 차이 계산 (최단 경로, 더 안정적인 버전)
+const getAngleDifference = (angle1: number, angle2: number) => {
+  // 두 각도를 0-360 범위로 정규화
+  const norm1 = ((angle1 % 360) + 360) % 360
+  const norm2 = ((angle2 % 360) + 360) % 360
+  
+  let diff = norm2 - norm1
+  
+  // 최단 경로 찾기 (-180 ~ 180)
+  if (diff > 180) {
+    diff -= 360
+  } else if (diff < -180) {
+    diff += 360
+  }
+  
+  return diff
+}
+
+// 회전 시작 핸들러
 const handleRotateStart = (e: MouseEvent) => {
   e.stopPropagation()
   e.preventDefault()
+  
+  isRotating.value = true
+  
+  // 현재 회전각 저장 (누적 회전 값 사용)
+  rotationStartAngle.value = props.locker.rotation || 0
+  cumulativeRotation.value = props.locker.rotation || 0
+  
+  // SVG 요소의 중심점 계산
+  const svgElement = (e.currentTarget as SVGElement).closest('g[data-locker-id]')
+  if (!svgElement) return
+  
+  const rect = svgElement.getBoundingClientRect()
+  const centerX = rect.left + rect.width / 2
+  const centerY = rect.top + rect.height / 2
+  
+  // 마우스 시작 각도 저장
+  rotationStartMouseAngle.value = calculateMouseAngle(e, centerX, centerY)
+  
+  let lastMouseAngle = rotationStartMouseAngle.value
+  
+  // 전역 이벤트 리스너 등록
+  const handleRotateMove = (event: MouseEvent) => {
+    if (!isRotating.value) return
+    
+    const currentMouseAngle = calculateMouseAngle(event, centerX, centerY)
+    
+    // 최단 경로 각도 차이 계산
+    const angleDelta = getAngleDifference(lastMouseAngle, currentMouseAngle)
+    lastMouseAngle = currentMouseAngle
+    
+    // 누적 회전에 델타 추가
+    cumulativeRotation.value += angleDelta
+    let newRotation = cumulativeRotation.value
+    
+    // Shift 키: 15도 단위로 제한
+    if (event.shiftKey) {
+      newRotation = Math.round(newRotation / 15) * 15
+      isSnapped.value = true // 15도 단위로 제한될 때도 스냅 표시
+    }
+    // Alt 키가 없을 때만 스냅 기능
+    else if (!event.altKey) {
+      // 스냅 기능 (8도 범위 내에서 주요 각도로 스냅) - 더 잘 붙도록 범위 증가
+      const snapAngles = [0, 45, 90, 135, 180, 225, 270, 315]
+      const snapTolerance = 8
+      
+      isSnapped.value = false
+      // 간단하고 안정적인 스냅 로직
+      const normalizedAngle = ((newRotation % 360) + 360) % 360
+      
+      for (const snapAngle of snapAngles) {
+        const diff = Math.abs(normalizedAngle - snapAngle)
+        
+        if (diff < snapTolerance || (snapAngle === 0 && Math.abs(normalizedAngle - 360) < snapTolerance)) {
+          // 현재 회전 수를 유지하면서 스냅
+          const fullRotations = Math.floor(newRotation / 360)
+          
+          // 0도 근처에서 특별 처리
+          if (snapAngle === 0) {
+            if (normalizedAngle > 180) {
+              // 270도 이상에서 0도로 접근 - 다음 회전의 0도(360도)로
+              newRotation = (fullRotations + 1) * 360
+            } else {
+              // 90도 이하에서 0도로 접근 - 현재 회전의 0도로
+              newRotation = fullRotations * 360
+            }
+          } else {
+            newRotation = fullRotations * 360 + snapAngle
+          }
+          
+          isSnapped.value = true
+          break
+        }
+      }
+    } else {
+      isSnapped.value = false
+    }
+    
+    // 360도 처리: 누적 회전 방식 사용 (정규화하지 않음)
+    // 이렇게 하면 360도를 넘어가도 역회전 없이 계속 회전
+    
+    emit('rotate', props.locker.id, newRotation)
+  }
+  
+  const handleRotateEnd = () => {
+    if (!isRotating.value) return
+    
+    isRotating.value = false
+    isSnapped.value = false
+    
+    // 전역 이벤트 리스너 제거
+    document.removeEventListener('mousemove', handleRotateMove)
+    document.removeEventListener('mouseup', handleRotateEnd)
+    
+    emit('rotateend', props.locker.id)
+  }
+  
+  document.addEventListener('mousemove', handleRotateMove)
+  document.addEventListener('mouseup', handleRotateEnd)
+  
   emit('rotatestart', props.locker, e)
 }
 </script>
@@ -308,6 +564,23 @@ const handleRotateStart = (e: MouseEvent) => {
   stroke-width: 3;
   stroke-dasharray: 8 4; /* 8px 선, 4px 공백 = 총 12px */
   animation: dash-rotate 0.5s linear infinite;
+}
+
+.rotation-handle {
+  transition: opacity 0.2s ease;
+}
+
+.rotation-handle:hover {
+  opacity: 1;
+}
+
+.rotation-handle circle {
+  transition: transform 0.2s ease, fill 0.2s ease;
+}
+
+.rotation-handle circle:hover {
+  transform: scale(1.2);
+  fill: #0556a3;
 }
 
 @keyframes dash-rotate {

@@ -81,7 +81,11 @@ export class LockerApiService {
       lockrGendrSet: dbLocker.LOCKR_GENDR_SET,
       
       // Parent-child relationship
-      parentLockerId: dbLocker.PARENT_LOCKR_CD ? `locker-${dbLocker.PARENT_LOCKR_CD}` : null,
+      parentLockerId: (() => {
+        const result = dbLocker.PARENT_LOCKR_CD ? `locker-${dbLocker.PARENT_LOCKR_CD}` : null;
+        console.log(`[API Transform] ${dbLocker.LOCKR_LABEL}: PARENT_LOCKR_CD=${dbLocker.PARENT_LOCKR_CD}, parentLockerId=${result}`);
+        return result;
+      })(),
       parentLockrCd: dbLocker.PARENT_LOCKR_CD,
       childLockerIds: [], // Will be populated from relationships
       tierLevel: dbLocker.TIER_LEVEL || 0,
@@ -124,8 +128,8 @@ export class LockerApiService {
     
     return {
       LOCKR_LABEL: appLocker.lockrLabel || appLocker.number,
-      X: Math.round(appLocker.x),
-      Y: Math.round(appLocker.y),
+      X: appLocker.x !== undefined ? Math.round(appLocker.x) : null,
+      Y: appLocker.y !== undefined ? Math.round(appLocker.y) : null,
       FRONT_VIEW_X: appLocker.frontViewX ? Math.round(appLocker.frontViewX) : undefined,
       FRONT_VIEW_Y: appLocker.frontViewY ? Math.round(appLocker.frontViewY) : undefined,
       ROTATION: appLocker.rotation || 0,
@@ -194,8 +198,15 @@ export class LockerApiService {
       const data = await response.json()
       const dbLockers: ApiLocker[] = data.lockers || data
       
+      console.log(`[API getLockers] Received ${dbLockers.length} lockers from backend`)
+      console.log(`[API getLockers] First 3 lockers:`, dbLockers.slice(0, 3))
+      
       // Convert all lockers
-      const appLockers = dbLockers.map(dbLocker => this.dbToAppFormat(dbLocker))
+      console.log(`[API getLockers] Starting transformation of ${dbLockers.length} lockers...`)
+      const appLockers = dbLockers.map((dbLocker, index) => {
+        console.log(`[API getLockers] Transforming locker ${index + 1}/${dbLockers.length}: ${dbLocker.LOCKR_LABEL}`)
+        return this.dbToAppFormat(dbLocker)
+      })
       
       // Build parent-child relationships
       appLockers.forEach(locker => {
