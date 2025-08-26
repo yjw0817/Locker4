@@ -27,7 +27,6 @@ router.get('/', async (req, res) => {
     // Build dynamic query based on parentOnly parameter
     let query = 'SELECT * FROM lockrs WHERE COMP_CD = ? AND BCOFF_CD = ?';
     const params = [COMP_CD, BCOFF_CD];
-    
     if (parentOnly === 'true') {
       query += ' AND PARENT_LOCKR_CD IS NULL';
       console.log('[API] Filtering for parent lockers only (PARENT_LOCKR_CD IS NULL)');
@@ -271,7 +270,7 @@ router.delete('/:lockrCd', async (req, res) => {
 router.post('/:lockrCd/tiers', async (req, res) => {
   try {
     const { lockrCd } = req.params;
-    const { tierCount } = req.body;
+    const { tierCount, parentFrontViewX, parentFrontViewY } = req.body;
     
     if (!tierCount || tierCount < 1 || tierCount > 10) {
       return res.status(400).json({ 
@@ -296,21 +295,71 @@ router.post('/:lockrCd/tiers', async (req, res) => {
     const parentLocker = parent[0];
     const newTiers = [];
     
+    // Parent's front view position - 루프 밖에서 한 번만 설정
+    // 프론트엔드에서 보낸 좌표를 우선 사용, 없으면 DB 값 사용
+    let parentFrontX = parentFrontViewX !== undefined ? parentFrontViewX : parentLocker.FRONT_VIEW_X
+    let parentFrontY = parentFrontViewY !== undefined ? parentFrontViewY : parentLocker.FRONT_VIEW_Y
+    
+    console.log(`[API CRITICAL] ⚠️ Parent ${parentLocker.LOCKR_LABEL} coordinates check:`, {
+      fromRequest: { x: parentFrontViewX, y: parentFrontViewY },
+      fromDB: { x: parentLocker.FRONT_VIEW_X, y: parentLocker.FRONT_VIEW_Y },
+      finalValues: { x: parentFrontX, y: parentFrontY },
+      xIsNumber: typeof parentFrontX === 'number',
+      yIsNumber: typeof parentFrontY === 'number'
+    })
+    
+    if (parentFrontX === null || parentFrontY === null) {
+      // 부모 락커에 FRONT_VIEW 좌표가 없는 경우, 에러 반환
+      console.error(`[API] Parent ${parentLocker.LOCKR_LABEL} missing FRONT_VIEW coordinates`)
+      return res.status(400).json({
+        success: false,
+        error: 'Parent locker missing front view coordinates. Please save parent position first.'
+      })
+    }
+    
+    // 프론트엔드에서 좌표를 보냈다면 부모 락커의 FRONT_VIEW 좌표도 업데이트
+    if (parentFrontViewX !== undefined && parentFrontViewY !== undefined) {
+      await pool.query(
+        'UPDATE lockrs SET FRONT_VIEW_X = ?, FRONT_VIEW_Y = ? WHERE LOCKR_CD = ?',
+        [parentFrontX, parentFrontY, lockrCd]
+      )
+      console.log(`[API] Updated parent ${parentLocker.LOCKR_LABEL} with new front view coordinates`)
+    }
+    
     // Create tier lockers
     for (let i = 1; i <= tierCount; i++) {
       // Calculate front view positions - tiers should stack ABOVE parent
       const LOCKER_VISUAL_SCALE = 2.0
-      const tierHeight = 60
-      const gap = 10
+      const tierHeight = 30  // 자식 락커의 실제 높이
+      const gap = 5  // 락커 사이 간격
       const scaledTierHeight = tierHeight * LOCKER_VISUAL_SCALE
       const scaledGap = gap * LOCKER_VISUAL_SCALE
       
-      // Parent's front view position (or use floor position as fallback)
-      const parentFrontX = parentLocker.FRONT_VIEW_X !== null ? parentLocker.FRONT_VIEW_X : parentLocker.X
-      const parentFrontY = parentLocker.FRONT_VIEW_Y !== null ? parentLocker.FRONT_VIEW_Y : parentLocker.Y
-      
       // Stack tiers ABOVE parent (subtract from Y coordinate)
-      const tierFrontViewY = parentFrontY - (scaledTierHeight + scaledGap) * i
+      // SVG Y축은 아래로 갈수록 증가하므로, 위로 올리려면 Y값을 감소시킴
+      // CRITICAL: 부모와 정확히 같은 X 좌표 사용
+      const tierFrontViewX = Number(parentFrontX)  // X좌표는 부모와 완전히 동일해야 함
+      const tierFrontViewY = Number(parentFrontY) - (scaledTierHeight + scaledGap) * i
+      
+      console.log(`[API CRITICAL] ⚠️ TIER ${i} COORDINATE CALCULATION:`, {
+        parentLabel: parentLocker.LOCKR_LABEL,
+        parentX: parentFrontX,
+        parentY: parentFrontY,
+        calculation: {
+          tierX_formula: `parentFrontX (${parentFrontX})`,
+          tierY_formula: `${parentFrontY} - (${scaledTierHeight} + ${scaledGap}) * ${i} = ${tierFrontViewY}`,
+        },
+        result: {
+          tierX: tierFrontViewX,
+          tierY: tierFrontViewY,
+          xDiff: tierFrontViewX - parentFrontX,  // MUST BE 0
+          yDiff: tierFrontViewY - parentFrontY,  // MUST BE NEGATIVE
+        },
+        validation: {
+          xCorrect: tierFrontViewX === parentFrontX ? '✅ X CORRECT' : `❌ X WRONG (diff: ${tierFrontViewX - parentFrontX})`,
+          yCorrect: tierFrontViewY < parentFrontY ? '✅ Y CORRECT (above parent)' : '❌ Y WRONG (not above parent)'
+        }
+      })
 
       const tierData = {
         COMP_CD: parentLocker.COMP_CD,
@@ -322,7 +371,7 @@ router.post('/:lockrCd/tiers', async (req, res) => {
         LOCKR_LABEL: `${parentLocker.LOCKR_LABEL}-T${i}`,
         ROTATION: 0, // Front view lockers always face forward
         DOOR_DIRECTION: null,
-        FRONT_VIEW_X: parentFrontX,
+        FRONT_VIEW_X: tierFrontViewX,  // 명시적으로 tierFrontViewX 사용
         FRONT_VIEW_Y: Math.round(tierFrontViewY),
         GROUP_NUM: parentLocker.GROUP_NUM,
         LOCKR_GENDR_SET: parentLocker.LOCKR_GENDR_SET,
@@ -334,15 +383,109 @@ router.post('/:lockrCd/tiers', async (req, res) => {
         UPDATE_BY: 'system'
       };
       
-      const [result] = await pool.query(
-        `INSERT INTO lockrs SET ?`,
-        tierData
+      // 삽입 직전 최종 확인
+      console.log(`[API] BEFORE INSERT - Tier ${i} final values:`, {
+        LABEL: tierData.LOCKR_LABEL,
+        FRONT_VIEW_X: tierData.FRONT_VIEW_X,
+        FRONT_VIEW_Y: tierData.FRONT_VIEW_Y,
+        X_FIELD: tierData.X,
+        Y_FIELD: tierData.Y,
+        PARENT_LOCKR_CD: tierData.PARENT_LOCKR_CD
+      });
+      
+      // INSERT 쿼리 직접 실행
+      const insertQuery = `
+        INSERT INTO lockrs (
+          COMP_CD, BCOFF_CD, LOCKR_KND, LOCKR_TYPE_CD,
+          X, Y, LOCKR_LABEL, ROTATION, DOOR_DIRECTION,
+          FRONT_VIEW_X, FRONT_VIEW_Y, GROUP_NUM, LOCKR_GENDR_SET,
+          LOCKR_NO, PARENT_LOCKR_CD, TIER_LEVEL, LOCKR_STAT,
+          UPDATE_DT, UPDATE_BY
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
+      `;
+      
+      const insertValues = [
+        tierData.COMP_CD,
+        tierData.BCOFF_CD,
+        tierData.LOCKR_KND,
+        tierData.LOCKR_TYPE_CD,
+        tierData.X,  // NULL
+        tierData.Y,  // NULL
+        tierData.LOCKR_LABEL,
+        tierData.ROTATION,
+        tierData.DOOR_DIRECTION,
+        tierData.FRONT_VIEW_X,  // 이 값이 parentFrontX와 동일해야 함
+        tierData.FRONT_VIEW_Y,
+        tierData.GROUP_NUM,
+        tierData.LOCKR_GENDR_SET,
+        tierData.LOCKR_NO,
+        tierData.PARENT_LOCKR_CD,
+        tierData.TIER_LEVEL,
+        tierData.LOCKR_STAT,
+        tierData.UPDATE_BY
+      ];
+      
+      console.log(`[API] INSERT VALUES for tier ${i}:`, {
+        X_position: insertValues[4],
+        Y_position: insertValues[5],
+        FRONT_VIEW_X_position: insertValues[9],
+        FRONT_VIEW_Y_position: insertValues[10],
+        PARENT_LOCKR_CD_position: insertValues[14]
+      });
+      
+      const [result] = await pool.query(insertQuery, insertValues);
+      
+      // 저장 직후 DB에서 다시 조회하여 확인
+      const [savedTier] = await pool.query(
+        'SELECT LOCKR_CD, LOCKR_LABEL, X, Y, FRONT_VIEW_X, FRONT_VIEW_Y, PARENT_LOCKR_CD FROM lockrs WHERE LOCKR_CD = ?',
+        [result.insertId]
       );
+      
+      console.log(`[API CRITICAL] ⚠️ TIER ${i} DB VERIFICATION:`, {
+        tierLabel: savedTier[0].LOCKR_LABEL,
+        savedInDB: {
+          LOCKR_CD: savedTier[0].LOCKR_CD,
+          X: savedTier[0].X,
+          Y: savedTier[0].Y,
+          FRONT_VIEW_X: savedTier[0].FRONT_VIEW_X,
+          FRONT_VIEW_Y: savedTier[0].FRONT_VIEW_Y,
+          PARENT_LOCKR_CD: savedTier[0].PARENT_LOCKR_CD
+        },
+        expected: {
+          FRONT_VIEW_X: tierFrontViewX,
+          FRONT_VIEW_Y: Math.round(tierFrontViewY),
+          PARENT_X: parentFrontX,
+          PARENT_Y: parentFrontY
+        },
+        validation: {
+          xMatch: savedTier[0].FRONT_VIEW_X === tierFrontViewX ? 
+            `✅ X CORRECT (${savedTier[0].FRONT_VIEW_X})` : 
+            `❌❌❌ X WRONG: Saved ${savedTier[0].FRONT_VIEW_X}, Expected ${tierFrontViewX}, Diff: ${savedTier[0].FRONT_VIEW_X - tierFrontViewX}`,
+          yMatch: savedTier[0].FRONT_VIEW_Y === Math.round(tierFrontViewY) ? 
+            `✅ Y CORRECT (${savedTier[0].FRONT_VIEW_Y})` : 
+            `❌❌❌ Y WRONG: Saved ${savedTier[0].FRONT_VIEW_Y}, Expected ${Math.round(tierFrontViewY)}, Diff: ${savedTier[0].FRONT_VIEW_Y - Math.round(tierFrontViewY)}`,
+          parentCheck: `Parent ${parentLocker.LOCKR_LABEL} at (${parentFrontX}, ${parentFrontY})`
+        }
+      });
       
       newTiers.push({ ...tierData, LOCKR_CD: result.insertId });
     }
     
     console.log(`[API] Added ${tierCount} tiers to locker ${lockrCd}`);
+    
+    // 응답 직전 최종 데이터 확인
+    console.log('[API] RESPONSE DATA - newTiers array:');
+    newTiers.forEach((tier, index) => {
+      console.log(`  Tier ${index + 1}:`, {
+        LOCKR_CD: tier.LOCKR_CD,
+        LOCKR_LABEL: tier.LOCKR_LABEL,
+        X: tier.X,
+        Y: tier.Y,
+        FRONT_VIEW_X: tier.FRONT_VIEW_X,
+        FRONT_VIEW_Y: tier.FRONT_VIEW_Y,
+        PARENT_LOCKR_CD: tier.PARENT_LOCKR_CD
+      });
+    });
     
     res.json({ 
       success: true,

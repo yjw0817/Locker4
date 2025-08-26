@@ -472,7 +472,7 @@
   </div>
   
   <!-- Floor Input Dialog -->
-  <div v-if="floorInputVisible" class="modal-overlay" @click="floorInputVisible = false">
+  <div v-if="floorInputVisible" class="modal-overlay" @click="handleFloorModalOverlayClick">
     <div class="modal-content" @click.stop>
       <h3>단수 입력</h3>
       <div class="form-group">
@@ -494,7 +494,7 @@
   </div>
   
   <!-- Number Assignment Dialog -->
-  <div v-if="numberAssignVisible" class="modal-overlay" @click="numberAssignVisible = false">
+  <div v-if="numberAssignVisible" class="modal-overlay" @click="handleNumberModalOverlayClick">
     <div class="modal-content" @click.stop>
       <h3>번호 부여</h3>
       <div class="form-group">
@@ -1493,7 +1493,15 @@ const displayLockers = computed(() => {
       
       if (locker.frontViewX !== undefined && locker.frontViewY !== undefined) {
         // 새로운 알고리즘 결과 사용
-        console.log(`[DisplayLockers NEW] Using new algorithm for ${locker.number}: X=${locker.frontViewX}, Y=${locker.frontViewY}`)
+        console.log(`[DisplayLockers NEW] ${locker.number}:`, {
+          frontViewX: locker.frontViewX,
+          frontViewY: locker.frontViewY,
+          displayX: locker.frontViewX * scale,
+          displayY: locker.frontViewY * scale,
+          parentLockrCd: locker.parentLockrCd,
+          tierLevel: locker.tierLevel,
+          scale: scale
+        })
         displayX = locker.frontViewX * scale
         displayY = locker.frontViewY * scale
         displayHeight = lockerActualHeight * scale
@@ -2481,6 +2489,25 @@ const updateSelectionInRectangle = () => {
 }
 
 // 캔버스 클릭 처리 (스냅 기능 추가)
+// 팝업 오버레이 클릭 핸들러 - 드래그 중이거나 작업 중일 때는 닫지 않음
+const handleFloorModalOverlayClick = () => {
+  // 드래그 중이거나 다른 작업 중일 때는 팝업을 닫지 않음
+  if (isDragging.value || selectionBox.value.isSelecting || lockerDragJustFinished.value) {
+    console.log('[Modal] Floor modal close prevented - operation in progress')
+    return
+  }
+  floorInputVisible.value = false
+}
+
+const handleNumberModalOverlayClick = () => {
+  // 드래그 중이거나 다른 작업 중일 때는 팝업을 닫지 않음
+  if (isDragging.value || selectionBox.value.isSelecting || lockerDragJustFinished.value) {
+    console.log('[Modal] Number modal close prevented - operation in progress')
+    return
+  }
+  numberAssignVisible.value = false
+}
+
 const handleCanvasClick = (event) => {
   // Check if any drag operation or rotation just finished - if so, ignore this click
   if (dragSelectionJustFinished.value || lockerDragJustFinished.value || rotationJustEnded.value) {
@@ -3300,7 +3327,8 @@ const validateLockerPlacement = () => {
   const problematicLockers = new Set()
   
   // 락커의 문 방향 앞에 다른 락커가 있는지 체크
-  const lockers = currentLockers.value
+  // 부모 락커만 검사 (tier 락커는 평면배치모드에서 보이지 않으므로 제외)
+  const lockers = currentLockers.value.filter(locker => !locker.parentLockerId)
   
   for (let i = 0; i < lockers.length; i++) {
     const locker = lockers[i]
@@ -4084,23 +4112,79 @@ const transformToFrontViewNew = () => {
       frontViewRotation: 0, // 모든 락커 아래 방향
     })
     
-    // 업데이트 via store
-    lockerStore.updateLocker(locker.id, {
-      frontViewX: currentX,
-      frontViewY: FLOOR_Y - height,
-      frontViewRotation: 0
-    })
+    // CRITICAL: 자식 락커 위치 계산 수정
+    if (locker.parentLockrCd) {
+      // 자식 락커는 부모 락커 위치 기반으로 계산
+      const parentLocker = renderData.find(r => r.lockrCd === locker.parentLockrCd)
+      if (parentLocker) {
+        const TIER_HEIGHT = 30
+        const TIER_GAP = 0  // 부모 락커와 바로 붙임
+        const scaledTierHeight = TIER_HEIGHT * LOCKER_VISUAL_SCALE
+        const scaledGap = TIER_GAP * LOCKER_VISUAL_SCALE
+        const tierLevel = locker.tierLevel || 1
+        
+        // 자식 락커는 부모와 같은 X, 위쪽 Y 좌표 (gap 없이)
+        const childX = parentLocker.frontViewX  // 부모와 동일한 X
+        const childY = parentLocker.frontViewY - scaledTierHeight * tierLevel  // 위쪽으로 (gap 없이)
+        
+        console.log(`[CHILD POSITION] ${locker.number} (child of ${parentLocker.number}):`, {
+          parentX: parentLocker.frontViewX,
+          parentY: parentLocker.frontViewY,
+          childX: childX,
+          childY: childY,
+          tierLevel: tierLevel,
+          calculation: `${parentLocker.frontViewY} - ${scaledTierHeight} * ${tierLevel} = ${childY} (no gap)`
+        })
+        
+        // 자식 락커 위치 업데이트
+        lockerStore.updateLocker(locker.id, {
+          frontViewX: childX,
+          frontViewY: childY,
+          frontViewRotation: 0
+        })
+        
+        // renderData에도 올바른 위치 저장
+        renderData[renderData.length - 1].frontViewX = childX
+        renderData[renderData.length - 1].frontViewY = childY
+        
+        // 자식 락커는 currentX를 증가시키지 않음 (부모 위에 스택)
+      } else {
+        console.error(`[CHILD POSITION] Parent not found for ${locker.number}, parentLockrCd: ${locker.parentLockrCd}`)
+        
+        // 부모를 찾지 못한 경우 기본 위치 사용
+        lockerStore.updateLocker(locker.id, {
+          frontViewX: currentX,
+          frontViewY: FLOOR_Y - height,
+          frontViewRotation: 0
+        })
+        currentX += width
+      }
+    } else {
+      // 부모 락커는 기존 로직 사용
+      lockerStore.updateLocker(locker.id, {
+        frontViewX: currentX,
+        frontViewY: FLOOR_Y - height,
+        frontViewRotation: 0
+      })
+      
+      currentX += width // 락커 너비만큼 이동
+    }
     
-    currentX += width // 락커 너비만큼 이동
     prevLocker = locker // 다음 반복을 위해 현재 락커 저장
   })
   
-  // 7. 전체 중앙 정렬
+  // 7. 전체 중앙 정렬 - 자식 락커도 함께 이동
   const totalWidth = currentX
   const centerOffset = (canvasWidth.value - totalWidth) / 2
   
-  renderData.forEach(item => {
+  console.log(`[CENTER ALIGNMENT] Total width: ${totalWidth}, Center offset: ${centerOffset}`)
+  
+  renderData.forEach((item, index) => {
+    const oldX = item.frontViewX
     item.frontViewX += centerOffset
+    
+    console.log(`[CENTER ALIGNMENT] ${item.number}: ${oldX} → ${item.frontViewX} (offset: ${centerOffset})`)
+    
     // Store 업데이트도 중앙 정렬 적용
     lockerStore.updateLocker(item.id, {
       frontViewX: item.frontViewX,
@@ -4346,14 +4430,24 @@ const addFloors = async () => {
       if (!parentLocker) return
     }
     
-    console.log(`[AddFloors] Adding ${count} tiers to parent locker:`, parentLocker.number)
+    console.log(`[AddFloors] Adding ${count} tiers to parent locker:`, {
+      number: parentLocker.number,
+      frontViewX: parentLocker.frontViewX,
+      frontViewY: parentLocker.frontViewY,
+      x: parentLocker.x,
+      y: parentLocker.y
+    })
     
     // Use the backend API to add tiers
     try {
       const response = await fetch(`${API_BASE_URL}/lockrs/${parentLocker.lockrCd}/tiers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tierCount: count })
+        body: JSON.stringify({ 
+          tierCount: count,
+          parentFrontViewX: parentLocker.frontViewX,
+          parentFrontViewY: parentLocker.frontViewY 
+        })
       })
       
       const result = await response.json()
