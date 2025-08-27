@@ -84,12 +84,7 @@ export class LockerApiService {
       parentLockerId: (() => {
         const result = dbLocker.PARENT_LOCKR_CD ? `locker-${dbLocker.PARENT_LOCKR_CD}` : null;
         if (dbLocker.LOCKR_LABEL && dbLocker.LOCKR_LABEL.includes('-T')) {
-          console.log(`[API Transform TIER] ${dbLocker.LOCKR_LABEL}:`, {
-            PARENT_LOCKR_CD: dbLocker.PARENT_LOCKR_CD,
-            parentLockerId: result,
-            FRONT_VIEW_X: dbLocker.FRONT_VIEW_X,
-            FRONT_VIEW_Y: dbLocker.FRONT_VIEW_Y
-          });
+          // Tier transformation logged
         }
         return result;
       })(),
@@ -205,13 +200,12 @@ export class LockerApiService {
       const data = await response.json()
       const dbLockers: ApiLocker[] = data.lockers || data
       
-      console.log(`[API getLockers] Received ${dbLockers.length} lockers from backend`)
-      console.log(`[API getLockers] First 3 lockers:`, dbLockers.slice(0, 3))
+      // Received lockers from backend
       
       // Convert all lockers
-      console.log(`[API getLockers] Starting transformation of ${dbLockers.length} lockers...`)
+      // Starting transformation of lockers
       const appLockers = dbLockers.map((dbLocker, index) => {
-        console.log(`[API getLockers] Transforming locker ${index + 1}/${dbLockers.length}: ${dbLocker.LOCKR_LABEL}`)
+        // Transforming locker
         return this.dbToAppFormat(dbLocker)
       })
       
@@ -308,22 +302,22 @@ export class LockerApiService {
   }
   
   // Add tiers to parent locker
-  async addTiers(parentLockrCd: number, tierCount: number, parentFrontViewX?: number, parentFrontViewY?: number): Promise<Locker[]> {
+  async addTiers(parentLockrCd: number, tierCount: number, parentFrontViewX?: number, parentFrontViewY?: number, startTierLevel?: number): Promise<Locker[]> {
     try {
-      console.log('[LockerApi] Adding tiers with parent coordinates:', {
-        parentLockrCd,
-        tierCount,
-        parentFrontViewX,
-        parentFrontViewY
-      })
+      console.log('[API DEBUG] addTiers called with:', { parentLockrCd, tierCount, parentFrontViewX, parentFrontViewY, startTierLevel })
+      console.log('[API DEBUG] baseUrl:', this.baseUrl)
       
-      const response = await fetch(`${this.baseUrl}/lockrs/${parentLockrCd}/tiers`, {
+      const url = `${this.baseUrl}/lockrs/${parentLockrCd}/tiers`
+      console.log('[API DEBUG] Request URL:', url)
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: this.headers,
         body: JSON.stringify({ 
           tierCount,
           parentFrontViewX,
-          parentFrontViewY
+          parentFrontViewY,
+          startTierLevel
         })
       })
       
@@ -332,33 +326,17 @@ export class LockerApiService {
       }
       
       const data = await response.json()
-      console.log('[LockerApi] Tier API Response:', data)
+      // Tier API response received
       
       const newTiers: ApiLocker[] = data.tiers || data
       
       // Log each tier's data transformation
       const transformedTiers = newTiers.map((tier, index) => {
-        console.log(`[LockerApi] Tier ${index + 1} from API:`, {
-          LOCKR_CD: tier.LOCKR_CD,
-          LOCKR_LABEL: tier.LOCKR_LABEL,
-          X: tier.X,
-          Y: tier.Y,
-          FRONT_VIEW_X: tier.FRONT_VIEW_X,
-          FRONT_VIEW_Y: tier.FRONT_VIEW_Y,
-          PARENT_LOCKR_CD: tier.PARENT_LOCKR_CD
-        })
+        // Tier from API
         
         const transformed = this.dbToAppFormat(tier)
         
-        console.log(`[LockerApi] Tier ${index + 1} after transform:`, {
-          id: transformed.id,
-          number: transformed.number,
-          x: transformed.x,
-          y: transformed.y,
-          frontViewX: transformed.frontViewX,
-          frontViewY: transformed.frontViewY,
-          parentLockerId: transformed.parentLockerId
-        })
+        // Tier transformed
         
         return transformed
       })

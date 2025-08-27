@@ -247,14 +247,7 @@ const logicalDimensions = computed(() => {
   } else {
     // Front view: Width x Height (both 2x scaled)
     const frontHeight = height || actualHeight || (60 * LOCKER_VISUAL_SCALE)
-    console.log(`[LockerSVG] ${props.locker.number || 'UNKNOWN'} dimensions in front view (2x scale):`, {
-      width,
-      height: frontHeight,
-      actualHeight,
-      scale: LOCKER_VISUAL_SCALE,
-      EXPECTED: props.locker.number === 'L3' || props.locker.number === 'L4' ? '162px (90*1.8)' : '54px (30*1.8)',
-      IS_CORRECT: frontHeight === (props.locker.number === 'L3' || props.locker.number === 'L4' ? 162 : 54) ? '✅ CORRECT' : '❌ WRONG'
-    })
+    // Dimension logging removed
     return {
       width,
       height: frontHeight

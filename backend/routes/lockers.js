@@ -270,7 +270,15 @@ router.delete('/:lockrCd', async (req, res) => {
 router.post('/:lockrCd/tiers', async (req, res) => {
   try {
     const { lockrCd } = req.params;
-    const { tierCount, parentFrontViewX, parentFrontViewY } = req.body;
+    const { tierCount, startTierLevel, parentFrontViewX, parentFrontViewY } = req.body;
+    
+    console.log(`[TIERS API] Request received:`, {
+      lockrCd,
+      tierCount,
+      startTierLevel,
+      parentFrontViewX,
+      parentFrontViewY
+    });
     
     if (!tierCount || tierCount < 1 || tierCount > 10) {
       return res.status(400).json({ 
@@ -300,17 +308,11 @@ router.post('/:lockrCd/tiers', async (req, res) => {
     let parentFrontX = parentFrontViewX !== undefined ? parentFrontViewX : parentLocker.FRONT_VIEW_X
     let parentFrontY = parentFrontViewY !== undefined ? parentFrontViewY : parentLocker.FRONT_VIEW_Y
     
-    console.log(`[API CRITICAL] ⚠️ Parent ${parentLocker.LOCKR_LABEL} coordinates check:`, {
-      fromRequest: { x: parentFrontViewX, y: parentFrontViewY },
-      fromDB: { x: parentLocker.FRONT_VIEW_X, y: parentLocker.FRONT_VIEW_Y },
-      finalValues: { x: parentFrontX, y: parentFrontY },
-      xIsNumber: typeof parentFrontX === 'number',
-      yIsNumber: typeof parentFrontY === 'number'
-    })
+    // Parent coordinates check - logging removed
     
     if (parentFrontX === null || parentFrontY === null) {
       // 부모 락커에 FRONT_VIEW 좌표가 없는 경우, 에러 반환
-      console.error(`[API] Parent ${parentLocker.LOCKR_LABEL} missing FRONT_VIEW coordinates`)
+      // Parent missing FRONT_VIEW coordinates
       return res.status(400).json({
         success: false,
         error: 'Parent locker missing front view coordinates. Please save parent position first.'
@@ -323,15 +325,58 @@ router.post('/:lockrCd/tiers', async (req, res) => {
         'UPDATE lockrs SET FRONT_VIEW_X = ?, FRONT_VIEW_Y = ? WHERE LOCKR_CD = ?',
         [parentFrontX, parentFrontY, lockrCd]
       )
-      console.log(`[API] Updated parent ${parentLocker.LOCKR_LABEL} with new front view coordinates`)
+      // Updated parent with new front view coordinates
     }
     
+    // Check for existing children to determine the correct starting tier level
+    const [existingChildren] = await pool.query(
+      'SELECT TIER_LEVEL, LOCKR_LABEL, LOCKR_CD FROM lockrs WHERE PARENT_LOCKR_CD = ? ORDER BY TIER_LEVEL',
+      [lockrCd]
+    );
+    
+    console.log(`[TIERS API] Existing children: ${existingChildren.length} found`);
+    
+    const existingTierLevels = existingChildren.map(child => child.TIER_LEVEL);
+    const existingMaxTier = existingTierLevels.length > 0 ? Math.max(...existingTierLevels) : 0;
+    
+    // Use the provided startTierLevel or calculate from existing children
+    // CRITICAL: Ensure startTierLevel is treated as a number
+    const baseTierLevel = startTierLevel ? Number(startTierLevel) : (existingMaxTier + 1);
+    
+    console.log(`[TIERS API] Tier calculation: startLevel=${startTierLevel} → baseTierLevel=${baseTierLevel}`);
+    
+    // Check if any of the tier levels we're about to create already exist
+    const tierLevelsToCreate = [];
+    for (let i = 0; i < tierCount; i++) {
+      tierLevelsToCreate.push(baseTierLevel + i);
+    }
+    
+    const conflictingTiers = existingChildren.filter(child => 
+      tierLevelsToCreate.includes(child.TIER_LEVEL)
+    );
+    
+    if (conflictingTiers.length > 0) {
+      // Tier level conflict detected - logging removed
+      
+      // Delete existing conflicting tiers before creating new ones
+      const conflictingIds = conflictingTiers.map(t => t.LOCKR_CD);
+      await pool.query(
+        'DELETE FROM lockrs WHERE LOCKR_CD IN (?)',
+        [conflictingIds]
+      );
+      // Deleted conflicting tiers
+    }
+    
+    // Creating tiers - logging removed
+    
     // Create tier lockers
-    for (let i = 1; i <= tierCount; i++) {
+    for (let i = 0; i < tierCount; i++) {
+      const currentTierLevel = baseTierLevel + i;
+      
       // Calculate front view positions - tiers should stack ABOVE parent
       const LOCKER_VISUAL_SCALE = 2.0
       const tierHeight = 30  // 자식 락커의 실제 높이
-      const gap = 5  // 락커 사이 간격
+      const gap = 0  // 락커 사이 간격 (요청에 따라 0으로 설정)
       const scaledTierHeight = tierHeight * LOCKER_VISUAL_SCALE
       const scaledGap = gap * LOCKER_VISUAL_SCALE
       
@@ -339,27 +384,9 @@ router.post('/:lockrCd/tiers', async (req, res) => {
       // SVG Y축은 아래로 갈수록 증가하므로, 위로 올리려면 Y값을 감소시킴
       // CRITICAL: 부모와 정확히 같은 X 좌표 사용
       const tierFrontViewX = Number(parentFrontX)  // X좌표는 부모와 완전히 동일해야 함
-      const tierFrontViewY = Number(parentFrontY) - (scaledTierHeight + scaledGap) * i
+      const tierFrontViewY = Number(parentFrontY) - (scaledTierHeight + scaledGap) * currentTierLevel
       
-      console.log(`[API CRITICAL] ⚠️ TIER ${i} COORDINATE CALCULATION:`, {
-        parentLabel: parentLocker.LOCKR_LABEL,
-        parentX: parentFrontX,
-        parentY: parentFrontY,
-        calculation: {
-          tierX_formula: `parentFrontX (${parentFrontX})`,
-          tierY_formula: `${parentFrontY} - (${scaledTierHeight} + ${scaledGap}) * ${i} = ${tierFrontViewY}`,
-        },
-        result: {
-          tierX: tierFrontViewX,
-          tierY: tierFrontViewY,
-          xDiff: tierFrontViewX - parentFrontX,  // MUST BE 0
-          yDiff: tierFrontViewY - parentFrontY,  // MUST BE NEGATIVE
-        },
-        validation: {
-          xCorrect: tierFrontViewX === parentFrontX ? '✅ X CORRECT' : `❌ X WRONG (diff: ${tierFrontViewX - parentFrontX})`,
-          yCorrect: tierFrontViewY < parentFrontY ? '✅ Y CORRECT (above parent)' : '❌ Y WRONG (not above parent)'
-        }
-      })
+      // Tier coordinate calculation - logging removed
 
       const tierData = {
         COMP_CD: parentLocker.COMP_CD,
@@ -368,30 +395,23 @@ router.post('/:lockrCd/tiers', async (req, res) => {
         LOCKR_TYPE_CD: parentLocker.LOCKR_TYPE_CD,
         X: null, // No floor position for front-view-only tiers
         Y: null, // No floor position for front-view-only tiers
-        LOCKR_LABEL: `${parentLocker.LOCKR_LABEL}-T${i}`,
+        LOCKR_LABEL: `${parentLocker.LOCKR_LABEL}-T${currentTierLevel}`,
         ROTATION: 0, // Front view lockers always face forward
         DOOR_DIRECTION: null,
         FRONT_VIEW_X: tierFrontViewX,  // 명시적으로 tierFrontViewX 사용
         FRONT_VIEW_Y: Math.round(tierFrontViewY),
         GROUP_NUM: parentLocker.GROUP_NUM,
         LOCKR_GENDR_SET: parentLocker.LOCKR_GENDR_SET,
-        LOCKR_NO: parentLocker.LOCKR_NO ? (parentLocker.LOCKR_NO * 10 + i) : null,
+        LOCKR_NO: parentLocker.LOCKR_NO ? (parentLocker.LOCKR_NO * 10 + currentTierLevel) : null,
         PARENT_LOCKR_CD: lockrCd,
-        TIER_LEVEL: i,
+        TIER_LEVEL: currentTierLevel,
         LOCKR_STAT: '00',
         UPDATE_DT: new Date(),
         UPDATE_BY: 'system'
       };
       
       // 삽입 직전 최종 확인
-      console.log(`[API] BEFORE INSERT - Tier ${i} final values:`, {
-        LABEL: tierData.LOCKR_LABEL,
-        FRONT_VIEW_X: tierData.FRONT_VIEW_X,
-        FRONT_VIEW_Y: tierData.FRONT_VIEW_Y,
-        X_FIELD: tierData.X,
-        Y_FIELD: tierData.Y,
-        PARENT_LOCKR_CD: tierData.PARENT_LOCKR_CD
-      });
+      console.log(`[TIERS API] Creating tier: ${tierData.LOCKR_LABEL} (TIER_LEVEL=${tierData.TIER_LEVEL})`);
       
       // INSERT 쿼리 직접 실행
       const insertQuery = `
@@ -425,67 +445,18 @@ router.post('/:lockrCd/tiers', async (req, res) => {
         tierData.UPDATE_BY
       ];
       
-      console.log(`[API] INSERT VALUES for tier ${i}:`, {
-        X_position: insertValues[4],
-        Y_position: insertValues[5],
-        FRONT_VIEW_X_position: insertValues[9],
-        FRONT_VIEW_Y_position: insertValues[10],
-        PARENT_LOCKR_CD_position: insertValues[14]
-      });
+      // INSERT VALUES logging removed
       
       const [result] = await pool.query(insertQuery, insertValues);
       
-      // 저장 직후 DB에서 다시 조회하여 확인
-      const [savedTier] = await pool.query(
-        'SELECT LOCKR_CD, LOCKR_LABEL, X, Y, FRONT_VIEW_X, FRONT_VIEW_Y, PARENT_LOCKR_CD FROM lockrs WHERE LOCKR_CD = ?',
-        [result.insertId]
-      );
-      
-      console.log(`[API CRITICAL] ⚠️ TIER ${i} DB VERIFICATION:`, {
-        tierLabel: savedTier[0].LOCKR_LABEL,
-        savedInDB: {
-          LOCKR_CD: savedTier[0].LOCKR_CD,
-          X: savedTier[0].X,
-          Y: savedTier[0].Y,
-          FRONT_VIEW_X: savedTier[0].FRONT_VIEW_X,
-          FRONT_VIEW_Y: savedTier[0].FRONT_VIEW_Y,
-          PARENT_LOCKR_CD: savedTier[0].PARENT_LOCKR_CD
-        },
-        expected: {
-          FRONT_VIEW_X: tierFrontViewX,
-          FRONT_VIEW_Y: Math.round(tierFrontViewY),
-          PARENT_X: parentFrontX,
-          PARENT_Y: parentFrontY
-        },
-        validation: {
-          xMatch: savedTier[0].FRONT_VIEW_X === tierFrontViewX ? 
-            `✅ X CORRECT (${savedTier[0].FRONT_VIEW_X})` : 
-            `❌❌❌ X WRONG: Saved ${savedTier[0].FRONT_VIEW_X}, Expected ${tierFrontViewX}, Diff: ${savedTier[0].FRONT_VIEW_X - tierFrontViewX}`,
-          yMatch: savedTier[0].FRONT_VIEW_Y === Math.round(tierFrontViewY) ? 
-            `✅ Y CORRECT (${savedTier[0].FRONT_VIEW_Y})` : 
-            `❌❌❌ Y WRONG: Saved ${savedTier[0].FRONT_VIEW_Y}, Expected ${Math.round(tierFrontViewY)}, Diff: ${savedTier[0].FRONT_VIEW_Y - Math.round(tierFrontViewY)}`,
-          parentCheck: `Parent ${parentLocker.LOCKR_LABEL} at (${parentFrontX}, ${parentFrontY})`
-        }
-      });
+      // DB verification removed to reduce logs
       
       newTiers.push({ ...tierData, LOCKR_CD: result.insertId });
     }
     
-    console.log(`[API] Added ${tierCount} tiers to locker ${lockrCd}`);
+    // Added tiers - logging removed
     
-    // 응답 직전 최종 데이터 확인
-    console.log('[API] RESPONSE DATA - newTiers array:');
-    newTiers.forEach((tier, index) => {
-      console.log(`  Tier ${index + 1}:`, {
-        LOCKR_CD: tier.LOCKR_CD,
-        LOCKR_LABEL: tier.LOCKR_LABEL,
-        X: tier.X,
-        Y: tier.Y,
-        FRONT_VIEW_X: tier.FRONT_VIEW_X,
-        FRONT_VIEW_Y: tier.FRONT_VIEW_Y,
-        PARENT_LOCKR_CD: tier.PARENT_LOCKR_CD
-      });
-    });
+    console.log(`[TIERS API] Response: ${newTiers.length} tiers created successfully`);
     
     res.json({ 
       success: true,
@@ -498,6 +469,70 @@ router.post('/:lockrCd/tiers', async (req, res) => {
       success: false,
       error: 'Failed to add tiers',
       details: error.message 
+    });
+  }
+});
+
+// Clean up duplicate tier lockers
+router.post('/cleanup-duplicates', async (req, res) => {
+  try {
+    console.log('[API] Starting duplicate tier cleanup...', req.body || {});
+    
+    // Find all duplicate tiers (same parent and tier level)
+    const [duplicates] = await pool.query(`
+      SELECT 
+        PARENT_LOCKR_CD,
+        TIER_LEVEL,
+        GROUP_CONCAT(LOCKR_CD) as duplicate_ids,
+        GROUP_CONCAT(LOCKR_LABEL) as duplicate_labels,
+        COUNT(*) as count
+      FROM lockrs
+      WHERE PARENT_LOCKR_CD IS NOT NULL
+      GROUP BY PARENT_LOCKR_CD, TIER_LEVEL
+      HAVING COUNT(*) > 1
+    `);
+    
+    let totalDeleted = 0;
+    const cleanupResults = [];
+    
+    for (const dup of duplicates) {
+      const ids = dup.duplicate_ids.split(',').map(id => parseInt(id));
+      const labels = dup.duplicate_labels.split(',');
+      
+      // Keep the first one, delete the rest
+      const idsToDelete = ids.slice(1);
+      
+      if (idsToDelete.length > 0) {
+        await pool.query(
+          'DELETE FROM lockrs WHERE LOCKR_CD IN (?)',
+          [idsToDelete]
+        );
+        
+        totalDeleted += idsToDelete.length;
+        cleanupResults.push({
+          parentLockrCd: dup.PARENT_LOCKR_CD,
+          tierLevel: dup.TIER_LEVEL,
+          kept: { id: ids[0], label: labels[0] },
+          deleted: idsToDelete.map((id, idx) => ({ id, label: labels[idx + 1] }))
+        });
+        
+        console.log(`[API] Cleaned up tier ${dup.TIER_LEVEL} of parent ${dup.PARENT_LOCKR_CD}: kept ${ids[0]}, deleted ${idsToDelete.join(', ')}`);
+      }
+    }
+    
+    console.log(`[API] Duplicate cleanup complete. Deleted ${totalDeleted} duplicate tiers.`);
+    
+    res.json({
+      success: true,
+      totalDeleted,
+      results: cleanupResults
+    });
+  } catch (error) {
+    console.error('[API] Error cleaning up duplicates:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to clean up duplicates',
+      details: error.message
     });
   }
 });

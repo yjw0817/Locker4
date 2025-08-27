@@ -172,8 +172,8 @@
               <button 
                 class="mode-btn"
                 :class="{ active: currentViewMode === 'front' }"
-                @click="console.log('[BUTTON] Front view button clicked - BEFORE setViewMode'); setViewMode('front'); console.log('[BUTTON] Front view button clicked - AFTER setViewMode')"
-                title="세로배치모드 (F)"
+                @click="setViewMode('front')"
+                title="정면배치모드 (F)"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -181,7 +181,7 @@
                   <rect x="7" y="7" width="4" height="6" />
                   <rect x="13" y="7" width="4" height="6" />
                 </svg>
-                <span>세로배치</span>
+                <span>정면배치</span>
               </button>
               
               <button 
@@ -756,19 +756,7 @@ const DISPLAY_SCALE = 1.0
 // Floor line position for front view (logical units)
 const FLOOR_Y = 550  // 바닥선 Y 위치 (100px 아래로 이동)
 
-// Log scale configuration
-console.log('[Scale] Display configuration:', {
-  floorScale: FLOOR_VIEW_SCALE,
-  frontScale: FRONT_VIEW_SCALE,
-  currentScale: getCurrentScale(),
-  viewMode: currentViewMode.value,
-  sizes: {
-    small: { logical: 40, display: 72 },   // 40 * 1.8 = 72
-    medium: { logical: 50, display: 90 },  // 50 * 1.8 = 90
-    large: { logical: 60, display: 108 }   // 60 * 1.8 = 108
-  },
-  grid: { logical: 20, visual: 36 }        // 20 * 1.8 = 36
-})
+// Log scale configuration removed - was causing syntax error
 
 // 캔버스 크기 (동적으로 조정)
 const canvasWidth = ref(1550)  // 고정 너비
@@ -792,11 +780,7 @@ const updateCanvasSize = () => {
     const wrapperWidth = rect.width
     const wrapperHeight = rect.height
     
-    console.log('[Canvas] Dimensions:', { 
-      wrapper: { width: wrapperWidth, height: wrapperHeight },
-      canvas: { width: canvasWidth.value, height: canvasHeight.value },
-      viewBox: `0 0 ${canvasWidth.value} ${canvasHeight.value}`
-    })
+    // Canvas dimensions updated
   }
 }
 
@@ -846,7 +830,7 @@ const API_BASE_URL = 'http://localhost:3333/api'
 // Data Loading Functions
 const loadZones = async () => {
   try {
-    console.log('[API] Loading zones from API...')
+    
     const response = await fetch(`${API_BASE_URL}/zones`)
     
     if (!response.ok) {
@@ -854,7 +838,7 @@ const loadZones = async () => {
     }
     
     const data = await response.json()
-    console.log('[API] Zones API response:', data)
+    
     
     // Transform backend data to frontend format
     if (data.zones) {
@@ -872,7 +856,7 @@ const loadZones = async () => {
       }))
       
       lockerStore.zones = transformedZones
-      console.log('[API] Zones loaded and transformed:', transformedZones.length)
+      
     } else {
       console.warn('[API] No zones data in response:', data)
       lockerStore.zones = []
@@ -892,11 +876,11 @@ const loadLockers = async () => {
       ? `${API_BASE_URL}/lockrs?parentOnly=true` 
       : `${API_BASE_URL}/lockrs`
     
-    console.log(`[LOADLOCKERS] ⚡ STARTING loadLockers() call`)
-    console.log(`[LOADLOCKERS] Current view mode: ${currentViewMode.value}`)
-    console.log(`[LOADLOCKERS] Is floor view: ${isFloorView}`)
-    console.log(`[LOADLOCKERS] API URL: ${apiUrl}`)
-    console.log(`[LOADLOCKERS] Stack trace:`, new Error().stack)
+    
+    
+    
+    
+    
     
     const response = await fetch(apiUrl)
     
@@ -905,16 +889,16 @@ const loadLockers = async () => {
     }
     
     const data = await response.json()
-    console.log('[API] Lockers API response:', data)
-    console.log(`[API] DEBUG - Response contains ${data.lockers?.length || 0} lockers`)
+    
+    
     
     // DETAILED DEBUG: 각 락커의 parent 관계 출력
     if (data.lockers) {
-      console.log('[API] PARENT-CHILD ANALYSIS:')
+      
       data.lockers.forEach(locker => {
         const isParent = locker.PARENT_LOCKR_CD === null
         const parentInfo = isParent ? 'PARENT' : `CHILD of ${locker.PARENT_LOCKR_CD}`
-        console.log(`  ${locker.LOCKR_LABEL}: ${parentInfo} (PARENT_LOCKR_CD: ${locker.PARENT_LOCKR_CD})`)
+        // console.log(`  ${locker.LOCKR_LABEL}: ${parentInfo} (PARENT_LOCKR_CD: ${locker.PARENT_LOCKR_CD})`)
       })
     }
     
@@ -927,18 +911,11 @@ const loadLockers = async () => {
         const typeHeight = lockerType?.height || 60  // 실제 높이
         const typeDepth = lockerType?.depth || 40
         
-        // CRITICAL DEBUG: 타입 매핑 확인
-        console.log(`[LoadLockers] ${locker.LOCKR_LABEL}:`, {
-          typeCode: locker.LOCKR_TYPE_CD,
-          foundType: lockerType ? `Found - ${lockerType.name}` : 'NOT FOUND',
-          expectedHeight: typeHeight,
-          isNormalLocker: locker.LOCKR_TYPE_CD === 'custom-1755675491548' ? 'YES (30px)' : 'NO',
-          isTallLocker: locker.LOCKR_TYPE_CD === 'custom-1755675506519' ? 'YES (90px)' : 'NO'
-        })
+        // Type mapping check removed
         
         // CRITICAL DEBUG: Parent-child relationship transformation
         const parentLockerId = locker.PARENT_LOCKR_CD ? `locker-${locker.PARENT_LOCKR_CD}` : null
-        console.log(`[TRANSFORM DEBUG] ${locker.LOCKR_LABEL}: PARENT_LOCKR_CD=${locker.PARENT_LOCKR_CD}, parentLockerId=${parentLockerId}`)
+        
 
         const transformedLocker = {
           id: `locker-${locker.LOCKR_CD}`,
@@ -975,7 +952,7 @@ const loadLockers = async () => {
         }
         
         // CRITICAL DEBUG: Verify actualHeight is in the transformed object
-        console.log(`[LoadLockers Transform] ${transformedLocker.number}: actualHeight=${transformedLocker.actualHeight}, typeHeight=${typeHeight}`)
+        
         
         return transformedLocker
       })
@@ -984,23 +961,23 @@ const loadLockers = async () => {
       lockerStore.lockers = transformedLockers
       
       // DETAILED DEBUG: Store에 저장된 데이터 확인
-      console.log('[STORE] After assignment, lockerStore.lockers contains:')
+      
       lockerStore.lockers.forEach(locker => {
         const isParent = !locker.parentLockrCd
         const parentInfo = isParent ? 'PARENT' : `CHILD of ${locker.parentLockrCd}`
-        console.log(`  ${locker.number}: ${parentInfo} (parentLockrCd: ${locker.parentLockrCd})`)
+        // console.log(`  ${locker.number}: ${parentInfo} (parentLockrCd: ${locker.parentLockrCd})`)
       })
       
       // CRITICAL DEBUG: Verify actualHeight is preserved in store
       transformedLockers.forEach(locker => {
         if (locker.number === 'L3' || locker.number === 'L4') {
-          console.log(`[Store Assignment] ${locker.number}: actualHeight=${locker.actualHeight} (should be 90)`)
+          
         } else if (locker.number === 'L1' || locker.number === 'L2' || locker.number === 'L5') {
-          console.log(`[Store Assignment] ${locker.number}: actualHeight=${locker.actualHeight} (should be 30)`)
+          
         }
       })
       
-      console.log('[API] Lockers loaded successfully:', transformedLockers.length)
+      
     } else if (data.lockers) {
       // Handle case where success flag is not present but lockers exist
       // CRITICAL: Process the data instead of direct assignment to preserve actualHeight
@@ -1042,7 +1019,7 @@ const loadLockers = async () => {
       })
       
       lockerStore.lockers = transformedLockers
-      console.log('[API] Lockers loaded successfully (fallback path):', transformedLockers.length)
+      
     } else {
       console.warn('[API] No lockers data in response:', data)
       lockerStore.lockers = []
@@ -1057,7 +1034,7 @@ const loadLockers = async () => {
 const loadLockerTypes = async () => {
   try {
     isLoadingTypes.value = true
-    console.log('Loading locker types from API...')
+    // console.log('Loading locker types from API...')
     
     const response = await fetch(`${API_BASE_URL}/types`)
     if (!response.ok) {
@@ -1065,7 +1042,7 @@ const loadLockerTypes = async () => {
     }
     
     const data = await response.json()
-    console.log('Types API response:', data)
+    // console.log('Types API response:', data)
     
     if (data.success) {
       // Transform backend data to frontend format
@@ -1080,7 +1057,7 @@ const loadLockerTypes = async () => {
       }))
       
       lockerTypes.value = transformedTypes
-      console.log('Locker types loaded and transformed:', transformedTypes.length)
+      // console.log('Locker types loaded and transformed:', transformedTypes.length)
     }
   } catch (error) {
     console.error('Failed to load locker types:', error)
@@ -1105,7 +1082,7 @@ const saveZone = async (zoneData: any) => {
     
     if (result.success) {
       await loadZones() // Refresh zones
-      console.log('[API] Zone saved successfully')
+      
       return result
     }
   } catch (error) {
@@ -1128,7 +1105,7 @@ const saveLocker = async (lockerData: any) => {
     
     if (result.success) {
       await loadLockers() // Refresh lockers
-      console.log('[API] Locker saved successfully')
+      
       return result
     }
   } catch (error) {
@@ -1150,7 +1127,7 @@ const updateLockerPlacement = async (lockerId: string, placementData: any) => {
     const result = await response.json()
     
     if (result.success) {
-      console.log('[API] Locker placement updated successfully')
+      
       return result
     }
   } catch (error) {
@@ -1209,7 +1186,7 @@ const saveMultipleLockerPositions = async (positions: Array<{ id: string, x: num
     })
     
     await Promise.all(savePromises)
-    console.log('[API] Saved positions for', positions.length, 'lockers')
+    
   } catch (error) {
     console.error('[API] Failed to save some locker positions:', error)
   }
@@ -1326,13 +1303,13 @@ const areAdjacent = (locker1: any, locker2: any, maxGap = 5) => {
   const isAdjacent = (verticallyClose && horizontalOverlap) || (horizontallyClose && verticalOverlap)
   
   // 디버깅 로그
-  console.log(`[DEBUG] Checking adjacency: ${locker1.id} <-> ${locker2.id}`)
-  console.log(`  L1 bounds: x=${l1.left}, right=${l1.right}, y=${l1.top}, bottom=${l1.bottom}`)
-  console.log(`  L2 bounds: x=${l2.left}, right=${l2.right}, y=${l2.top}, bottom=${l2.bottom}`)
-  console.log(`  Distance: horizontal=${horizontalDistance}px (max: ${scaledMaxGap}px), vertical=${verticalDistance}px`)
-  console.log(`  Horizontally close: ${horizontallyClose}, Vertically close: ${verticallyClose}`)
-  console.log(`  Horizontal overlap: ${horizontalOverlap}, Vertical overlap: ${verticalOverlap}`)
-  console.log(`  Result: ${isAdjacent ? '✅ ADJACENT' : '❌ NOT ADJACENT'}`)
+  
+  // console.log(`  L1 bounds: x=${l1.left}, right=${l1.right}, y=${l1.top}, bottom=${l1.bottom}`)
+  // console.log(`  L2 bounds: x=${l2.left}, right=${l2.right}, y=${l2.top}, bottom=${l2.bottom}`)
+  // console.log(`  Distance: horizontal=${horizontalDistance}px (max: ${scaledMaxGap}px), vertical=${verticalDistance}px`)
+  // console.log(`  Horizontally close: ${horizontallyClose}, Vertically close: ${verticallyClose}`)
+  // console.log(`  Horizontal overlap: ${horizontalOverlap}, Vertical overlap: ${verticalOverlap}`)
+  // console.log(`  Result: ${isAdjacent ? '✅ ADJACENT' : '❌ NOT ADJACENT'}`)
   
   return isAdjacent
 }
@@ -1447,24 +1424,24 @@ const visibleLockerTypes = computed(() => {
 const currentLockers = computed(() => {
   if (!selectedZone.value) return []
   
-  console.log(`[CurrentLockers] DEBUG - Total lockers in store: ${lockerStore.lockers.length}`)
-  console.log(`[CurrentLockers] DEBUG - Selected zone: ${selectedZone.value.id}`)
-  console.log(`[CurrentLockers] DEBUG - Current view mode: ${currentViewMode.value}`)
+  
+  
+  
   
   let filtered = lockerStore.lockers.filter(l => l.zoneId === selectedZone.value.id)
   
   // 평면뷰(floor)일 때는 부모 락커만 표시
   if (currentViewMode.value === 'floor') {
     filtered = filtered.filter(l => !l.parentLockrCd)
-    console.log(`[CurrentLockers] DEBUG - Floor view: filtered to parent lockers only`)
+    
   }
   
   // DETAILED DEBUG: 필터링 결과 분석
-  console.log(`[CurrentLockers] DEBUG - Final result: ${filtered.length} lockers`)
+  
   filtered.forEach(locker => {
     const isParent = !locker.parentLockrCd
     const parentInfo = isParent ? 'PARENT' : `CHILD of ${locker.parentLockrCd}`
-    console.log(`  ${locker.number}: ${parentInfo} (actualHeight=${locker.actualHeight}, rotation=${locker.rotation})`)
+    // Debug removed
   })
   
   return filtered
@@ -1473,7 +1450,7 @@ const currentLockers = computed(() => {
 // Compute display versions of lockers with scaled dimensions
 const displayLockers = computed(() => {
   // Backend should provide appropriate lockers based on view mode
-  console.log(`[DEBUG displayLockers] View mode: ${currentViewMode.value}, lockers count: ${currentLockers.value.length}`)
+  
   const filteredLockers = currentLockers.value
   
   return filteredLockers.map((locker, index) => {
@@ -1492,22 +1469,12 @@ const displayLockers = computed(() => {
       const scale = getCurrentScale()
       
       if (locker.frontViewX !== undefined && locker.frontViewY !== undefined) {
-        // 새로운 알고리즘 결과 사용
-        console.log(`[DisplayLockers NEW] ${locker.number}:`, {
-          frontViewX: locker.frontViewX,
-          frontViewY: locker.frontViewY,
-          displayX: locker.frontViewX * scale,
-          displayY: locker.frontViewY * scale,
-          parentLockrCd: locker.parentLockrCd,
-          tierLevel: locker.tierLevel,
-          scale: scale
-        })
+        // 새로운 알고리즘 결과 사용 - debug removed
         displayX = locker.frontViewX * scale
         displayY = locker.frontViewY * scale
         displayHeight = lockerActualHeight * scale
       } else {
         // FALLBACK: Original algorithm for compatibility
-        console.log(`[DisplayLockers FALLBACK] Using original algorithm for ${locker.number}`)
         const LOCKER_VISUAL_SCALE = 2.0
         
         // Find locker position in the front view sequence
@@ -1542,7 +1509,7 @@ const displayLockers = computed(() => {
     const displayWidth = locker.width * getCurrentScale() // 모든 뷰모드에서 동일한 렌더링 스케일 적용
     
     // CRITICAL DEBUG: Check actualHeight preservation
-    console.log(`[DisplayLockers] ${locker.number}: actualHeight=${locker.actualHeight}, typeId=${locker.typeId}`)
+    
     
     return {
       ...locker,
@@ -1570,14 +1537,7 @@ const sortedLockers = computed(() => {
       // actualHeight를 확실히 전달 (30 또는 90)
       const frontViewHeight = locker.actualHeight || locker.height || 60
       
-      console.log(`[SortedLockers] ${locker.number}:`, {
-        actualHeight: locker.actualHeight,
-        height: locker.height,
-        frontViewHeight: frontViewHeight,
-        typeId: locker.typeId,
-        EXPECTED_L3_L4: locker.number === 'L3' || locker.number === 'L4' ? '90px' : '30px',
-        IS_CORRECT: frontViewHeight === (locker.number === 'L3' || locker.number === 'L4' ? 90 : 30) ? '✅ CORRECT' : '❌ WRONG'
-      })
+      // Debug info removed
       
       const resultLocker = {
         ...locker,
@@ -1592,7 +1552,7 @@ const sortedLockers = computed(() => {
       
       // FINAL DEBUG: Check final result passed to LockerSVG
       if (locker.number === 'L3' || locker.number === 'L4') {
-        console.log(`[SortedLockers FINAL] ${locker.number}: height=${resultLocker.height}, actualHeight=${resultLocker.actualHeight} (FINAL RESULT TO LockerSVG)`)
+        
       }
       
       return resultLocker
@@ -1606,7 +1566,7 @@ const sortedLockers = computed(() => {
       // 선택된 락커를 배열 끝으로 이동
       const [selected] = lockers.splice(selectedIndex, 1)
       lockers.push(selected)
-      console.log('[Canvas] Reordering lockers, selected:', selectedLocker.value.id)
+      
     }
   }
   return lockers
@@ -1754,10 +1714,10 @@ const showZoneContextMenuHandler = (event, zone) => {
 const deleteZone = async (zone) => {
   try {
     // Debug logging
-    console.log('[DEBUG] Deleting zone:', zone)
-    console.log('[DEBUG] Zone ID:', zone.id)
-    console.log('[DEBUG] Zone LOCKR_KND_CD:', zone.LOCKR_KND_CD)
-    console.log('[DEBUG] Full zone object:', JSON.stringify(zone, null, 2))
+    
+    
+    
+    
     
     // Check if zone has lockers
     const zoneLockers = currentLockers.value.filter(l => l.LOCKR_KND === zone.id || l.zoneId === zone.id || l.LOCKR_KND === zone.LOCKR_KND_CD)
@@ -1776,8 +1736,8 @@ const deleteZone = async (zone) => {
     const zoneIdToDelete = zone.LOCKR_KND_CD || zone.id
     const deleteUrl = `${API_BASE_URL}/zones/${zoneIdToDelete}`
     
-    console.log('[DEBUG] DELETE URL:', deleteUrl)
-    console.log('[DEBUG] Zone ID to delete:', zoneIdToDelete)
+    
+    
     
     // Call API
     const response = await fetch(deleteUrl, {
@@ -1792,7 +1752,7 @@ const deleteZone = async (zone) => {
     const result = await response.json()
     
     if (result.success) {
-      console.log('[API] Zone deleted successfully:', zone.name)
+      
       
       // Refresh zones
       await loadZones()
@@ -1832,7 +1792,7 @@ const showTypeContextMenuHandler = (event, type) => {
 // Delete locker type function
 const deleteLockerType = async (type) => {
   try {
-    console.log('[DEBUG] Delete type function called:', type)
+    
     
     // Check if type has lockers
     const typeLockers = currentLockers.value.filter(l => l.LOCKR_TYPE_CD === type.id || l.type === type.id)
@@ -1847,26 +1807,26 @@ const deleteLockerType = async (type) => {
       return
     }
     
-    console.log('[DEBUG] Sending DELETE request to:', `${API_BASE_URL}/types/${type.id}`)
+    
     
     // Call API
     const response = await fetch(`${API_BASE_URL}/types/${type.id}`, {
       method: 'DELETE'
     })
     
-    console.log('[DEBUG] Response status:', response.status)
+    
     
     if (!response.ok) {
       const errorData = await response.json()
-      console.log('[DEBUG] Error response:', errorData)
+      
       throw new Error(errorData.message || 'Failed to delete locker type')
     }
     
     const result = await response.json()
-    console.log('[DEBUG] Success response:', result)
+    
     
     if (result.success) {
-      console.log('[API] Locker type deleted successfully:', type.name)
+      
       
       // Refresh locker types
       await loadLockerTypes()
@@ -1887,7 +1847,7 @@ const deleteLockerType = async (type) => {
 // 락커 타입 선택
 const selectLockerType = (type) => {
   selectedType.value = type
-  console.log('[Locker Addition] Type selected:', type)
+  // Type selected
 }
 
 // Helper function to find available position
@@ -1934,11 +1894,7 @@ const findAvailablePosition = (startX: number, startY: number, width: number, de
 
 // Direct locker addition without preview
 const addLocker = async () => {
-  console.log('[Direct Add] Add button clicked', {
-    currentViewMode: currentViewMode.value,
-    hasType: !!selectedType.value,
-    hasZone: !!selectedZone.value
-  })
+  // Add button clicked
   
   // 평면배치모드에서만 락커 추가 가능
   if (currentViewMode.value !== 'floor') {
@@ -1981,15 +1937,7 @@ const addLocker = async () => {
     number: `L${currentLockers.value.length + 1}`
   }
   
-  console.log('[Direct Add] Creating locker:', {
-    type: selectedType.value.name,
-    position: position,
-    dimensions: { 
-      width: newLocker.width, 
-      height: newLocker.height, 
-      depth: newLocker.depth 
-    }
-  })
+  // Creating locker
   
   // Save to database first (this will also add to store via loadLockers)
   try {
@@ -2005,7 +1953,7 @@ const addLocker = async () => {
     
     const result = await saveLocker(saveData)
     if (result && result.lockrCd) {
-      console.log('[Database] Locker saved with ID:', result.lockrCd)
+      // Locker saved
     }
   } catch (error) {
     console.error('[Database] Failed to save locker:', error)
@@ -2020,11 +1968,7 @@ const addLocker = async () => {
   // Debug all locker dimensions after adding
   debugLockerDimensions()
   
-  console.log('[Direct Add] Locker placed:', {
-    type: selectedType.value.name,
-    position: { x: position.x, y: position.y },
-    dimensions: { width: newLocker.width, depth: newLocker.depth }
-  })
+  // Locker placed successfully
 }
 
 // Add tiers to selected parent lockers
@@ -2050,7 +1994,7 @@ const addTiersToSelectedLockers = async (tierCount: number) => {
     
     // Skip if not a parent locker
     if (!locker || locker.parentLockrCd || locker.tierLevel > 0) {
-      console.log(`[Tiers] Skipping ${lockerId} - not a parent locker`)
+      // Skipping non-parent locker
       skippedCount++
       continue
     }
@@ -2063,24 +2007,54 @@ const addTiersToSelectedLockers = async (tierCount: number) => {
     }
     
     try {
+      // Calculate tier level for this parent
+      const existingChildren = currentLockers.value.filter(l => 
+        l.parentLockrCd === locker.lockrCd || l.parentLockerId === locker.id
+      )
+      
+      const maxExistingTier = existingChildren.reduce((max, child) => 
+        Math.max(max, child.tierLevel || 0), 0
+      )
+      
+      const startTierLevel = maxExistingTier > 0 ? maxExistingTier + 1 : 1
+      
+      console.log(`[AddFloors] Tier level calculation:`, {
+        lockerId: locker.id,
+        lockrCd: locker.lockrCd,
+        existingChildrenCount: existingChildren.length,
+        maxExistingTier: maxExistingTier,
+        startTierLevel: startTierLevel,
+        algorithm: maxExistingTier > 0 ? 
+          `Children exist -> Start from tier ${startTierLevel}` : 
+          `No children -> Start from tier 1`
+      })
+      
       // Call API to add tiers
-      // TODO: Implement lockerApi.addTiers when API module is created
-      // const newTiers = await lockerApi.addTiers(locker.lockrCd, tierCount)
+      console.log('[AddFloors] Sending to backend:', { 
+        lockrCd: locker.lockrCd,
+        tierCount, 
+        startTierLevel,
+        parentFrontViewX: locker.frontViewX, 
+        parentFrontViewY: locker.frontViewY 
+      })
       
-      // For now, show message that tier functionality is not yet implemented
-      console.log(`[Tiers] Would add ${tierCount} tiers to locker ${locker.lockrLabel || locker.number}`)
-      alert('층 추가 기능은 아직 구현 중입니다.')
-      return
+      const newTiers = await lockerApi.addTiers(
+        locker.lockrCd, 
+        tierCount, 
+        locker.frontViewX, 
+        locker.frontViewY,
+        startTierLevel
+      )
       
-      // if (newTiers && newTiers.length > 0) {
-      //   // Add new tiers to local store
-      //   newTiers.forEach(tier => {
-      //     lockerStore.addLocker(tier)
-      //   })
-      //   
-      //   console.log(`[Tiers] Added ${newTiers.length} tiers to locker ${locker.lockrLabel || locker.number}`)
-      //   addedCount++
-      // }
+      if (newTiers && newTiers.length > 0) {
+        // Add new tiers to local store
+        newTiers.forEach(tier => {
+          lockerStore.addLocker(tier)
+        })
+        
+        console.log(`[AddFloors] Added ${newTiers.length} tiers to locker ${locker.lockrLabel || locker.number}`)
+        addedCount++
+      }
     } catch (error) {
       console.error(`[Tiers] Failed to add tiers to locker ${lockerId}:`, error)
     }
@@ -2088,7 +2062,7 @@ const addTiersToSelectedLockers = async (tierCount: number) => {
   
   // Show result
   if (addedCount > 0) {
-    console.log(`[Tiers] Successfully added tiers to ${addedCount} locker(s)`)
+    console.log(`[AddFloors] Successfully added ${tierCount} tiers starting from level ${startTierLevel}`)
     
     // Refresh locker display - use proper loadLockers to preserve actualHeight
     if (lockerStore.isOnlineMode) {
@@ -2097,7 +2071,7 @@ const addTiersToSelectedLockers = async (tierCount: number) => {
   }
   
   if (skippedCount > 0) {
-    console.log(`[Tiers] Skipped ${skippedCount} locker(s) (not parent lockers or not saved)`)
+    // Some lockers skipped
   }
 }
 
@@ -2118,12 +2092,7 @@ const showAddTiersDialog = () => {
 
 // Add locker by double-clicking on type card
 const addLockerByDoubleClick = async (type: any) => {
-  console.log('[Double-Click] Adding locker:', {
-    type: type.name,
-    trigger: 'double-click',
-    dimensions: { width: type.width, depth: type.depth, height: type.height },
-    timestamp: Date.now()
-  })
+  // Adding new locker
   
   // Check if in floor mode
   if (currentViewMode.value !== 'floor') {
@@ -2177,12 +2146,7 @@ const addLockerByDoubleClick = async (type: any) => {
     zoneId: selectedZone.value.id
   }
   
-  console.log('[Double-Click] Creating locker with properties:', {
-    id: newLocker.id,
-    type: newLocker.type,
-    dimensions: { width: newLocker.width, height: newLocker.height, depth: newLocker.depth },
-    position: { x: newLocker.x, y: newLocker.y }
-  })
+  // Creating locker with properties
   
   // Save to database first (this will also add to store via loadLockers)
   try {
@@ -2198,7 +2162,7 @@ const addLockerByDoubleClick = async (type: any) => {
     
     const result = await saveLocker(saveData)
     if (result && result.lockrCd) {
-      console.log('[Database] Locker saved with ID:', result.lockrCd)
+      // Locker saved
     }
   } catch (error) {
     console.error('[Database] Failed to save locker:', error)
@@ -2223,7 +2187,7 @@ const addLockerByDoubleClick = async (type: any) => {
     setTimeout(() => card.classList.remove('pulse-animation'), 300)
   }
   
-  console.log('[Double-Click] Locker added successfully:', created)
+  // Locker added successfully
 }
 
 // Restore deleted locker type
@@ -2232,7 +2196,7 @@ const restoreLockerType = (typeId: string) => {
   if (index > -1) {
     hiddenTypes.value.splice(index, 1)
   }
-  console.log('[Locker Type] Restored:', typeId)
+  // Locker type restored
 }
 
 // Get type label from type ID
@@ -2255,16 +2219,7 @@ const getMousePosition = (event: MouseEvent) => {
   const svgP = pt.matrixTransform(svg.getScreenCTM().inverse())
   
   const scale = getCurrentScale()
-  console.log('[Coordinates] System check:', {
-    scale: scale,
-    viewMode: currentViewMode.value,
-    client: { x: event.clientX, y: event.clientY },
-    svg: { x: svgP.x, y: svgP.y },
-    logical: { x: svgP.x, y: svgP.y },
-    display: { x: svgP.x * scale, y: svgP.y * scale },
-    collision: 'Using logical coordinates',
-    snapping: 'Using logical coordinates'
-  })
+  // Removed mouse move logging to reduce console noise
   
   // SVG coordinates are already in logical space (not display space)
   // because viewBox defines the logical coordinate system
@@ -2281,7 +2236,7 @@ const handleCanvasMouseDown = (event) => {
   const x = pos.x
   const y = pos.y
   
-  console.log('[SVG Coords] Mouse down at:', { x, y })
+  // console.log('[SVG Coords] Mouse down at:', { x, y })
   
   // More comprehensive check for empty space
   const target = event.target as Element
@@ -2300,11 +2255,11 @@ const handleCanvasMouseDown = (event) => {
     target.classList.contains('selection-box') // Ignore selection box itself
   )
   
-  console.log('[MouseDown] Target:', target.tagName, 'Classes:', target.className, 'IsEmpty:', isEmptySpace, 'IsLocker:', isLockerElement)
+  // console.log('[MouseDown] Target:', target.tagName, 'Classes:', target.className, 'IsEmpty:', isEmptySpace, 'IsLocker:', isLockerElement)
   
   // Only start drag selection on truly empty space
   if (isEmptySpace && !isDragging.value) {
-    console.log('[Rectangle Select] Starting at', x, y)
+    // console.log('[Rectangle Select] Starting at', x, y)
     isDragSelecting.value = true
     dragSelectStart.value = { x, y }
     dragSelectEnd.value = { x, y }
@@ -2347,7 +2302,7 @@ const handleCanvasMouseMove = (event) => {
 const handleCanvasMouseUp = (event) => {
   // Don't handle if rotating or just finished rotating
   if (isRotating.value || rotationJustEnded.value) {
-    console.log('[Canvas MouseUp] Ignored - rotation in progress or just ended')
+    // console.log('[Canvas MouseUp] Ignored - rotation in progress or just ended')
     return
   }
   
@@ -2369,7 +2324,7 @@ const handleCanvasMouseUp = (event) => {
       
       // Set flag to prevent immediate deselection by click event
       dragSelectionJustFinished.value = true
-      console.log('[Rectangle Select] Setting dragSelectionJustFinished flag to true')
+      // console.log('[Rectangle Select] Setting dragSelectionJustFinished flag to true')
       
       // Ensure selection UI is shown after drag selection
       if (selectedLockerIds.value.size > 0) {
@@ -2379,19 +2334,19 @@ const handleCanvasMouseUp = (event) => {
       // Clear flag after a short delay
       setTimeout(() => {
         dragSelectionJustFinished.value = false
-        console.log('[Rectangle Select] Cleared dragSelectionJustFinished flag')
+        // console.log('[Rectangle Select] Cleared dragSelectionJustFinished flag')
       }, 100)
       
-      console.log('[Rectangle Select] Finished selection')
-      console.log('[Rectangle Select] Start:', dragSelectStart.value, 'End:', dragSelectEnd.value)
-      console.log('[Rectangle Select] Selected lockers:', Array.from(selectedLockerIds.value))
-      console.log('[Rectangle Select] Current selection count:', selectedLockerIds.value.size)
+      // console.log('[Rectangle Select] Finished selection')
+      // console.log('[Rectangle Select] Start:', dragSelectStart.value, 'End:', dragSelectEnd.value)
+      // console.log('[Rectangle Select] Selected lockers:', Array.from(selectedLockerIds.value))
+      // console.log('[Rectangle Select] Current selection count:', selectedLockerIds.value.size)
     } else {
       // Just a click, clear selection (but not if rotating)
       if (!isRotating.value) {
         selectedLockerIds.value.clear()
         selectedLocker.value = null
-        console.log('[Rectangle Select] Cancelled - not enough drag distance')
+        // console.log('[Rectangle Select] Cancelled - not enough drag distance')
       }
     }
     
@@ -2422,16 +2377,7 @@ const updateSelectionInRectangle = () => {
   const minY = Math.min(dragSelectStart.value.y, dragSelectEnd.value.y)
   const maxY = Math.max(dragSelectStart.value.y, dragSelectEnd.value.y)
   
-  console.log('[DEBUG] Selection rectangle:', { minX, maxX, minY, maxY })
-  console.log('[DEBUG] Current lockers:', currentLockers.value.map(l => ({
-    id: l.id,
-    x: l.x,
-    y: l.y,
-    width: l.width,
-    height: l.height || l.depth,
-    frontViewX: l.frontViewX,
-    frontViewY: l.frontViewY
-  })))
+  // Debug log removed
   
   selectedLockerIds.value.clear()
   
@@ -2457,25 +2403,19 @@ const updateSelectionInRectangle = () => {
       lockerBottom = locker.y + dims.height
     }
     
-    console.log('[DEBUG] Checking locker:', locker.id, {
-      left: lockerLeft,
-      right: lockerRight,
-      top: lockerTop,
-      bottom: lockerBottom,
-      viewMode: currentViewMode.value
-    })
+    // Debug removed
     
     // Check for ANY overlap (not just complete containment)
     const overlaps = !(lockerRight < minX || lockerLeft > maxX || 
                        lockerBottom < minY || lockerTop > maxY)
     
     if (overlaps) {
-      console.log('[DEBUG] Locker overlaps!', locker.id)
+      
       selectedLockerIds.value.add(locker.id)
     }
   })
   
-  console.log('[DEBUG] Final selected IDs:', Array.from(selectedLockerIds.value))
+  
   
   // Make sure visual update happens
   if (selectedLockerIds.value.size > 0) {
@@ -2511,18 +2451,11 @@ const handleNumberModalOverlayClick = () => {
 const handleCanvasClick = (event) => {
   // Check if any drag operation or rotation just finished - if so, ignore this click
   if (dragSelectionJustFinished.value || lockerDragJustFinished.value || rotationJustEnded.value) {
-    console.log('[Canvas] Click ignored - operation just finished', {
-      dragSelection: dragSelectionJustFinished.value,
-      lockerDrag: lockerDragJustFinished.value,
-      rotation: rotationJustEnded.value
-    })
+    // Debug removed
     return
   }
   
-  console.log('[Canvas] Click event', { 
-    target: event.target.tagName,
-    targetClasses: event.target.classList
-  })
+  // Debug removed
   
   // SVG 체크를 더 유연하게 수정
   const target = event.target
@@ -2533,7 +2466,7 @@ const handleCanvasClick = (event) => {
   
   // 배경 클릭 시 선택 해제 (Ctrl/Shift 키가 없을 때만)
   if (isBackgroundClick && !event.ctrlKey && !event.shiftKey && !event.metaKey) {
-    console.log('[Canvas] Background clicked - clearing selection')
+    
     selectedLocker.value = null
     selectedLockerIds.value.clear()
     lockerStore.selectLocker(null)
@@ -2624,7 +2557,7 @@ const selectLocker = (locker, event?) => {
       },
       rotationCenter: { x: locker.width/2, y: locker.height/2 }
     })
-    console.log('[Canvas] Single select:', locker.id)
+    
   }
   
   lastSelectedLocker.value = locker
@@ -2662,7 +2595,7 @@ const selectRange = (from: any, to: any) => {
 const startDragLocker = (locker, event) => {
   // 프론트 뷰에서는 드래그 비활성화
   if (currentViewMode.value === 'front') {
-    console.log('[Front View] Drag disabled in front view mode')
+    // Front view drag disabled
     return
   }
   
@@ -2776,7 +2709,7 @@ const startRotateLocker = (locker, event) => {
   }
   isRotating.value = true
   
-  console.log('[Rotation] Started for locker:', locker.id)
+  // Rotation started
   
   // 다중 선택시 그룹 회전 정보 미리 계산 및 저장
   if (selectedLockerIds.value.size > 1) {
@@ -2818,10 +2751,7 @@ const startRotateLocker = (locker, event) => {
       leaderId: locker.id
     }
     
-    console.log('[Rotation] Group rotation state initialized', {
-      center: { x: centerX, y: centerY },
-      lockerCount: lockerStates.size
-    })
+    // Group rotation state initialized
   } else {
     groupRotationState.value = null
   }
@@ -2936,7 +2866,7 @@ const handleRotateMove = (lockerId: string, newRotation: number) => {
 
 // 회전 종료
 const handleRotateEnd = (lockerId: string) => {
-  console.log('[Rotation] Ended for locker:', lockerId)
+  // Rotation ended
   
   // Set a flag to indicate rotation just ended
   rotationJustEnded.value = true
@@ -2953,12 +2883,12 @@ const handleRotateEnd = (lockerId: string) => {
     delete leaderLocker._lastRotation
     delete leaderLocker._lastRawRotation
     delete leaderLocker._rotationDirection  // 방향 플래그도 정리
-    console.log('[Rotation] Cleaned up temporary rotation values')
+    // Cleaned up temporary rotation values
   }
   
   // 그룹 회전 상태 정리
   if (groupRotationState.value) {
-    console.log('[Rotation] Clearing group rotation state')
+    // Clearing group rotation state
     groupRotationState.value = null
   }
   
@@ -3005,7 +2935,7 @@ const saveLockerRotation = async (lockerId: string, rotation: number) => {
         normalizedRotation += 360
       }
       await lockerStore.updateLocker(lockerId, { rotation: normalizedRotation })
-      console.log(`[Rotation] Saved locker ${lockerId} with rotation: ${normalizedRotation}° (from ${rotation}°)`)
+      // Locker rotation saved
     }
   } catch (error) {
     console.error('[Rotation] Failed to save rotation:', error)
@@ -3503,9 +3433,9 @@ const highlightProblematicLockers = (lockerIds: string[]) => {
 
 // 뷰 모드 설정
 const setViewMode = (mode: 'floor' | 'front') => {
-  console.log('[DEBUG] setViewMode called with:', mode)
+  
   currentViewMode.value = mode
-  console.log('[DEBUG] currentViewMode.value set to:', currentViewMode.value)
+  
   updateViewMode()
   
   // 스케일 변경 로그
@@ -3525,13 +3455,13 @@ const setViewMode = (mode: 'floor' | 'front') => {
 
 // 뷰 모드 업데이트
 const updateViewMode = () => {
-  console.log('[DEBUG] updateViewMode called with mode:', currentViewMode.value)
+  
   
   // 프론트 뷰로 전환하려는 경우 검증 수행
   if (currentViewMode.value === 'front') {
-    console.log('[DEBUG] Validating locker placement for front view')
+    
     const validation = validateLockerPlacement()
-    console.log('[DEBUG] Validation result:', validation)
+    
     
     if (!validation.isValid) {
       console.error('[Validation FAILED] Cannot switch to front view:', validation.errors)
@@ -3567,11 +3497,11 @@ const updateViewMode = () => {
     selectedLockerIds.value.clear()
     isDragging.value = false
     showSelectionUI.value = false
-    console.log('[Front View] Interactions disabled, view-only mode')
+    // Front view interactions disabled
     
     // Note: Front view transformation is now handled by the view mode watcher
     // after loading all lockers (including child/tier lockers)
-    console.log('[Front View] Transformation will be handled by view mode watcher after loading lockers')
+    // Transformation handled by view mode watcher
   } else {
     // 플로어 뷰로 돌아올 때 선택 UI 복원
     showSelectionUI.value = true
@@ -3586,12 +3516,12 @@ const updateViewMode = () => {
 // BACKUP: 기존 transformToFrontView 로직 (2025-08-22)
 // =================================
 const transformToFrontView_BACKUP = () => {
-  console.log('[Front View] Starting transformation with user perspective')
+  // Starting front view transformation
   
   const lockers = currentLockers.value
   
   if (lockers.length === 0) {
-    console.log('[Front View] No lockers to transform')
+    // No lockers to transform
     return
   }
   
@@ -3763,7 +3693,6 @@ const getMinDistance = (locker1: any, locker2: any): number => {
 // 대그룹 탐지 (10px 이내 연결 - requirement: minimum distance < 10px for group connection)
 const findMajorGroups = (lockers: any[]): any[][] => {
   // Use the updated groupNearbyLockers function which implements Adjacent/Connected logic
-  console.log('[Major Group] Using new Adjacent/Connected logic via groupNearbyLockers')
   return groupNearbyLockers()
 }
 
@@ -3825,12 +3754,12 @@ const findMinorGroups = (majorGroup: any[]): any[][] => {
   const minorGroups: any[][] = []
   const visited = new Set<string>()
   
-  console.log(`[MINOR GROUPS] Processing major group with ${majorGroup.length} lockers:`, majorGroup.map(l => l.number || l.id).join(', '))
+  // Processing major group for minor groups
   
   majorGroup.forEach(locker => {
     if (visited.has(locker.id)) return
     
-    console.log(`[MINOR GROUPS] Starting new minor group with ${locker.number || locker.id}`)
+    // Starting new minor group
     const minorGroup: any[] = []
     const queue = [locker]
     
@@ -3840,7 +3769,7 @@ const findMinorGroups = (majorGroup: any[]): any[][] => {
       
       visited.add(current.id)
       minorGroup.push(current)
-      console.log(`[MINOR GROUPS] Added ${current.number || current.id} to minor group`)
+      // Added to minor group
       
       // CRITICAL: Minor groups = ONLY adjacent lockers (same direction + <= 30px)
       // Connections (40-43px) break minor groups even if same direction
@@ -3849,29 +3778,29 @@ const findMinorGroups = (majorGroup: any[]): any[][] => {
           const adjacent = isAdjacent(current, other)
           const connected = isConnected(current, other)
           
-          console.log(`[MINOR GROUPS] ${current.number || current.id} ↔ ${other.number || other.id}: Adjacent=${adjacent}, Connected=${connected}`)
+          // Checking adjacency and connection
           
           // Only adjacent lockers continue minor group
           // Connected lockers break minor group (different minor groups)
           if (adjacent && !connected) {
-            console.log(`[MINOR GROUPS] ✅ Adding ${other.number || other.id} to same minor group (adjacent)`)
+            // Adding to same minor group
             queue.push(other)
           } else if (connected) {
-            console.log(`[MINOR GROUPS] ❌ Connection breaks minor group - ${other.number || other.id} will be separate minor group`)
+            // Connection breaks minor group
           } else {
-            console.log(`[MINOR GROUPS] ❌ Not adjacent - ${other.number || other.id} will be separate minor group`)
+            // Not adjacent - separate minor group
           }
         }
       })
     }
     
     if (minorGroup.length > 0) {
-      console.log(`[MINOR GROUPS] Minor group complete:`, minorGroup.map(l => l.number || l.id).join(', '))
+      // Minor group complete
       minorGroups.push(minorGroup)
     }
   })
   
-  console.log(`[MINOR GROUPS] Total minor groups found: ${minorGroups.length}`)
+  // Minor groups analysis complete
   minorGroups.forEach((group, index) => {
     console.log(`  Minor group ${index + 1}: ${group.map(l => l.number || l.id).join(', ')}`)
   })
@@ -3999,7 +3928,7 @@ const getActualGroupForFrontView = (prevLocker: any, currentLocker: any, minorGr
 const getGroupSpacingForFrontView = (prevLocker: any, currentLocker: any, minorGroups: any[]): number => {
   const groupInfo = getActualGroupForFrontView(prevLocker, currentLocker, minorGroups)
   
-  console.log(`[Group Spacing] ${prevLocker.number} -> ${currentLocker.number}`)
+  // Checking group spacing
   console.log('  Group info:', groupInfo)
   
   if (!groupInfo.sameType) {
@@ -4019,24 +3948,21 @@ const getGroupSpacingForFrontView = (prevLocker: any, currentLocker: any, minorG
 
 // 새로운 Front View 변환 함수
 const transformToFrontViewNew = () => {
-  console.log('==========================================')
-  console.log('[Front View] Starting NEW transformation algorithm')
-  console.log('==========================================')
+  // === Front view transformation start ===
+  // Starting NEW transformation algorithm
+  // === Front view transformation start ===
   console.trace('Called from:')
   
   const lockers = currentLockers.value
   
   if (lockers.length === 0) {
-    console.log('[Front View] No lockers to transform')
+    // No lockers to transform
     return
   }
   
   // 1. 대그룹 탐지
   const majorGroups = findMajorGroups(lockers)
-  console.log(`[Front View] Found ${majorGroups.length} major groups:`)
-  majorGroups.forEach((group, index) => {
-    console.log(`  Major Group ${index + 1}:`, group.map(l => `${l.number}(rot:${l.rotation || 0})`))
-  })
+  // Found major groups for transformation
   
   // 2. 대그룹 우선순위 정렬
   const sortedMajorGroups = sortMajorGroups(majorGroups)
@@ -4095,7 +4021,7 @@ const transformToFrontViewNew = () => {
       currentX += spacing
       
       if (spacing > 0) {
-        console.log(`[Dynamic Gap] Adding ${spacing}px between ${prevLocker.number} and ${locker.number}`)
+        // Adding dynamic gap
       }
     }
     
@@ -4103,7 +4029,7 @@ const transformToFrontViewNew = () => {
     // 세로모드에서는 height 사용! (평면모드는 depth)
     const height = (locker.actualHeight || locker.height || 60) * LOCKER_VISUAL_SCALE
     
-    console.log(`[Position] Locker ${locker.number}(rot:${locker.rotation || 0}) at X:${currentX}, Width:${width}, Height:${height}`)
+    // Positioning locker
     
     renderData.push({
       ...locker,
@@ -4127,14 +4053,7 @@ const transformToFrontViewNew = () => {
         const childX = parentLocker.frontViewX  // 부모와 동일한 X
         const childY = parentLocker.frontViewY - scaledTierHeight * tierLevel  // 위쪽으로 (gap 없이)
         
-        console.log(`[CHILD POSITION] ${locker.number} (child of ${parentLocker.number}):`, {
-          parentX: parentLocker.frontViewX,
-          parentY: parentLocker.frontViewY,
-          childX: childX,
-          childY: childY,
-          tierLevel: tierLevel,
-          calculation: `${parentLocker.frontViewY} - ${scaledTierHeight} * ${tierLevel} = ${childY} (no gap)`
-        })
+        // Positioning child locker
         
         // 자식 락커 위치 업데이트
         lockerStore.updateLocker(locker.id, {
@@ -4177,13 +4096,13 @@ const transformToFrontViewNew = () => {
   const totalWidth = currentX
   const centerOffset = (canvasWidth.value - totalWidth) / 2
   
-  console.log(`[CENTER ALIGNMENT] Total width: ${totalWidth}, Center offset: ${centerOffset}`)
+  // Center alignment calculation
   
   renderData.forEach((item, index) => {
     const oldX = item.frontViewX
     item.frontViewX += centerOffset
     
-    console.log(`[CENTER ALIGNMENT] ${item.number}: ${oldX} → ${item.frontViewX} (offset: ${centerOffset})`)
+    // Item center aligned
     
     // Store 업데이트도 중앙 정렬 적용
     lockerStore.updateLocker(item.id, {
@@ -4271,10 +4190,10 @@ const positionLockersInFrontView = (lockerSequence) => {
 
 // 뷰 모드 토글 (평면/세로) - Keep for backwards compatibility
 const toggleVerticalMode = () => {
-  console.log('[DEBUG] Before toggle:', currentViewMode.value)
+  
   currentViewMode.value = currentViewMode.value === 'floor' ? 'front' : 'floor'
-  console.log('[DEBUG] After toggle:', currentViewMode.value)
-  console.log('[DEBUG] Button should be:', currentViewMode.value === 'floor' ? 'ENABLED' : 'DISABLED')
+  
+  
   updateViewMode()
 }
 
@@ -4286,6 +4205,78 @@ const deleteSelectedLocker = () => {
 
 // 다중 선택된 락커 삭제
 const deleteSelectedLockers = () => {
+  // 세로배치 모드에서만 제약 조건 적용
+  if (currentViewMode.value !== 'front') {
+    // 평면배치 모드에서는 기존 로직 사용
+    deleteSelectedLockersOriginal()
+    return
+  }
+  
+  const lockersToDelete = selectedLockerIds.value.size > 0 
+    ? Array.from(selectedLockerIds.value)
+    : selectedLocker.value ? [selectedLocker.value.id] : []
+  
+  if (lockersToDelete.length === 0) return
+  
+  // 세로배치 모드에서 삭제 제약 조건 검사
+  const blockedLockers = []
+  
+  lockersToDelete.forEach(lockerId => {
+    const locker = currentLockers.value.find(l => l.id === lockerId)
+    if (!locker) return
+    
+    // 1. 자식 락커(상단 락커)가 있는지 확인
+    const hasChildren = currentLockers.value.some(l => l.parentLockerId === lockerId)
+    
+    // 2. 동일 부모의 상단 락커가 있는지 확인 (같은 부모, 더 높은 tier)
+    let hasUpperTiers = false
+    if (locker.parentLockrCd) {
+      // 현재 락커가 자식인 경우, 같은 부모의 더 높은 tier 확인
+      hasUpperTiers = currentLockers.value.some(l => 
+        l.parentLockrCd === locker.parentLockrCd && 
+        l.id !== lockerId &&
+        (l.tierLevel || 0) > (locker.tierLevel || 0)
+      )
+    }
+    
+    if (hasChildren || hasUpperTiers) {
+      blockedLockers.push({
+        locker,
+        reasons: '상단 락커 존재'
+      })
+    }
+  })
+  
+  // 삭제가 차단된 락커가 있는 경우
+  if (blockedLockers.length > 0) {
+    alert('삭제하려면 먼저 상단 락커를 제거해주세요.')
+    return
+  }
+  
+  // 삭제 가능한 락커들만 확인 후 삭제
+  const count = lockersToDelete.length
+  if (!confirm(`삭제하시겠습니까? (${count}개 락커)`)) {
+    return
+  }
+  
+  // 삭제 실행
+  lockersToDelete.forEach(id => {
+    lockerStore.deleteLocker(id)
+  })
+  
+  selectedLockerIds.value.clear()
+  selectedLocker.value = null
+  console.log('[Delete] Deleted lockers:', lockersToDelete)
+}
+
+// ID 추출 헬퍼 함수
+const extractDbId = (appId) => {
+  const match = appId.match(/locker-(\d+)/)
+  return match ? parseInt(match[1]) : null
+}
+
+// 기존 삭제 로직 (평면배치 모드용)
+const deleteSelectedLockersOriginal = async () => {
   const lockersToDelete = selectedLockerIds.value.size > 0 
     ? Array.from(selectedLockerIds.value)
     : selectedLocker.value ? [selectedLocker.value.id] : []
@@ -4294,36 +4285,38 @@ const deleteSelectedLockers = () => {
   
   const parentLockersWithChildren = []
   
-  // Check for parent lockers with children
-  lockersToDelete.forEach(lockerId => {
+  // 평면배치 모드에서는 자식 락커가 로드되지 않으므로 DB에서 직접 확인
+  for (const lockerId of lockersToDelete) {
     const locker = currentLockers.value.find(l => l.id === lockerId)
-    if (locker && !locker.parentLockerId) {
-      // This is a parent locker
-      const hasChildren = currentLockers.value.some(l => l.parentLockerId === lockerId)
-      if (hasChildren) {
-        parentLockersWithChildren.push(locker)
+    
+    if (locker && (locker.tierLevel === 0 || !locker.parentLockerId)) {
+      // This is a parent locker - check DB for children
+      const parentLockrCd = extractDbId(lockerId)
+      
+      if (parentLockrCd) {
+        try {
+          // API를 통해 자식 락커 존재 여부 확인
+          const response = await fetch(`${API_BASE_URL}/lockrs/${parentLockrCd}/children`)
+          if (response.ok) {
+            const data = await response.json()
+            const children = data.children || data
+            
+            if (children && children.length > 0) {
+              parentLockersWithChildren.push(locker)
+              
+            }
+          }
+        } catch (error) {
+          console.error('[DEBUG] Error checking children:', error)
+        }
       }
     }
-  })
+  }
   
-  // If parent lockers have children, show confirmation
+  // If parent lockers have children, show blocking message
   if (parentLockersWithChildren.length > 0) {
-    const lockerNumbers = parentLockersWithChildren.map(l => l.number || 'unnamed').join(', ')
-    const confirmed = confirm(
-      `락커 ${lockerNumbers}에 배치된 상위 락커가 있습니다.\n` +
-      `삭제하시면 배치된 모든 상위 락커가 함께 삭제됩니다.\n` +
-      `계속하시겠습니까?`
-    )
-    
-    if (!confirmed) return
-    
-    // Add all child lockers to deletion list
-    parentLockersWithChildren.forEach(parent => {
-      const children = currentLockers.value.filter(l => l.parentLockerId === parent.id)
-      children.forEach(child => {
-        lockersToDelete.push(child.id)
-      })
-    })
+    alert('상단 락커가 존재합니다. 정면 배치모드에서 상단 락커를 먼저 삭제해주세요.')
+    return
   } else {
     // Regular confirmation for lockers without children
     const count = lockersToDelete.length
@@ -4413,9 +4406,14 @@ const addFloors = async () => {
   }
   
   if (currentViewMode.value !== 'front') {
-    alert('단수 추가는 세로배치모드(Front View)에서만 가능합니다.')
+    alert('단수 추가는 정면배치모드(Front View)에서만 가능합니다.')
     return
   }
+  
+  // Load latest data from database before processing to ensure we have current children
+  console.log('[AddFloors] Loading latest locker data from database...')
+  await loadLockers()
+  console.log('[AddFloors] Latest data loaded, processing tier addition...')
   
   const selectedLockers = Array.from(selectedLockerIds.value).map(id =>
     currentLockers.value.find(l => l.id === id)
@@ -4423,36 +4421,104 @@ const addFloors = async () => {
   
   // Process each selected locker
   const addTierPromises = selectedLockers.map(async (targetLocker) => {
-    // Find the base parent (if selected locker is a child)
+    // 알고리즘 개선: 선택된 락커가 자식인지 부모인지 확인
     let parentLocker = targetLocker
-    if (targetLocker.parentLockerId) {
-      parentLocker = currentLockers.value.find(l => l.id === targetLocker.parentLockerId)
-      if (!parentLocker) return
+    let actualParentLocker = null
+    
+    // Case 1: 선택된 락커가 자식 락커인 경우
+    if (targetLocker.parentLockerId || targetLocker.parentLockrCd) {
+      // 부모 락커 찾기
+      actualParentLocker = currentLockers.value.find(l => 
+        l.id === targetLocker.parentLockerId || 
+        l.lockrCd === targetLocker.parentLockrCd
+      )
+      
+      if (!actualParentLocker) {
+        console.error(`[AddFloors] Parent not found for child locker ${targetLocker.number}`)
+        return
+      }
+      
+      parentLocker = actualParentLocker
+      console.log(`[AddFloors] Selected locker is CHILD (${targetLocker.number}), using parent (${parentLocker.number})`)
+    } else {
+      // Case 2: 선택된 락커가 부모 락커인 경우
+      console.log(`[AddFloors] Selected locker is PARENT (${parentLocker.number})`)
     }
+    
+    // 부모 락커의 모든 자식들 중 최대 tier 레벨 찾기
+    console.log(`[AddFloors] Finding existing children for parent:`, {
+      parentId: parentLocker.id,
+      parentLockrCd: parentLocker.lockrCd,
+      parentNumber: parentLocker.number
+    })
+    
+    const existingChildren = currentLockers.value.filter(l => {
+      // Check both parentLockrCd (database ID) and parentLockerId (frontend ID)
+      const isChild = (l.parentLockrCd && l.parentLockrCd === parentLocker.lockrCd) || 
+                      (l.parentLockerId && l.parentLockerId === parentLocker.id)
+      if (isChild) {
+        console.log(`[AddFloors] Found existing child:`, {
+          childId: l.id,
+          childNumber: l.number,
+          parentLockrCd: l.parentLockrCd,
+          parentLockerId: l.parentLockerId,
+          tierLevel: l.tierLevel || 0
+        })
+      }
+      return isChild
+    })
+    
+    // 모든 자식들 중 최대 tier 레벨 계산
+    const maxExistingTier = existingChildren.reduce((max, child) => 
+      Math.max(max, child.tierLevel || 0), 0
+    )
+    
+    // 다음 tier 레벨부터 시작 (자식이 있으면 최대 tier + 1, 없으면 1부터)
+    const startTierLevel = maxExistingTier > 0 ? maxExistingTier + 1 : 1
+    
+    console.log(`[AddFloors] Tier level calculation:`, {
+      existingChildrenCount: existingChildren.length,
+      maxExistingTier: maxExistingTier,
+      startTierLevel: startTierLevel,
+      algorithm: maxExistingTier > 0 ? 
+        `Children exist -> Start from tier ${startTierLevel}` : 
+        `No children -> Start from tier 1`
+    })
     
     console.log(`[AddFloors] Adding ${count} tiers to parent locker:`, {
       number: parentLocker.number,
+      parentLockrCd: parentLocker.lockrCd,
+      existingChildren: existingChildren.length,
+      existingChildrenDetails: existingChildren.map(c => ({
+        number: c.number,
+        tierLevel: c.tierLevel
+      })),
+      maxExistingTier: maxExistingTier,
+      startTierLevel: startTierLevel,
       frontViewX: parentLocker.frontViewX,
-      frontViewY: parentLocker.frontViewY,
-      x: parentLocker.x,
-      y: parentLocker.y
+      frontViewY: parentLocker.frontViewY
     })
     
     // Use the backend API to add tiers
     try {
+      const requestData = { 
+        tierCount: count,
+        startTierLevel: startTierLevel,  // 시작 tier 레벨 전달
+        parentFrontViewX: parentLocker.frontViewX,
+        parentFrontViewY: parentLocker.frontViewY 
+      }
+      
+      console.log(`[AddFloors] Sending to backend:`, requestData)
+      
       const response = await fetch(`${API_BASE_URL}/lockrs/${parentLocker.lockrCd}/tiers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          tierCount: count,
-          parentFrontViewX: parentLocker.frontViewX,
-          parentFrontViewY: parentLocker.frontViewY 
-        })
+        body: JSON.stringify(requestData)
       })
       
       const result = await response.json()
       if (result.success) {
-        console.log(`[AddFloors] Successfully added ${result.count} tiers to backend`)
+        console.log(`[AddFloors] Successfully added ${result.count} tiers starting from level ${startTierLevel}`)
       } else {
         console.error('[AddFloors] Failed to add tiers:', result.error)
         throw new Error(result.error)
@@ -4500,6 +4566,48 @@ const showNumberAssignDialog = () => {
   numberDirection.value = 'horizontal'
   reverseDirection.value = false
   fromTop.value = false
+}
+
+// Clean up duplicate tier lockers
+const cleanupDuplicateTiers = async () => {
+  console.log('[Cleanup] Starting duplicate tier cleanup...')
+  
+  if (!confirm('중복된 상단 락커를 제거하시겠습니까? 각 단수에서 첫 번째 락커만 유지됩니다.')) {
+    return
+  }
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/lockrs/cleanup-duplicates`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    
+    const result = await response.json()
+    console.log('[Cleanup] Cleanup result:', result)
+    
+    if (result.success) {
+      alert(`중복 제거 완료!\n${result.totalDeleted}개의 중복 상단 락커가 제거되었습니다.`)
+      
+      // Reload lockers to reflect changes
+      await loadLockers()
+      
+      // If in front view, re-transform
+      if (currentViewMode.value === 'front') {
+        transformToFrontViewNew()
+      }
+    } else {
+      alert('중복 제거 실패: ' + (result.error || 'Unknown error'))
+    }
+  } catch (error) {
+    console.error('[Cleanup] Error:', error)
+    alert('중복 제거 중 오류가 발생했습니다.')
+  }
 }
 
 // Show grouping analysis popup (그룹핑 확인)
@@ -5469,7 +5577,7 @@ const isAdjacent = (locker1: any, locker2: any): boolean => {
   const distance = getMinDistance(locker1, locker2)
   const sameDirection = (locker1.rotation || 0) === (locker2.rotation || 0)
   const result = distance <= ADJACENT_THRESHOLD && sameDirection
-  console.log(`[ADJACENT] ${locker1.number || locker1.id} ↔ ${locker2.number || locker2.id}: ${distance.toFixed(2)}px, same direction: ${sameDirection} → ${result ? 'ADJACENT' : 'NOT ADJACENT'}`)
+  // Adjacency check - logging removed
   return result
 }
 
@@ -5479,7 +5587,7 @@ const isAdjacent = (locker1: any, locker2: any): boolean => {
 const isConnected = (locker1: any, locker2: any): boolean => {
   const distance = getMinDistance(locker1, locker2)
   const result = distance > CONNECTED_MIN && distance < CONNECTED_MAX
-  console.log(`[CONNECTED] ${locker1.number || locker1.id} ↔ ${locker2.number || locker2.id}: ${distance.toFixed(2)}px → ${result ? 'CONNECTED' : 'NOT CONNECTED'}`)
+  // Connection check - logging removed
   return result
 }
 
@@ -5490,13 +5598,13 @@ const groupNearbyLockers = () => {
   const groups: any[][] = []
   const visited = new Set<string>()
   
-  console.log('==========================================')
-  console.log('[DEBUG] Starting MAJOR GROUP detection with Adjacent/Connected logic')
-  console.log('[DEBUG] ADJACENT_THRESHOLD:', ADJACENT_THRESHOLD, 'CONNECTED_MIN-MAX:', CONNECTED_MIN, '-', CONNECTED_MAX)
-  console.log('[DEBUG] Total lockers:', currentLockers.value.length)
+  // === Front view transformation start ===
+  
+  
+  
   
   // Debug: Log all locker positions
-  console.log('[DEBUG] Locker positions:')
+  
   currentLockers.value.forEach(locker => {
     console.log(`  ${locker.number || locker.id}: x=${locker.x}, y=${locker.y}, width=${locker.width}, height=${locker.height || locker.depth}, rotation=${locker.rotation || 0}°`)
   })
@@ -5504,7 +5612,7 @@ const groupNearbyLockers = () => {
   currentLockers.value.forEach(locker => {
     if (visited.has(locker.id)) return
     
-    console.log(`[MAJOR GROUP] Starting new major group with locker ${locker.number || locker.id}`)
+    // Starting new major group
     const group = [locker]
     visited.add(locker.id)
     
@@ -5512,7 +5620,7 @@ const groupNearbyLockers = () => {
     const queue = [locker]
     while (queue.length > 0) {
       const current = queue.shift()!
-      console.log(`[MAJOR GROUP] Processing locker ${current.number || current.id} from queue`)
+      // Processing locker from queue
       
       currentLockers.value.forEach(other => {
         if (visited.has(other.id)) return
@@ -5522,10 +5630,10 @@ const groupNearbyLockers = () => {
         const connected = isConnected(current, other)
         const shouldGroup = adjacent || connected
         
-        console.log(`[MAJOR GROUP] ${current.number || current.id} ↔ ${other.number || other.id}: Adjacent=${adjacent}, Connected=${connected} → ${shouldGroup ? '✓ ADD TO MAJOR GROUP' : '✗ SEPARATE MAJOR GROUP'}`)
+        // Checking if lockers should group
         
         if (shouldGroup) {
-          console.log(`[MAJOR GROUP] Adding ${other.number || other.id} to major group`)
+          // Adding to major group
           group.push(other)
           visited.add(other.id)
           queue.push(other)
@@ -5533,15 +5641,15 @@ const groupNearbyLockers = () => {
       })
     }
     
-    console.log(`[MAJOR GROUP] Major group ${groups.length + 1} complete:`, group.map(l => l.number || l.id).join(', '))
+    // Major group complete
     groups.push(group)
   })
   
-  console.log(`[DEBUG] Final result: ${groups.length} groups`)
+  
   groups.forEach((group, index) => {
     console.log(`  Group ${index + 1}: ${group.map(l => l.number || l.id).join(', ')}`)
   })
-  console.log('==========================================')
+  // === Front view transformation start ===
   
   return groups
 }
@@ -5995,7 +6103,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
     event.preventDefault()
     
     if (selectedLocker.value) {
-      console.log('[Rotation] Press R - Use mouse to drag rotation handle')
+      // console.log('[Rotation] Press R - Use mouse to drag rotation handle')
       // 회전 핸들을 강조 표시하거나 힌트를 보여줄 수 있습니다
     }
     
@@ -6084,7 +6192,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
   
   // Escape: 선택 해제
   if (event.key === 'Escape') {
-    console.log('[Canvas] ESC pressed - clearing selection')
+    
     selectedLockerIds.value.clear()
     selectedLocker.value = null
     lockerStore.selectLocker(null)
@@ -6157,15 +6265,15 @@ const getCursorStyle = computed(() => {
 
 // ========== 디버깅 로그 ==========
 watch(selectedLockerIds, (newIds) => {
-  console.log('[DEBUG] Selected lockers changed:', Array.from(newIds))
-  console.log('[DEBUG] Selected lockers objects:', selectedLockers.value)
-  console.log('[DEBUG] Connected groups:', connectedGroups.value)
-  console.log('[DEBUG] Lockers needing unified outline:', Array.from(lockersNeedingUnifiedOutline.value))
+  
+  
+  
+  
 }, { immediate: true, deep: true })
 
 watch(connectedGroups, (newGroups) => {
-  console.log('[DEBUG] Connected groups updated:', newGroups)
-  console.log('[DEBUG] Groups with length > 1:', newGroups.filter(g => g.length > 1))
+  
+  
 }, { deep: true })
 
 // 초기화

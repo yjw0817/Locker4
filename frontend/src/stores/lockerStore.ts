@@ -205,7 +205,7 @@ export const useLockerStore = defineStore('locker', () => {
       
       lockers.value[index] = { ...lockers.value[index], ...updates }
       // 선택된 락커가 업데이트되면 selectedLocker computed도 자동 갱신됨
-      console.log(`[Store] Updated locker ${id}:`, updates)
+      // Update logged
       
       // If online mode, sync to database
       if (isOnlineMode.value && !id.includes('temp')) {
