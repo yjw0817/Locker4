@@ -4148,7 +4148,15 @@ const transformToFrontViewNew = () => {
     console.log(`[Boundary Check] 화면을 넘어가는 ${lockersToDelete.length}개의 락커를 삭제합니다:`,
       lockersToDelete.map(l => `${l.number}(${l.id})`))
     
-    // 백엔드에서 삭제
+    // 먼저 로컬 스토어에서 즉시 삭제 (화면에서 즉시 제거)
+    lockersToDelete.forEach(locker => {
+      const index = currentLockers.value.findIndex(l => l.id === locker.id)
+      if (index !== -1) {
+        currentLockers.value.splice(index, 1)
+      }
+    })
+    
+    // 백엔드에서 비동기로 삭제
     const deletePromises = lockersToDelete.map(async (locker) => {
       try {
         // 백엔드 API 호출
@@ -4157,21 +4165,25 @@ const transformToFrontViewNew = () => {
         })
         
         if (response.ok) {
-          // 로컬 스토어에서도 삭제
-          lockerStore.removeLocker(locker.id)
-          console.log(`[Boundary Check] 락커 ${locker.number}(${locker.lockrCd}) 삭제 완료`)
+          console.log(`[Boundary Check] 백엔드에서 락커 ${locker.number}(${locker.lockrCd}) 삭제 완료`)
         } else {
-          console.error(`[Boundary Check] 락커 ${locker.number} 삭제 실패:`, await response.text())
+          console.error(`[Boundary Check] 백엔드에서 락커 ${locker.number} 삭제 실패:`, await response.text())
+          // 삭제 실패 시 다시 추가할 수도 있지만, 화면 경계를 넘는 락커이므로 그대로 둠
         }
       } catch (error) {
-        console.error(`[Boundary Check] 락커 ${locker.number} 삭제 중 오류:`, error)
+        console.error(`[Boundary Check] 백엔드에서 락커 ${locker.number} 삭제 중 오류:`, error)
       }
     })
     
-    // 모든 삭제 작업이 완료되면 락커 목록 다시 로드
+    // 모든 삭제 작업이 완료되면 락커 목록 다시 로드하고 위치 재계산
     Promise.all(deletePromises).then(() => {
-      console.log('[Boundary Check] 모든 경계 초과 락커 삭제 완료, 락커 목록 다시 로드')
-      loadLockers()
+      console.log('[Boundary Check] 모든 경계 초과 락커 삭제 완료, 락커 목록 다시 로드 및 위치 재계산')
+      loadLockers().then(() => {
+        // 락커 로드 완료 후 위치 재계산
+        nextTick(() => {
+          transformToFrontViewNew()
+        })
+      })
     })
   }
   
