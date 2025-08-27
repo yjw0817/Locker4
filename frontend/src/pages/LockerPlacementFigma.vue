@@ -3953,10 +3953,14 @@ const transformToFrontViewNew = () => {
   // === Front view transformation start ===
   console.trace('Called from:')
   
-  const lockers = currentLockers.value
+  // Filter out child lockers - only parent lockers should participate in grouping
+  const lockers = currentLockers.value.filter(locker => 
+    !locker.parentLockrCd && !locker.parentLockerId
+  )
+  console.log(`[Transform] Processing ${lockers.length} parent lockers (${currentLockers.value.length - lockers.length} child lockers excluded from grouping)`)
   
   if (lockers.length === 0) {
-    // No lockers to transform
+    // No parent lockers to transform
     return
   }
   
