@@ -4240,42 +4240,76 @@ const deleteSelectedLockers = () => {
     return
   }
   
-  // 2. 선택된 락커들의 tierLevel 수집 및 정렬
-  const tierLevels = selectedLockers
-    .map(locker => locker.tierLevel || 0)
-    .filter((level, index, arr) => arr.indexOf(level) === index) // 중복 제거
-    .sort((a, b) => b - a) // 내림차순 정렬
-  
-  // 3. 최고 tier부터 연속적인지 확인
-  const maxTier = Math.max(...tierLevels)
-  const isSequential = tierLevels.every((tier, index) => {
-    return tier === maxTier - index
-  })
-  
-  if (!isSequential) {
-    alert('삭제는 가장 높은 tier부터 순서대로만 가능합니다. (예: tier 3→2→1 순서)')
-    return
-  }
-  
-  // 4. 각 락커별로 상단 락커 존재 여부 재확인 (추가 안전장치)
-  const blockedLockers = []
+  // 2. 부모별로 그룹화하여 tierLevel 연속성 확인
+  const lockersByParent = new Map()
+
   selectedLockers.forEach(locker => {
+    const parentKey = locker.parentLockrCd || 'no-parent'
+    if (!lockersByParent.has(parentKey)) {
+      lockersByParent.set(parentKey, [])
+    }
+    lockersByParent.get(parentKey).push(locker)
+  })
+
+  console.log('[DELETE] Lockers grouped by parent:', Array.from(lockersByParent.entries()).map(([parent, lockers]) => ({
+    parent,
+    lockers: lockers.map(l => ({ id: l.id, number: l.number, tierLevel: l.tierLevel }))
+  })))
+
+  // 3. 각 부모 그룹별로 tier 연속성 검증
+  for (const [parentKey, parentLockers] of lockersByParent.entries()) {
+    const tierLevels = parentLockers
+      .map(locker => locker.tierLevel || 0)
+      .filter((level, index, arr) => arr.indexOf(level) === index) // 중복 제거
+      .sort((a, b) => b - a) // 내림차순 정렬
+    
+    console.log(`[DELETE] Parent ${parentKey} tier levels:`, tierLevels)
+    
+    // 최고 tier부터 연속적인지 확인
+    const maxTier = Math.max(...tierLevels)
+    const isSequential = tierLevels.every((tier, index) => {
+      const expected = maxTier - index
+      const isValid = tier === expected
+      console.log(`[DELETE] Parent ${parentKey} tier validation:`, { tier, index, expected, isValid })
+      return isValid
+    })
+    
+    if (!isSequential) {
+      alert(`삭제는 각 부모 그룹별로 가장 높은 tier부터 순서대로만 가능합니다. (부모: ${parentKey})`)
+      return
+    }
+  }
+
+  // 4. 각 부모 그룹별로 최상단 락커 위에 더 높은 tier가 있는지 확인
+  const blockedGroups = []
+
+  for (const [parentKey, parentLockers] of lockersByParent.entries()) {
+    // 이 그룹에서 선택된 락커들 중 최고 tier 찾기
+    const selectedMaxTier = Math.max(...parentLockers.map(l => l.tierLevel || 0))
+    
+    console.log(`[DELETE] Parent ${parentKey} selected max tier:`, selectedMaxTier)
+    
+    // 같은 부모의 모든 락커 중에서 선택된 최고 tier보다 높은 것이 있는지 확인
     const hasUpperTiers = currentLockers.value.some(l => 
-      l.parentLockrCd === locker.parentLockrCd && 
-      l.id !== locker.id &&
-      (l.tierLevel || 0) > (locker.tierLevel || 0)
+      l.parentLockrCd === parentKey && 
+      !parentLockers.find(selected => selected.id === l.id) && // 선택되지 않은 락커 중에서
+      (l.tierLevel || 0) > selectedMaxTier
     )
     
+    console.log(`[DELETE] Parent ${parentKey} has upper tiers:`, hasUpperTiers)
+    
     if (hasUpperTiers) {
-      blockedLockers.push({
-        locker,
-        reasons: '상단 락커 존재'
+      blockedGroups.push({
+        parentKey,
+        selectedMaxTier,
+        reason: '선택된 최상단 락커 위에 더 높은 tier 존재'
       })
     }
-  })
-  
-  if (blockedLockers.length > 0) {
-    alert('선택된 락커 위에 다른 락커가 있습니다. 가장 높은 tier부터 삭제해주세요.')
+  }
+
+  if (blockedGroups.length > 0) {
+    console.log('[DELETE] Blocked groups:', blockedGroups)
+    alert('선택된 락커들 중 일부 그룹에서 최상단 락커 위에 더 높은 tier가 있습니다. 가장 높은 tier부터 삭제해주세요.')
     return
   }
   
