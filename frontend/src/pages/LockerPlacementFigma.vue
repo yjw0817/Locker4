@@ -4120,13 +4120,70 @@ const transformToFrontViewNew = () => {
     })
   })
   
-  // 8. 시퀀스 저장
+  // 8. 화면 경계를 넘어가는 락커 감지 및 삭제
+  const lockersToDelete = []
+  const canvasMaxX = canvasWidth.value  // 1550px
+  
+  // 모든 락커(부모 + 자식)를 검사
+  currentLockers.value.forEach(locker => {
+    const width = (locker.width || 0) * 2.0  // LOCKER_VISUAL_SCALE 적용
+    const lockerRightEdge = (locker.frontViewX || 0) + width
+    
+    // 락커의 오른쪽 끝이 캔버스를 넘어가거나, 왼쪽이 0보다 작으면
+    if (lockerRightEdge > canvasMaxX || locker.frontViewX < 0) {
+      console.warn(`[Boundary Check] 락커 ${locker.number}이(가) 화면 경계를 넘어갑니다:`, {
+        lockerId: locker.id,
+        number: locker.number,
+        leftEdge: locker.frontViewX,
+        rightEdge: lockerRightEdge,
+        canvasWidth: canvasMaxX,
+        isOverflowing: lockerRightEdge > canvasMaxX,
+        isUnderflowing: locker.frontViewX < 0
+      })
+      lockersToDelete.push(locker)
+    }
+  })
+  
+  // 화면을 넘어가는 락커들 삭제
+  if (lockersToDelete.length > 0) {
+    console.log(`[Boundary Check] 화면을 넘어가는 ${lockersToDelete.length}개의 락커를 삭제합니다:`,
+      lockersToDelete.map(l => `${l.number}(${l.id})`))
+    
+    // 백엔드에서 삭제
+    const deletePromises = lockersToDelete.map(async (locker) => {
+      try {
+        // 백엔드 API 호출
+        const response = await fetch(`${API_BASE_URL}/lockrs/${locker.lockrCd}`, {
+          method: 'DELETE'
+        })
+        
+        if (response.ok) {
+          // 로컬 스토어에서도 삭제
+          lockerStore.removeLocker(locker.id)
+          console.log(`[Boundary Check] 락커 ${locker.number}(${locker.lockrCd}) 삭제 완료`)
+        } else {
+          console.error(`[Boundary Check] 락커 ${locker.number} 삭제 실패:`, await response.text())
+        }
+      } catch (error) {
+        console.error(`[Boundary Check] 락커 ${locker.number} 삭제 중 오류:`, error)
+      }
+    })
+    
+    // 모든 삭제 작업이 완료되면 락커 목록 다시 로드
+    Promise.all(deletePromises).then(() => {
+      console.log('[Boundary Check] 모든 경계 초과 락커 삭제 완료, 락커 목록 다시 로드')
+      loadLockers()
+    })
+  }
+  
+  // 9. 시퀀스 저장
   frontViewSequence.value = finalSequence
   
   console.log('[Front View] NEW Transformation complete:', {
     totalLockers: finalSequence.length,
     majorGroups: sortedMajorGroups.length,
-    sequence: finalSequence.map(l => l.number || l.id).join(' → ')
+    sequence: finalSequence.map(l => l.number || l.id).join(' → '),
+    deletedLockers: lockersToDelete.length
   })
 }
 
