@@ -4021,7 +4021,12 @@ const transformToFrontViewNew = () => {
     
     // 이전 락커와의 간격 계산 - allMinorGroups를 전달
     if (prevLocker && index > 0) {
-      const spacing = getGroupSpacingForFrontView(prevLocker, locker, allMinorGroups)
+      // 자식 락커가 포함된 경우 spacing은 0
+      let spacing = 0
+      if (!prevLocker.parentLockrCd && !locker.parentLockrCd) {
+        // 둘 다 부모 락커인 경우에만 그룹 스페이싱 적용
+        spacing = getGroupSpacingForFrontView(prevLocker, locker, allMinorGroups)
+      }
       currentX += spacing
       
       if (spacing > 0) {
