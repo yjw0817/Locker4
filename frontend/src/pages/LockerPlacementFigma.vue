@@ -476,14 +476,15 @@
     <div class="modal-content" @click.stop>
       <h3>단수 입력</h3>
       <div class="form-group">
-        <label>층수:</label>
+        <label>단수:</label>
         <input 
           v-model.number="floorCount" 
           type="number" 
           min="1" 
-          max="10"
-          placeholder="1-10 사이 입력"
+          max="9"
+          placeholder="1-9 사이 입력"
           class="form-control"
+          @input="validateFloorCount"
         >
       </div>
       <div class="modal-buttons">
@@ -4450,8 +4451,8 @@ const showFloorInputDialog = () => {
 // Add floors (단수 입력)
 const addFloors = async () => {
   const count = Number(floorCount.value)
-  if (count < 1 || count > 10) {
-    alert('1층부터 10층까지 입력 가능합니다.')
+  if (isNaN(count) || count < 1 || count > 9) {
+    alert('단수는 1부터 9까지 숫자만 입력 가능합니다.')
     return
   }
   
@@ -4606,6 +4607,33 @@ const addFloors = async () => {
     })
   })
   updateViewMode()
+}
+
+// Validate floor count input - only allow numbers 1-9
+const validateFloorCount = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const value = target.value
+  
+  // Remove non-numeric characters
+  const numericValue = value.replace(/[^0-9]/g, '')
+  
+  // Limit to max 9
+  if (numericValue !== '') {
+    const num = parseInt(numericValue)
+    if (num > 9) {
+      target.value = '9'
+      floorCount.value = 9
+    } else if (num < 1) {
+      target.value = '1'
+      floorCount.value = 1
+    } else {
+      target.value = numericValue
+      floorCount.value = num
+    }
+  } else {
+    target.value = ''
+    floorCount.value = 1
+  }
 }
 
 // Show number assignment dialog
