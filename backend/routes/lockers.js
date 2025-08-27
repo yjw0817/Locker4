@@ -375,9 +375,24 @@ router.post('/:lockrCd/tiers', async (req, res) => {
       [lockrCd]
     );
     
+    // Get parent locker's actual height from lockr_types table
+    let tierHeight = 30;  // Default height if not found
+    if (parentLocker.LOCKR_TYPE_CD) {
+      const [lockerTypeData] = await pool.query(
+        'SELECT HEIGHT FROM lockr_types WHERE LOCKR_TYPE_CD = ? AND COMP_CD = ? AND BCOFF_CD = ?',
+        [parentLocker.LOCKR_TYPE_CD, parentLocker.COMP_CD, parentLocker.BCOFF_CD]
+      );
+      
+      if (lockerTypeData.length > 0 && lockerTypeData[0].HEIGHT) {
+        tierHeight = lockerTypeData[0].HEIGHT;
+        console.log(`[TIERS API] Using locker type height: ${tierHeight} for type ${parentLocker.LOCKR_TYPE_CD}`);
+      } else {
+        console.log(`[TIERS API] No height found for type ${parentLocker.LOCKR_TYPE_CD}, using default: ${tierHeight}`);
+      }
+    }
+    
     // Calculate tier dimensions
     const LOCKER_VISUAL_SCALE = 2.0
-    const tierHeight = 30  // 자식 락커의 실제 높이
     const gap = 0  // 락커 사이 간격 (요청에 따라 0으로 설정)
     const scaledTierHeight = tierHeight * LOCKER_VISUAL_SCALE
     const scaledGap = gap * LOCKER_VISUAL_SCALE
