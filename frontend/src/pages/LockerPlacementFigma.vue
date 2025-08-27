@@ -4225,28 +4225,48 @@ const deleteSelectedLockers = () => {
   
   if (lockersToDelete.length === 0) return
   
-  // 세로배치 모드에서 삭제 제약 조건 검사
-  const blockedLockers = []
+  // 선택된 락커들 정보 수집
+  const selectedLockers = lockersToDelete.map(id => 
+    currentLockers.value.find(l => l.id === id)
+  ).filter(Boolean)
   
-  lockersToDelete.forEach(lockerId => {
-    const locker = currentLockers.value.find(l => l.id === lockerId)
-    if (!locker) return
+  // 1. 부모 락커 포함 여부 체크 (삭제 불가)
+  const hasParentLocker = selectedLockers.some(locker => 
+    !locker.parentLockrCd || locker.tierLevel === 0
+  )
+  
+  if (hasParentLocker) {
+    alert('부모 락커는 삭제할 수 없습니다. 자식 락커(상단 락커)만 삭제 가능합니다.')
+    return
+  }
+  
+  // 2. 선택된 락커들의 tierLevel 수집 및 정렬
+  const tierLevels = selectedLockers
+    .map(locker => locker.tierLevel || 0)
+    .filter((level, index, arr) => arr.indexOf(level) === index) // 중복 제거
+    .sort((a, b) => b - a) // 내림차순 정렬
+  
+  // 3. 최고 tier부터 연속적인지 확인
+  const maxTier = Math.max(...tierLevels)
+  const isSequential = tierLevels.every((tier, index) => {
+    return tier === maxTier - index
+  })
+  
+  if (!isSequential) {
+    alert('삭제는 가장 높은 tier부터 순서대로만 가능합니다. (예: tier 3→2→1 순서)')
+    return
+  }
+  
+  // 4. 각 락커별로 상단 락커 존재 여부 재확인 (추가 안전장치)
+  const blockedLockers = []
+  selectedLockers.forEach(locker => {
+    const hasUpperTiers = currentLockers.value.some(l => 
+      l.parentLockrCd === locker.parentLockrCd && 
+      l.id !== locker.id &&
+      (l.tierLevel || 0) > (locker.tierLevel || 0)
+    )
     
-    // 1. 자식 락커(상단 락커)가 있는지 확인
-    const hasChildren = currentLockers.value.some(l => l.parentLockerId === lockerId)
-    
-    // 2. 동일 부모의 상단 락커가 있는지 확인 (같은 부모, 더 높은 tier)
-    let hasUpperTiers = false
-    if (locker.parentLockrCd) {
-      // 현재 락커가 자식인 경우, 같은 부모의 더 높은 tier 확인
-      hasUpperTiers = currentLockers.value.some(l => 
-        l.parentLockrCd === locker.parentLockrCd && 
-        l.id !== lockerId &&
-        (l.tierLevel || 0) > (locker.tierLevel || 0)
-      )
-    }
-    
-    if (hasChildren || hasUpperTiers) {
+    if (hasUpperTiers) {
       blockedLockers.push({
         locker,
         reasons: '상단 락커 존재'
@@ -4254,24 +4274,13 @@ const deleteSelectedLockers = () => {
     }
   })
   
-  // 삭제가 차단된 락커가 있는 경우
   if (blockedLockers.length > 0) {
-    alert('삭제하려면 먼저 상단 락커를 제거해주세요.')
+    alert('선택된 락커 위에 다른 락커가 있습니다. 가장 높은 tier부터 삭제해주세요.')
     return
   }
   
-  // 삭제 가능한 락커들만 확인 후 삭제
-  const count = lockersToDelete.length
-  if (!confirm(`삭제하시겠습니까? (${count}개 락커)`)) {
-    return
-  }
-  
-  // 삭제 실행
-  lockersToDelete.forEach(id => {
-    lockerStore.deleteLocker(id)
-  })
-  
-  selectedLockerIds.value.clear()
+  // 삭제 실행 (기존 로직 유지)
+  deleteSelectedLockersOriginal()
   selectedLocker.value = null
   console.log('[Delete] Deleted lockers:', lockersToDelete)
 }
