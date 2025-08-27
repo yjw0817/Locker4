@@ -369,22 +369,41 @@ router.post('/:lockrCd/tiers', async (req, res) => {
     
     // Creating tiers - logging removed
     
+    // Before creating new tiers, find existing children's positions
+    const [existingChildrenPositions] = await pool.query(
+      'SELECT FRONT_VIEW_Y FROM lockrs WHERE PARENT_LOCKR_CD = ? AND FRONT_VIEW_Y IS NOT NULL ORDER BY FRONT_VIEW_Y ASC',
+      [lockrCd]
+    );
+    
+    // Calculate tier dimensions
+    const LOCKER_VISUAL_SCALE = 2.0
+    const tierHeight = 30  // 자식 락커의 실제 높이
+    const gap = 0  // 락커 사이 간격 (요청에 따라 0으로 설정)
+    const scaledTierHeight = tierHeight * LOCKER_VISUAL_SCALE
+    const scaledGap = gap * LOCKER_VISUAL_SCALE
+    
+    // Calculate starting Y position
+    let startingY;
+    if (existingChildrenPositions.length > 0) {
+      // Position above existing topmost child
+      const topmostChildY = existingChildrenPositions[0].FRONT_VIEW_Y;
+      startingY = topmostChildY - (scaledTierHeight + scaledGap);
+      console.log(`[TIERS API] Positioning above existing child at Y=${topmostChildY}, new starting Y=${startingY}`);
+    } else {
+      // No existing children, position above parent
+      startingY = Number(parentFrontY) - (scaledTierHeight + scaledGap);
+      console.log(`[TIERS API] No existing children, positioning above parent at Y=${parentFrontY}, starting Y=${startingY}`);
+    }
+    
     // Create tier lockers
     for (let i = 0; i < tierCount; i++) {
       const currentTierLevel = baseTierLevel + i;
       
-      // Calculate front view positions - tiers should stack ABOVE parent
-      const LOCKER_VISUAL_SCALE = 2.0
-      const tierHeight = 30  // 자식 락커의 실제 높이
-      const gap = 0  // 락커 사이 간격 (요청에 따라 0으로 설정)
-      const scaledTierHeight = tierHeight * LOCKER_VISUAL_SCALE
-      const scaledGap = gap * LOCKER_VISUAL_SCALE
-      
-      // Stack tiers ABOVE parent (subtract from Y coordinate)
+      // Calculate each tier position sequentially from the starting position
       // SVG Y축은 아래로 갈수록 증가하므로, 위로 올리려면 Y값을 감소시킴
       // CRITICAL: 부모와 정확히 같은 X 좌표 사용
       const tierFrontViewX = Number(parentFrontX)  // X좌표는 부모와 완전히 동일해야 함
-      const tierFrontViewY = Number(parentFrontY) - (scaledTierHeight + scaledGap) * currentTierLevel
+      const tierFrontViewY = startingY - i * (scaledTierHeight + scaledGap);
       
       // Tier coordinate calculation - logging removed
 
