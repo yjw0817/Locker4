@@ -1531,29 +1531,70 @@ const displayLockers = computed(() => {
 
 // Z-index를 위한 정렬된 락커 배열 (선택된 락커를 마지막에 렌더링)
 const sortedLockers = computed(() => {
-  // Map lockers to have the right x, y, and rotation for the current view mode
+  // In front view mode, use the sequence from transformToFrontViewNew
+  if (currentViewMode.value === 'front' && frontViewSequence.value.length > 0) {
+    // Use the ordered sequence from applyRotationToMinorGroup
+    const orderedLockers = []
+    
+    // First, add lockers in the order defined by frontViewSequence
+    frontViewSequence.value.forEach(seqLocker => {
+      const displayLocker = displayLockers.value.find(d => d.id === seqLocker.id)
+      if (displayLocker) {
+        const frontViewHeight = displayLocker.actualHeight || displayLocker.height || 60
+        
+        const resultLocker = {
+          ...displayLocker,
+          x: displayLocker.displayX / getCurrentScale(),
+          y: displayLocker.displayY / getCurrentScale(),
+          height: frontViewHeight,
+          actualHeight: frontViewHeight,
+          rotation: displayLocker.frontViewRotation !== undefined ? displayLocker.frontViewRotation : 0
+        }
+        orderedLockers.push(resultLocker)
+      }
+    })
+    
+    // Add any lockers not in sequence (e.g., child lockers)
+    displayLockers.value.forEach(locker => {
+      if (!orderedLockers.find(l => l.id === locker.id)) {
+        const frontViewHeight = locker.actualHeight || locker.height || 60
+        
+        const resultLocker = {
+          ...locker,
+          x: locker.displayX / getCurrentScale(),
+          y: locker.displayY / getCurrentScale(),
+          height: frontViewHeight,
+          actualHeight: frontViewHeight,
+          rotation: locker.frontViewRotation !== undefined ? locker.frontViewRotation : 0
+        }
+        orderedLockers.push(resultLocker)
+      }
+    })
+    
+    // Move selected locker to end for z-index
+    if (selectedLocker.value) {
+      const selectedIndex = orderedLockers.findIndex(l => l.id === selectedLocker.value.id)
+      if (selectedIndex > -1) {
+        const [selected] = orderedLockers.splice(selectedIndex, 1)
+        orderedLockers.push(selected)
+      }
+    }
+    
+    return orderedLockers
+  }
+  
+  // Original logic for floor view or when no sequence exists
   const lockers = displayLockers.value.map(locker => {
     if (currentViewMode.value === 'front') {
-      // For front view, override x, y, and RESET rotation (all face forward)
-      // actualHeight를 확실히 전달 (30 또는 90)
       const frontViewHeight = locker.actualHeight || locker.height || 60
-      
-      // Debug info removed
       
       const resultLocker = {
         ...locker,
-        // ALWAYS use calculated positions from displayLockers, never cached frontViewX/Y
         x: locker.displayX / getCurrentScale(),
         y: locker.displayY / getCurrentScale(),
-        height: frontViewHeight,  // LockerSVG에서 이 값을 사용
-        actualHeight: frontViewHeight,  // actualHeight도 명시적으로 설정
-        // Use new algorithm rotation if available, otherwise default to 0
+        height: frontViewHeight,
+        actualHeight: frontViewHeight,
         rotation: locker.frontViewRotation !== undefined ? locker.frontViewRotation : 0
-      }
-      
-      // FINAL DEBUG: Check final result passed to LockerSVG
-      if (locker.number === 'L3' || locker.number === 'L4') {
-        
       }
       
       return resultLocker
@@ -1564,10 +1605,8 @@ const sortedLockers = computed(() => {
   if (selectedLocker.value) {
     const selectedIndex = lockers.findIndex(l => l.id === selectedLocker.value.id)
     if (selectedIndex > -1) {
-      // 선택된 락커를 배열 끝으로 이동
       const [selected] = lockers.splice(selectedIndex, 1)
       lockers.push(selected)
-      
     }
   }
   return lockers
@@ -3856,10 +3895,10 @@ const applyRotationToMinorGroup = (minorGroup: any[]): any[] => {
       })
       break
       
-    case 270: // 오른쪽 방향 - 270도 회전 시 위에서 아래로
+    case 270: // 오른쪽 방향 - 270도 회전 시 상하 반전
       sortedLockers.sort((a, b) => {
         if (Math.abs(a.x - b.x) > 1) return a.x - b.x
-        return a.y - b.y // 위에서 아래로 (L10→L11→L12)
+        return b.y - a.y // 상하 반전
       })
       break
   }
@@ -4053,19 +4092,7 @@ const transformToFrontViewNew = () => {
       // 자식 락커는 부모 락커 위치 기반으로 계산
       const parentLocker = renderData.find(r => r.lockrCd === locker.parentLockrCd)
       if (parentLocker) {
-        // 부모 락커의 타입에서 높이 정보 가져오기
-        let TIER_HEIGHT = 30  // 기본값
-        if (parentLocker.lockrTypeCd || parentLocker.typeId || parentLocker.type) {
-          const typeId = parentLocker.lockrTypeCd || parentLocker.typeId || parentLocker.type
-          const lockerType = lockerTypes.value.find(t => 
-            t.id === typeId || t.type === typeId || t.LOCKR_TYPE_CD === typeId
-          )
-          if (lockerType && lockerType.height) {
-            TIER_HEIGHT = lockerType.height
-            console.log(`[TIER HEIGHT] Using type height: ${TIER_HEIGHT} for parent type: ${typeId}`)
-          }
-        }
-        
+        const TIER_HEIGHT = 30
         const TIER_GAP = 0  // 부모 락커와 바로 붙임
         const scaledTierHeight = TIER_HEIGHT * LOCKER_VISUAL_SCALE
         const scaledGap = TIER_GAP * LOCKER_VISUAL_SCALE
@@ -4132,81 +4159,13 @@ const transformToFrontViewNew = () => {
     })
   })
   
-  // 8. 화면 위쪽 경계를 넘어가는 락커 감지 및 삭제
-  const lockersToDelete = []
-  const canvasTopY = 0  // 캔버스 상단 Y 좌표
-  
-  // 모든 락커(부모 + 자식)를 검사 - Y축 경계 체크
-  currentLockers.value.forEach(locker => {
-    const height = (locker.actualHeight || locker.height || 0) * 2.0  // LOCKER_VISUAL_SCALE 적용
-    const lockerTopEdge = (locker.frontViewY || 0)  // 락커의 상단 Y 좌표
-    
-    // 락커의 상단이 0보다 작으면 (화면 위로 넘어가면)
-    if (lockerTopEdge < canvasTopY) {
-      console.warn(`[Boundary Check] 락커 ${locker.number}이(가) 화면 위쪽 경계를 넘어갑니다:`, {
-        lockerId: locker.id,
-        number: locker.number,
-        topEdge: lockerTopEdge,
-        height: height,
-        canvasTop: canvasTopY,
-        isOverflowing: lockerTopEdge < canvasTopY
-      })
-      lockersToDelete.push(locker)
-    }
-  })
-  
-  // 화면을 넘어가는 락커들 삭제
-  if (lockersToDelete.length > 0) {
-    console.log(`[Boundary Check] 화면을 넘어가는 ${lockersToDelete.length}개의 락커를 삭제합니다:`,
-      lockersToDelete.map(l => `${l.number}(${l.id})`))
-    
-    // 먼저 로컬 스토어에서 즉시 삭제 (화면에서 즉시 제거)
-    lockersToDelete.forEach(locker => {
-      const index = currentLockers.value.findIndex(l => l.id === locker.id)
-      if (index !== -1) {
-        currentLockers.value.splice(index, 1)
-      }
-    })
-    
-    // 백엔드에서 비동기로 삭제
-    const deletePromises = lockersToDelete.map(async (locker) => {
-      try {
-        // 백엔드 API 호출
-        const response = await fetch(`${API_BASE_URL}/lockrs/${locker.lockrCd}`, {
-          method: 'DELETE'
-        })
-        
-        if (response.ok) {
-          console.log(`[Boundary Check] 백엔드에서 락커 ${locker.number}(${locker.lockrCd}) 삭제 완료`)
-        } else {
-          console.error(`[Boundary Check] 백엔드에서 락커 ${locker.number} 삭제 실패:`, await response.text())
-          // 삭제 실패 시 다시 추가할 수도 있지만, 화면 경계를 넘는 락커이므로 그대로 둠
-        }
-      } catch (error) {
-        console.error(`[Boundary Check] 백엔드에서 락커 ${locker.number} 삭제 중 오류:`, error)
-      }
-    })
-    
-    // 모든 삭제 작업이 완료되면 락커 목록 다시 로드하고 위치 재계산
-    Promise.all(deletePromises).then(() => {
-      console.log('[Boundary Check] 모든 경계 초과 락커 삭제 완료, 락커 목록 다시 로드 및 위치 재계산')
-      loadLockers().then(() => {
-        // 락커 로드 완료 후 위치 재계산
-        nextTick(() => {
-          transformToFrontViewNew()
-        })
-      })
-    })
-  }
-  
-  // 9. 시퀀스 저장
+  // 8. 시퀀스 저장
   frontViewSequence.value = finalSequence
   
   console.log('[Front View] NEW Transformation complete:', {
     totalLockers: finalSequence.length,
     majorGroups: sortedMajorGroups.length,
-    sequence: finalSequence.map(l => l.number || l.id).join(' → '),
-    deletedLockers: lockersToDelete.length
+    sequence: finalSequence.map(l => l.number || l.id).join(' → ')
   })
 }
 
@@ -4687,33 +4646,6 @@ const addFloors = async () => {
     })
   })
   updateViewMode()
-}
-
-// Validate floor count input - only allow numbers 1-9
-const validateFloorCount = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const value = target.value
-  
-  // Remove non-numeric characters
-  const numericValue = value.replace(/[^0-9]/g, '')
-  
-  // Limit to max 9
-  if (numericValue !== '') {
-    const num = parseInt(numericValue)
-    if (num > 9) {
-      target.value = '9'
-      floorCount.value = 9
-    } else if (num < 1) {
-      target.value = '1'
-      floorCount.value = 1
-    } else {
-      target.value = numericValue
-      floorCount.value = num
-    }
-  } else {
-    target.value = ''
-    floorCount.value = 1
-  }
 }
 
 // Show number assignment dialog
