@@ -4120,25 +4120,24 @@ const transformToFrontViewNew = () => {
     })
   })
   
-  // 8. 화면 경계를 넘어가는 락커 감지 및 삭제
+  // 8. 화면 위쪽 경계를 넘어가는 락커 감지 및 삭제
   const lockersToDelete = []
-  const canvasMaxX = canvasWidth.value  // 1550px
+  const canvasTopY = 0  // 캔버스 상단 Y 좌표
   
-  // 모든 락커(부모 + 자식)를 검사
+  // 모든 락커(부모 + 자식)를 검사 - Y축 경계 체크
   currentLockers.value.forEach(locker => {
-    const width = (locker.width || 0) * 2.0  // LOCKER_VISUAL_SCALE 적용
-    const lockerRightEdge = (locker.frontViewX || 0) + width
+    const height = (locker.actualHeight || locker.height || 0) * 2.0  // LOCKER_VISUAL_SCALE 적용
+    const lockerTopEdge = (locker.frontViewY || 0)  // 락커의 상단 Y 좌표
     
-    // 락커의 오른쪽 끝이 캔버스를 넘어가거나, 왼쪽이 0보다 작으면
-    if (lockerRightEdge > canvasMaxX || locker.frontViewX < 0) {
-      console.warn(`[Boundary Check] 락커 ${locker.number}이(가) 화면 경계를 넘어갑니다:`, {
+    // 락커의 상단이 0보다 작으면 (화면 위로 넘어가면)
+    if (lockerTopEdge < canvasTopY) {
+      console.warn(`[Boundary Check] 락커 ${locker.number}이(가) 화면 위쪽 경계를 넘어갑니다:`, {
         lockerId: locker.id,
         number: locker.number,
-        leftEdge: locker.frontViewX,
-        rightEdge: lockerRightEdge,
-        canvasWidth: canvasMaxX,
-        isOverflowing: lockerRightEdge > canvasMaxX,
-        isUnderflowing: locker.frontViewX < 0
+        topEdge: lockerTopEdge,
+        height: height,
+        canvasTop: canvasTopY,
+        isOverflowing: lockerTopEdge < canvasTopY
       })
       lockersToDelete.push(locker)
     }
