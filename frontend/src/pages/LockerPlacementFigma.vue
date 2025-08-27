@@ -3658,6 +3658,16 @@ const transformToFrontView_BACKUP = () => {
 // 새로운 Front View 알고리즘 구현 (2025-08-22)
 // =================================
 
+// 회전각을 0-360 범위로 정규화하는 함수
+// 270°와 -90°를 같은 값으로 처리
+const normalizeRotation = (rotation: number): number => {
+  let normalized = rotation % 360
+  if (normalized < 0) {
+    normalized += 360
+  }
+  return normalized
+}
+
 // 두 락커 사이의 최단거리 계산
 // ⚠️ CRITICAL FUNCTION - DISTANCE CALCULATION
 // DO NOT MODIFY - Calculates edge-to-edge distance between lockers
@@ -3828,7 +3838,8 @@ const sortMinorGroups = (minorGroups: any[][]): any[][] => {
 const applyRotationToMinorGroup = (minorGroup: any[]): any[] => {
   if (minorGroup.length === 0) return []
   
-  const direction = minorGroup[0].rotation || 0
+  // 회전각을 정규화하여 0-360 범위로 변환
+  const direction = normalizeRotation(minorGroup[0].rotation || 0)
   let sortedLockers = [...minorGroup]
   
   console.log(`[Rotation] Processing minor group with rotation ${direction}°:`, 
@@ -5733,7 +5744,10 @@ const CONNECTED_MAX = 43          // (direction irrelevant for connected)
 // Adjacent = distance ≤ 30px + same rotation
 const isAdjacent = (locker1: any, locker2: any): boolean => {
   const distance = getMinDistance(locker1, locker2)
-  const sameDirection = (locker1.rotation || 0) === (locker2.rotation || 0)
+  // 회전각을 정규화하여 비교 (270°와 -90°를 같은 값으로 처리)
+  const rotation1 = normalizeRotation(locker1.rotation || 0)
+  const rotation2 = normalizeRotation(locker2.rotation || 0)
+  const sameDirection = rotation1 === rotation2
   const result = distance <= ADJACENT_THRESHOLD && sameDirection
   // Adjacency check - logging removed
   return result
