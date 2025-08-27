@@ -4053,7 +4053,19 @@ const transformToFrontViewNew = () => {
       // 자식 락커는 부모 락커 위치 기반으로 계산
       const parentLocker = renderData.find(r => r.lockrCd === locker.parentLockrCd)
       if (parentLocker) {
-        const TIER_HEIGHT = 30
+        // 부모 락커의 타입에서 높이 정보 가져오기
+        let TIER_HEIGHT = 30  // 기본값
+        if (parentLocker.lockrTypeCd || parentLocker.typeId || parentLocker.type) {
+          const typeId = parentLocker.lockrTypeCd || parentLocker.typeId || parentLocker.type
+          const lockerType = lockerTypes.value.find(t => 
+            t.id === typeId || t.type === typeId || t.LOCKR_TYPE_CD === typeId
+          )
+          if (lockerType && lockerType.height) {
+            TIER_HEIGHT = lockerType.height
+            console.log(`[TIER HEIGHT] Using type height: ${TIER_HEIGHT} for parent type: ${typeId}`)
+          }
+        }
+        
         const TIER_GAP = 0  // 부모 락커와 바로 붙임
         const scaledTierHeight = TIER_HEIGHT * LOCKER_VISUAL_SCALE
         const scaledGap = TIER_GAP * LOCKER_VISUAL_SCALE
