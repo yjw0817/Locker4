@@ -3856,10 +3856,10 @@ const applyRotationToMinorGroup = (minorGroup: any[]): any[] => {
       })
       break
       
-    case 270: // 오른쪽 방향 - 270도 회전 시 상하 반전
+    case 270: // 오른쪽 방향 - 270도 회전 시 위에서 아래로 읽기
       sortedLockers.sort((a, b) => {
         if (Math.abs(a.x - b.x) > 1) return a.x - b.x
-        return b.y - a.y // 상하 반전
+        return a.y - b.y // 위에서 아래로 읽기 (원래 b.y - a.y였음)
       })
       break
   }
