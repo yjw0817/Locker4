@@ -4099,17 +4099,19 @@ const transformToFrontViewNew = () => {
   // Center alignment calculation
   
   renderData.forEach((item, index) => {
-    const oldX = item.frontViewX
-    item.frontViewX += centerOffset
-    
-    // Item center aligned
-    
-    // Store 업데이트도 중앙 정렬 적용
-    lockerStore.updateLocker(item.id, {
-      frontViewX: item.frontViewX,
-      frontViewY: item.frontViewY,
-      frontViewRotation: 0
-    })
+    // ONLY apply centerOffset to parent lockers (no parentLockrCd/parentLockerId)
+    if (!item.parentLockrCd && !item.parentLockerId) {
+      const oldX = item.frontViewX
+      item.frontViewX += centerOffset
+      
+      // Store 업데이트 - 부모 락커만
+      lockerStore.updateLocker(item.id, {
+        frontViewX: item.frontViewX,
+        frontViewY: item.frontViewY,
+        frontViewRotation: 0
+      })
+    }
+    // Child lockers maintain their parent-relative positions automatically
   })
   
   // 8. 시퀀스 저장
