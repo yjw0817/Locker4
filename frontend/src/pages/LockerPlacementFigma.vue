@@ -4820,7 +4820,7 @@ const validateFloorCount = (event: Event) => {
 const showNumberAssignDialog = () => {
   hideContextMenu()
   numberAssignVisible.value = true
-  startNumber.value = findNextAvailableNumber()
+  startNumber.value = 1  // Always start from 1 to allow gap filling
   numberDirection.value = 'horizontal'
   reverseDirection.value = false
   fromTop.value = false
@@ -5075,31 +5075,27 @@ const assignNumbers = async () => {
   assignmentProgress.value = '번호 할당을 준비중입니다...'
   
   try {
-    let start = Number(startNumber.value)
+    // Get all lockers in the zone for number checking
+    const frontViewLockers = selectedZone.value 
+      ? lockerStore.lockers.filter(l => l.zoneId === selectedZone.value.id)
+      : currentLockers.value
     
-    // If start number is 0 or invalid, auto-detect next available number
-    if (!start || start <= 0) {
-      start = findNextAvailableNumber()
-    }
+    // Get selected lockers - filter out those that already have numbers
+    const allSelectedLockers = Array.from(selectedLockerIds.value).map(id =>
+      currentLockers.value.find(l => l.id === id)
+    ).filter(Boolean)
   
-  // Check if start number is already assigned
-  const frontViewLockers = selectedZone.value 
-    ? lockerStore.lockers.filter(l => l.zoneId === selectedZone.value.id)
-    : currentLockers.value
-    
-  const existingLocker = frontViewLockers.find(l => {
-    return parseInt(String(l.lockrNo || 0)) === start
-  })
+  // Separate lockers with and without numbers
+  const lockersWithNumbers = allSelectedLockers.filter(l => l.lockrNo && l.lockrNo > 0)
+  const selectedLockers = allSelectedLockers.filter(l => !l.lockrNo || l.lockrNo <= 0)
   
-  if (existingLocker) {
-    alert(`L${start} 번호는 이미 사용중입니다.`)
+  console.log(`[Number Assignment] Selected: ${allSelectedLockers.length} total, ${lockersWithNumbers.length} with numbers, ${selectedLockers.length} without numbers`)
+  
+  // Early return if no lockers need numbering
+  if (selectedLockers.length === 0) {
+    alert('선택한 모든 락커에 이미 번호가 부여되어 있습니다.')
     return
   }
-  
-  // Get selected lockers
-  const selectedLockers = Array.from(selectedLockerIds.value).map(id =>
-    currentLockers.value.find(l => l.id === id)
-  ).filter(Boolean)
   
   // Create 2D grid based on direction
   const isHorizontal = numberDirection.value === 'horizontal'
@@ -5131,10 +5127,10 @@ const assignNumbers = async () => {
   )
   
   console.log(`[Number Assignment] Existing numbers:`, Array.from(assignedNumbers).sort((a, b) => a - b))
-  console.log(`[Number Assignment] Starting from: L${start}`)
+  console.log(`[Number Assignment] Will fill gaps starting from L1`)
   
-  // Assign numbers - use start number if provided, otherwise start from 1
-  let currentNum = start || 1
+  // Assign numbers - always start from 1 to find gaps
+  let currentNum = 1
   const assignments = []
   
   // Collect assignments first for batch processing
@@ -5146,15 +5142,7 @@ const assignNumbers = async () => {
   for (let index = 0; index < sortedLockers.length; index++) {
     const locker = sortedLockers[index]
     
-    // Skip lockers that already have numbers assigned
-    if (locker.lockrNo && locker.lockrNo > 0) {
-      assignments.push(`${index + 1}. ${locker.id.slice(-4)} → L${locker.lockrNo} (기존 번호 유지)`)
-      processedCount++
-      assignmentProgress.value = `락커 번호를 준비중입니다... (${processedCount}/${sortedLockers.length})`
-      continue
-    }
-    
-    // Find next available number for lockers without numbers
+    // Find next available number (filling gaps from 1)
     while (assignedNumbers.has(currentNum)) {
       currentNum++
     }
