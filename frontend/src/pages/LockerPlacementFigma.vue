@@ -279,7 +279,7 @@
 
             <!-- 락커들 -->
             <LockerSVG
-              v-for="(locker, index) in sortedLockers"
+              v-for="locker in sortedLockers"
               :key="locker.id"
               :locker="locker"
               :is-selected="selectedLocker?.id === locker.id"
@@ -290,7 +290,6 @@
               :view-mode="currentViewMode"
               :show-number="true"
               :show-rotate-handle="selectedLocker?.id === locker.id"
-              :animation-index="getAnimationIndex(locker, index)"
               @click="(locker, event) => selectLocker(locker, event)"
               @contextmenu.prevent="showContextMenu"
               @select="(id) => selectedLocker = currentLockers.find(l => l.id === id)"
@@ -787,30 +786,6 @@ const updateCanvasSize = () => {
 }
 
 // Helper functions for coordinate conversion
-
-// 자식 락커 애니메이션 인덱스 계산
-const getAnimationIndex = (locker: any, defaultIndex: number) => {
-  // 세로 모드가 아니거나 자식 락커가 아니면 애니메이션 불필요
-  if (currentViewMode.value !== 'front' || !locker.parentLockerId) {
-    return undefined
-  }
-  
-  // 같은 부모를 가진 자식 락커들을 찾기
-  const siblings = sortedLockers.value.filter(l => l.parentLockerId === locker.parentLockerId)
-  
-  // tierLevel 기준으로 정렬 (낮은 층부터 = 아래쪽부터)
-  // tierLevel이 없으면 1로 간주
-  const sortedSiblings = [...siblings].sort((a, b) => {
-    const aTier = a.tierLevel || 1
-    const bTier = b.tierLevel || 1
-    return aTier - bTier // tierLevel이 낮은 것(아래)부터
-  })
-  
-  // 현재 락커의 인덱스 찾기
-  const animIndex = sortedSiblings.findIndex(l => l.id === locker.id)
-  
-  return animIndex >= 0 ? animIndex : defaultIndex
-}
 const toLogicalCoords = (displayX: number, displayY: number) => {
   const scale = getCurrentScale()
   return {
