@@ -10,9 +10,10 @@
     :class="{ 
       'locker-selected': isSelected,
       'locker-hovered': isHovered,
-      'locker-dragging': isDragging
+      'locker-dragging': isDragging,
+      'child-locker-animated': shouldAnimateChildLocker
     }"
-    style="cursor: move;"
+    :style="lockerStyle"
   >
     <!-- 선택 상태 하이라이트 -->
     <path 
@@ -389,6 +390,29 @@ const textColor = computed(() => {
   }
 })
 
+// 자식 락커 애니메이션 여부
+const shouldAnimateChildLocker = computed(() => {
+  // 세로 모드이고, 자식 락커이며, 초기 렌더링 시에만 애니메이션
+  return props.viewMode === 'front' && 
+         props.locker.tierLevel && 
+         props.locker.tierLevel > 0
+})
+
+// 락커 스타일 (애니메이션 포함)
+const lockerStyle = computed(() => {
+  const style: any = {
+    cursor: 'move'
+  }
+  
+  if (shouldAnimateChildLocker.value) {
+    // 자식 락커 애니메이션: tierLevel에 따른 딜레이
+    const delay = (props.locker.tierLevel || 1) * 0.1
+    style.transition = `transform 0.3s ease-out ${delay}s`
+  }
+  
+  return style
+})
+
 // Get the appropriate number to display based on view mode
 const getDisplayNumber = () => {
   // ✅ Defensive programming: Handle undefined props.locker
@@ -606,6 +630,22 @@ const handleRotateStart = (e: MouseEvent) => {
   }
   to {
     stroke-dashoffset: 12; /* dasharray 합계와 동일 */
+  }
+}
+
+/* 자식 락커 슬라이드 애니메이션 */
+.child-locker-animated {
+  animation: slideUpFromBottom 0.3s ease-out forwards;
+}
+
+@keyframes slideUpFromBottom {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 </style>
