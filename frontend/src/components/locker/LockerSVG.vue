@@ -10,9 +10,15 @@
     :class="{ 
       'locker-selected': isSelected,
       'locker-hovered': isHovered,
-      'locker-dragging': isDragging
+      'locker-dragging': isDragging,
+      'locker-child-animated': viewMode === 'front' && locker.parentLockerId
     }"
-    style="cursor: move;"
+    :style="{ 
+      cursor: 'move',
+      animationDelay: viewMode === 'front' && locker.parentLockerId && animationIndex !== undefined 
+        ? `${animationIndex * 0.05}s` 
+        : '0s'
+    }"
   >
     <!-- 선택 상태 하이라이트 -->
     <path 
@@ -164,6 +170,7 @@ const props = defineProps<{
   hasError?: boolean
   shouldHideIndividualOutline?: boolean  // 개별 외곽선 숨김 여부
   adjacentSides?: string[]  // 인접한 면 정보 ['top', 'bottom', 'left', 'right']
+  animationIndex?: number  // 애니메이션 순서 인덱스
 }>()
 
 const emit = defineEmits<{
@@ -556,6 +563,23 @@ const handleRotateStart = (e: MouseEvent) => {
 .locker-svg {
   cursor: pointer;
   transition: transform 0.2s ease;
+}
+
+/* 자식 락커 애니메이션 (세로배치 모드에서만 적용) */
+.locker-child-animated {
+  animation: slideUpFromBottom 0.4s ease-out;
+  animation-fill-mode: both;
+}
+
+@keyframes slideUpFromBottom {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .locker-number {

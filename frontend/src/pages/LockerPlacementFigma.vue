@@ -279,7 +279,7 @@
 
             <!-- 락커들 -->
             <LockerSVG
-              v-for="locker in sortedLockers"
+              v-for="(locker, index) in sortedLockers"
               :key="locker.id"
               :locker="locker"
               :is-selected="selectedLocker?.id === locker.id"
@@ -290,6 +290,7 @@
               :view-mode="currentViewMode"
               :show-number="true"
               :show-rotate-handle="selectedLocker?.id === locker.id"
+              :animation-index="getAnimationIndex(locker, index)"
               @click="(locker, event) => selectLocker(locker, event)"
               @contextmenu.prevent="showContextMenu"
               @select="(id) => selectedLocker = currentLockers.find(l => l.id === id)"
@@ -786,6 +787,29 @@ const updateCanvasSize = () => {
 }
 
 // Helper functions for coordinate conversion
+
+// 자식 락커 애니메이션 인덱스 계산
+const getAnimationIndex = (locker: any, defaultIndex: number) => {
+  // 세로 모드가 아니거나 자식 락커가 아니면 애니메이션 불필요
+  if (currentViewMode.value !== 'front' || !locker.parentLockerId) {
+    return undefined
+  }
+  
+  // 같은 부모를 가진 자식 락커들을 찾아서 Y 위치 기준으로 정렬
+  const siblings = sortedLockers.value.filter(l => l.parentLockerId === locker.parentLockerId)
+  
+  // Y 위치가 큰 것(아래쪽)부터 애니메이션 (하단부터 위로 올라오는 효과)
+  const sortedSiblings = [...siblings].sort((a, b) => {
+    const aY = a.frontViewY !== undefined ? a.frontViewY : a.y
+    const bY = b.frontViewY !== undefined ? b.frontViewY : b.y
+    return bY - aY // Y가 큰 것(아래)부터
+  })
+  
+  // 현재 락커의 인덱스 찾기
+  const animIndex = sortedSiblings.findIndex(l => l.id === locker.id)
+  
+  return animIndex >= 0 ? animIndex : defaultIndex
+}
 const toLogicalCoords = (displayX: number, displayY: number) => {
   const scale = getCurrentScale()
   return {
@@ -1645,9 +1669,10 @@ const getLockerDimensions = (locker) => {
     }
   } else {
     // Front view (세로배치): Width x Height
+    // actualHeight를 우선적으로 사용 (장락커 등의 실제 높이)
     return {
       width: (locker.width || 40) * LOCKER_VISUAL_SCALE,
-      height: (locker.height || 60) * LOCKER_VISUAL_SCALE
+      height: (locker.actualHeight || locker.height || 60) * LOCKER_VISUAL_SCALE
     }
   }
 }
@@ -3867,10 +3892,10 @@ const applyRotationToMinorGroup = (minorGroup: any[]): any[] => {
       })
       break
       
-    case 270: // 오른쪽 방향 - 270도 회전 시 위에서 아래로
+    case 270: // 오른쪽 방향 - 270도 회전 시 상하 반전
       sortedLockers.sort((a, b) => {
         if (Math.abs(a.x - b.x) > 1) return a.x - b.x
-        return a.y - b.y // 위에서 아래로 (L10→L11→L12)
+        return b.y - a.y // 상하 반전 (L12→L11→L10)
       })
       break
   }
