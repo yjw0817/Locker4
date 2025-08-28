@@ -66,9 +66,9 @@
     <text
       v-if="showNumber !== false && getDisplayNumber()"
       :x="logicalDimensions.width / 2"
-      :y="logicalDimensions.height / 2"
+      :y="textYPosition"
       text-anchor="middle"
-      dominant-baseline="middle"
+      :dominant-baseline="textBaseline"
       :font-size="fontSize"
       :fill="textColor"
       font-weight="600"
@@ -351,8 +351,32 @@ const strokeWidth = computed(() => {
 })
 
 const fontSize = computed(() => {
-  // 폰트 크기도 락커 스케일에 비례 (2x 확대)
+  // 세로배치 모드에서는 더 작은 폰트 사용
+  if (props.viewMode === 'front') {
+    return 10 * LOCKER_VISUAL_SCALE  // 작은 폰트 크기
+  }
+  // 평면배치 모드에서는 기존 크기
   return 12 * LOCKER_VISUAL_SCALE
+})
+
+// 텍스트 Y 위치 계산 (세로배치 모드에서는 하단)
+const textYPosition = computed(() => {
+  if (props.viewMode === 'front') {
+    // 세로배치 모드: 하단에 위치 (패딩 고려)
+    return logicalDimensions.value.height - (8 * LOCKER_VISUAL_SCALE)
+  }
+  // 평면배치 모드: 중앙에 위치
+  return logicalDimensions.value.height / 2
+})
+
+// 텍스트 정렬 기준선
+const textBaseline = computed(() => {
+  if (props.viewMode === 'front') {
+    // 세로배치 모드: 하단 정렬
+    return 'text-after-edge'
+  }
+  // 평면배치 모드: 중앙 정렬
+  return 'middle'
 })
 
 const textColor = computed(() => {
