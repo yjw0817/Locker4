@@ -355,8 +355,8 @@ const fontSize = computed(() => {
   if (props.viewMode === 'front') {
     return 6 * LOCKER_VISUAL_SCALE  // 더 작은 폰트 크기 (6px)
   }
-  // 평면배치 모드에서는 기존 크기
-  return 12 * LOCKER_VISUAL_SCALE
+  // 평면배치 모드에서도 약간 작은 크기
+  return 10 * LOCKER_VISUAL_SCALE  // 기존 12px에서 10px로 축소
 })
 
 // 텍스트 Y 위치 계산 (세로배치 모드에서는 하단)
