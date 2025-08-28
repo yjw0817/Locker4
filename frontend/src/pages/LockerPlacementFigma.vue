@@ -288,6 +288,7 @@
               :is-dragging="isDragging && selectedLockerIds.has(locker.id)"
               :adjacent-sides="getAdjacentSides(locker.id)"
               :view-mode="currentViewMode"
+              :is-transitioning-to-floor="isTransitioningToFloor"
               :show-number="true"
               :show-rotate-handle="selectedLocker?.id === locker.id"
               @click="(locker, event) => selectLocker(locker, event)"
@@ -3433,8 +3434,20 @@ const highlightProblematicLockers = (lockerIds: string[]) => {
   })
 }
 
+// 평면 모드로 전환 중인지 여부
+const isTransitioningToFloor = ref(false)
+
 // 뷰 모드 설정
 const setViewMode = (mode: 'floor' | 'front') => {
+  
+  // 평면 모드로 전환 시 플래그 설정
+  if (mode === 'floor' && currentViewMode.value === 'front') {
+    isTransitioningToFloor.value = true
+    // 애니메이션이 끝난 후 플래그 해제
+    setTimeout(() => {
+      isTransitioningToFloor.value = false
+    }, 400) // 애니메이션 시간
+  }
   
   currentViewMode.value = mode
   

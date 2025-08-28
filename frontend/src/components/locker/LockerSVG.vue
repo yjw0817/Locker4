@@ -15,7 +15,10 @@
     style="cursor: move;"
   >
     <!-- 애니메이션 그룹 (자식 락커용) -->
-    <g :class="{ 'child-locker-content': shouldAnimateChildLocker }">
+    <g :class="{ 
+      'child-locker-content': shouldAnimateChildLocker,
+      'child-locker-fade-out': shouldFadeOutChildLocker
+    }">
       <!-- 선택 상태 하이라이트 -->
       <path 
         v-if="(isSelected || isMultiSelected) && !shouldHideIndividualOutline"
@@ -161,6 +164,7 @@ const props = defineProps<{
   isMultiSelected?: boolean
   isDragging?: boolean
   viewMode?: 'floor' | 'front'
+  isTransitioningToFloor?: boolean  // 평면 모드로 전환 중인지
   showNumber?: boolean
   showRotateHandle?: boolean
   hasError?: boolean
@@ -399,6 +403,14 @@ const shouldAnimateChildLocker = computed(() => {
          props.locker.tierLevel > 0
 })
 
+// 자식 락커 페이드 아웃 애니메이션 여부
+const shouldFadeOutChildLocker = computed(() => {
+  // 평면 모드로 전환 중이고, 자식 락커일 때
+  return props.isTransitioningToFloor && 
+         props.locker.tierLevel && 
+         props.locker.tierLevel > 0
+})
+
 // Get the appropriate number to display based on view mode
 const getDisplayNumber = () => {
   // ✅ Defensive programming: Handle undefined props.locker
@@ -633,6 +645,23 @@ const handleRotateStart = (e: MouseEvent) => {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* 자식 락커 페이드 아웃 애니메이션 */
+.child-locker-fade-out {
+  animation: fadeOutDown 0.3s ease-in forwards;
+  transform-origin: center center;
+}
+
+@keyframes fadeOutDown {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(20);
   }
 }
 </style>
