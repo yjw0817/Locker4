@@ -10,31 +10,32 @@
     :class="{ 
       'locker-selected': isSelected,
       'locker-hovered': isHovered,
-      'locker-dragging': isDragging,
-      'child-locker-animated': shouldAnimateChildLocker
+      'locker-dragging': isDragging
     }"
-    :style="lockerStyle"
+    style="cursor: move;"
   >
-    <!-- 선택 상태 하이라이트 -->
-    <path 
-      v-if="(isSelected || isMultiSelected) && !shouldHideIndividualOutline"
-      :d="selectionOutlinePath"
-      fill="none"
-      stroke="#0768AE"
-      stroke-width="2"
-      stroke-dasharray="5,5"
-      class="selection-outline"
-    >
-      <animate 
-        attributeName="stroke-dashoffset" 
-        values="0;10" 
-        dur="0.5s" 
-        repeatCount="indefinite"
-      />
-    </path>
-    
-    <!-- 락커 본체 (독립적인 경계선) -->
-    <rect
+    <!-- 애니메이션 그룹 (자식 락커용) -->
+    <g :class="{ 'child-locker-content': shouldAnimateChildLocker }">
+      <!-- 선택 상태 하이라이트 -->
+      <path 
+        v-if="(isSelected || isMultiSelected) && !shouldHideIndividualOutline"
+        :d="selectionOutlinePath"
+        fill="none"
+        stroke="#0768AE"
+        stroke-width="2"
+        stroke-dasharray="5,5"
+        class="selection-outline"
+      >
+        <animate 
+          attributeName="stroke-dashoffset" 
+          values="0;10" 
+          dur="0.5s" 
+          repeatCount="indefinite"
+        />
+      </path>
+      
+      <!-- 락커 본체 (독립적인 경계선) -->
+      <rect
       :x="1"
       :y="1"
       :width="logicalDimensions.width - 2"
@@ -146,7 +147,7 @@
         </circle>
       </g>
     </g>
-    
+    </g> <!-- 애니메이션 그룹 닫기 -->
   </g>
 </template>
 
@@ -398,21 +399,6 @@ const shouldAnimateChildLocker = computed(() => {
          props.locker.tierLevel > 0
 })
 
-// 락커 스타일 (애니메이션 포함)
-const lockerStyle = computed(() => {
-  const style: any = {
-    cursor: 'move'
-  }
-  
-  if (shouldAnimateChildLocker.value) {
-    // 자식 락커 애니메이션: tierLevel에 따른 딜레이
-    const delay = (props.locker.tierLevel || 1) * 0.1
-    style.transition = `transform 0.3s ease-out ${delay}s`
-  }
-  
-  return style
-})
-
 // Get the appropriate number to display based on view mode
 const getDisplayNumber = () => {
   // ✅ Defensive programming: Handle undefined props.locker
@@ -634,14 +620,15 @@ const handleRotateStart = (e: MouseEvent) => {
 }
 
 /* 자식 락커 슬라이드 애니메이션 */
-.child-locker-animated {
+.child-locker-content {
   animation: slideUpFromBottom 0.3s ease-out forwards;
+  transform-origin: center center;
 }
 
 @keyframes slideUpFromBottom {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(20);
   }
   to {
     opacity: 1;
