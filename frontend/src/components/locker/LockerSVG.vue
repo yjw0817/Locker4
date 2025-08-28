@@ -416,12 +416,15 @@ const labelBackgroundColor = computed(() => {
 // 라벨 배경 경로 (하단 모서리만 라운딩)
 const labelBackgroundPath = computed(() => {
   const x = 1
-  const y = logicalDimensions.value.height - (7 * LOCKER_VISUAL_SCALE)  // 10에서 7로 줄여서 상단을 3px 더 아래로
+  const y = logicalDimensions.value.height - (7 * LOCKER_VISUAL_SCALE)  // 라벨 영역 시작 위치
   const width = logicalDimensions.value.width - 2
-  const height = (7 * LOCKER_VISUAL_SCALE) - 1  // 높이도 7px로 조정
-  const radius = cornerRadius.value // 락커와 동일한 라운딩 사용
+  const height = (7 * LOCKER_VISUAL_SCALE) - 1  // 라벨 영역 높이
+  
+  // 락커와 동일한 라운딩 값 사용
+  const radius = cornerRadius.value  // 6 * LOCKER_VISUAL_SCALE = 12px
   
   // 하단 모서리만 라운딩된 사각형 경로
+  // 상단은 직각, 하단은 락커와 동일한 라운딩
   return `
     M ${x} ${y}
     L ${x + width} ${y}
@@ -429,6 +432,7 @@ const labelBackgroundPath = computed(() => {
     Q ${x + width} ${y + height} ${x + width - radius} ${y + height}
     L ${x + radius} ${y + height}
     Q ${x} ${y + height} ${x} ${y + height - radius}
+    L ${x} ${y}
     Z
   `
 })
