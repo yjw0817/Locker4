@@ -353,7 +353,7 @@ const strokeWidth = computed(() => {
 const fontSize = computed(() => {
   // 세로배치 모드에서는 더 작은 폰트 사용
   if (props.viewMode === 'front') {
-    return 8 * LOCKER_VISUAL_SCALE  // 더 작은 폰트 크기 (8px)
+    return 6 * LOCKER_VISUAL_SCALE  // 더 작은 폰트 크기 (6px)
   }
   // 평면배치 모드에서는 기존 크기
   return 12 * LOCKER_VISUAL_SCALE
@@ -362,8 +362,8 @@ const fontSize = computed(() => {
 // 텍스트 Y 위치 계산 (세로배치 모드에서는 하단)
 const textYPosition = computed(() => {
   if (props.viewMode === 'front') {
-    // 세로배치 모드: 하단에 위치 (값이 작을수록 더 아래로)
-    return logicalDimensions.value.height - (5 * LOCKER_VISUAL_SCALE)
+    // 세로배치 모드: 하단에 위치 (하단에서 8px 패딩)
+    return logicalDimensions.value.height - (8 * LOCKER_VISUAL_SCALE)
   }
   // 평면배치 모드: 중앙에 위치
   return logicalDimensions.value.height / 2
