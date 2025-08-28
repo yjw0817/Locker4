@@ -67,6 +67,19 @@
       class="front-indicator"
     />
     
+    <!-- 세로배치 모드에서 하단 라벨 배경 -->
+    <rect
+      v-if="viewMode === 'front' && showNumber !== false && getDisplayNumber()"
+      :x="1"
+      :y="logicalDimensions.height - (15 * LOCKER_VISUAL_SCALE)"
+      :width="logicalDimensions.width - 2"
+      :height="(15 * LOCKER_VISUAL_SCALE) - 1"
+      :fill="labelBackgroundColor"
+      :rx="0"
+      :ry="0"
+      shape-rendering="crispEdges"
+    />
+    
     <!-- 락커 번호 -->
     <text
       v-if="showNumber !== false && getDisplayNumber()"
@@ -368,8 +381,8 @@ const fontSize = computed(() => {
 // 텍스트 Y 위치 계산 (세로배치 모드에서는 하단)
 const textYPosition = computed(() => {
   if (props.viewMode === 'front') {
-    // 세로배치 모드: 하단에 위치 (하단에서 5px 패딩)
-    return logicalDimensions.value.height - (5 * LOCKER_VISUAL_SCALE)
+    // 세로배치 모드: 라벨 배경의 중앙에 위치
+    return logicalDimensions.value.height - (7.5 * LOCKER_VISUAL_SCALE)
   }
   // 평면배치 모드: 중앙에 위치
   return logicalDimensions.value.height / 2
@@ -385,7 +398,33 @@ const textBaseline = computed(() => {
   return 'middle'
 })
 
+// 라벨 배경색 (세로배치 모드)
+const labelBackgroundColor = computed(() => {
+  // 에러가 있는 락커는 빨간색
+  if (props.hasError || props.locker.hasError) return '#dc2626'
+  
+  // 락커 타입 색상 사용 (진한 색)
+  if (props.locker.color) {
+    return props.locker.color
+  }
+  
+  // 상태별 색상
+  switch (props.locker.status) {
+    case 'available': return '#6b7280'  // gray-500
+    case 'occupied': return '#ea580c'   // orange-600
+    case 'expired': return '#dc2626'    // red-600
+    case 'maintenance': return '#374151' // gray-700
+    default: return '#6b7280'
+  }
+})
+
 const textColor = computed(() => {
+  // 세로배치 모드에서는 항상 흰색
+  if (props.viewMode === 'front') {
+    return '#ffffff'
+  }
+  
+  // 평면배치 모드에서는 기존 색상 로직 유지
   switch (props.locker.status) {
     case 'available': return '#374151'
     case 'occupied': return '#92400E'
