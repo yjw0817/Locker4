@@ -39,10 +39,10 @@
       
       <!-- 락커 본체 (독립적인 경계선) -->
       <rect
-      :x="1"
-      :y="1"
-      :width="logicalDimensions.width - 2"
-      :height="logicalDimensions.height - 2"
+      :x="viewMode === 'front' ? 0 : 1"
+      :y="viewMode === 'front' ? 0 : 1"
+      :width="viewMode === 'front' ? logicalDimensions.width : logicalDimensions.width - 2"
+      :height="viewMode === 'front' ? logicalDimensions.height : logicalDimensions.height - 2"
       :fill="lockerFill"
       :stroke="lockerStroke"
       :stroke-width="strokeWidth"
@@ -415,10 +415,10 @@ const labelBackgroundColor = computed(() => {
 
 // 라벨 배경 경로 (하단 모서리만 라운딩)
 const labelBackgroundPath = computed(() => {
-  const x = 1
+  const x = 0  // 세로모드에서는 0부터 시작
   const y = logicalDimensions.value.height - (7 * LOCKER_VISUAL_SCALE)  // 라벨 영역 시작 위치
-  const width = logicalDimensions.value.width - 2
-  const height = (7 * LOCKER_VISUAL_SCALE) - 1  // 라벨 영역 높이
+  const width = logicalDimensions.value.width  // 전체 너비 사용
+  const height = 7 * LOCKER_VISUAL_SCALE  // 라벨 영역 높이
   
   // 락커와 동일한 라운딩 값 사용
   const radius = cornerRadius.value  // 6 * LOCKER_VISUAL_SCALE = 12px
