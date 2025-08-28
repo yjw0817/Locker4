@@ -21,7 +21,7 @@
     }">
       <!-- 선택 상태 하이라이트 -->
       <path 
-        v-if="(isSelected || isMultiSelected) && !shouldHideIndividualOutline"
+        v-if="(isSelected || isMultiSelected) && !shouldHideIndividualOutline && !isDragging"
         :d="selectionOutlinePath"
         fill="none"
         stroke="#0768AE"

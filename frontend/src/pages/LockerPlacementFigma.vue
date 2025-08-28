@@ -1347,7 +1347,8 @@ const findConnectedGroups = (selectedLockers: any[]) => {
 
 // 락커의 인접한 면 계산 (회전 고려)
 const getAdjacentSides = (lockerId: string): string[] => {
-  if (!isDragging.value || !selectedLockerIds.value.has(lockerId)) {
+  // 선택되지 않은 락커는 인접 체크 안 함
+  if (!selectedLockerIds.value.has(lockerId)) {
     return []
   }
   
@@ -1358,7 +1359,7 @@ const getAdjacentSides = (lockerId: string): string[] => {
   const LOCKER_VISUAL_SCALE = 2.0
   const tolerance = 10 // 인접 판단 허용 오차
   
-  // 회전된 락커의 실제 경계 구하기
+  // 회전된 락커의 실제 경계 구하기 - 최신 좌표 사용
   const lockerBounds = getRotatedBounds(locker)
   
   // 락커의 회전 각도에 따른 각 변의 방향 결정
@@ -1385,11 +1386,21 @@ const getAdjacentSides = (lockerId: string): string[] => {
     
     const otherBounds = getRotatedBounds(other)
     
+    // 디버깅: 드래그 중 인접 체크
+    if (isDragging.value) {
+      console.log(`[Adjacent Check] ${lockerId} vs ${other.id}:`, {
+        locker: { id: lockerId, rotation, bounds: lockerBounds },
+        other: { id: other.id, rotation: other.rotation, bounds: otherBounds },
+        mapping
+      })
+    }
+    
     // 실제 위치에서 상단 인접 체크
     if (Math.abs(lockerBounds.y - (otherBounds.y + otherBounds.height)) < tolerance &&
         lockerBounds.x < otherBounds.x + otherBounds.width && 
         lockerBounds.x + lockerBounds.width > otherBounds.x) {
       adjacentSides.push(mapping.top)
+      if (isDragging.value) console.log(`  -> TOP adjacent (physical top touches other's bottom)`)
     }
     
     // 실제 위치에서 하단 인접 체크
