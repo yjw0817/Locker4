@@ -367,7 +367,7 @@ const strokeWidth = computed(() => {
 const fontSize = computed(() => {
   // 세로배치 모드에서는 더 작은 폰트 사용
   if (props.viewMode === 'front') {
-    return 6 * LOCKER_VISUAL_SCALE  // 더 작은 폰트 크기 (6px)
+    return 5 * LOCKER_VISUAL_SCALE  // 더 작은 폰트 크기 (5px)
   }
   // 평면배치 모드에서도 약간 작은 크기
   return 10 * LOCKER_VISUAL_SCALE  // 기존 12px에서 10px로 축소
@@ -376,8 +376,8 @@ const fontSize = computed(() => {
 // 텍스트 Y 위치 계산 (세로배치 모드에서는 하단)
 const textYPosition = computed(() => {
   if (props.viewMode === 'front') {
-    // 세로배치 모드: 하단에 위치 (하단에서 5px 패딩) - 기존 위치 유지
-    return logicalDimensions.value.height - (5 * LOCKER_VISUAL_SCALE)
+    // 세로배치 모드: 라벨 배경 중앙에 위치 (3.5px 위치)
+    return logicalDimensions.value.height - (3.5 * LOCKER_VISUAL_SCALE)
   }
   // 평면배치 모드: 중앙에 위치
   return logicalDimensions.value.height / 2
@@ -416,9 +416,9 @@ const labelBackgroundColor = computed(() => {
 // 라벨 배경 경로 (하단 모서리만 라운딩)
 const labelBackgroundPath = computed(() => {
   const x = 1
-  const y = logicalDimensions.value.height - (10 * LOCKER_VISUAL_SCALE)  // 12에서 10으로 줄여서 상단을 아래로
+  const y = logicalDimensions.value.height - (7 * LOCKER_VISUAL_SCALE)  // 10에서 7로 줄여서 상단을 3px 더 아래로
   const width = logicalDimensions.value.width - 2
-  const height = (10 * LOCKER_VISUAL_SCALE) - 1  // 높이도 함께 조정
+  const height = (7 * LOCKER_VISUAL_SCALE) - 1  // 높이도 7px로 조정
   const radius = cornerRadius.value // 락커와 동일한 라운딩 사용
   
   // 하단 모서리만 라운딩된 사각형 경로
