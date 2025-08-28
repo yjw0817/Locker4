@@ -633,14 +633,22 @@ const handleRotateStart = (e: MouseEvent) => {
 
 /* 자식 락커 슬라이드 애니메이션 */
 .child-locker-content {
-  animation: slideUpFromBottom 0.3s ease-out forwards;
+  /* 초기 상태 명시적 설정 - 애니메이션 시작 전 */
+  opacity: 0;
+  transform: translateY(20px);
+  
+  /* GPU 가속을 위한 will-change 속성 */
+  will-change: transform, opacity;
+  
+  /* 애니메이션 설정 - both로 변경하여 시작/끝 상태 모두 적용 */
+  animation: slideUpFromBottom 0.3s ease-out both;
   transform-origin: center center;
 }
 
 @keyframes slideUpFromBottom {
   from {
     opacity: 0;
-    transform: translateY(20);
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
@@ -650,6 +658,9 @@ const handleRotateStart = (e: MouseEvent) => {
 
 /* 자식 락커 페이드 아웃 애니메이션 */
 .child-locker-fade-out {
+  /* GPU 가속을 위한 will-change 속성 */
+  will-change: transform, opacity;
+  
   animation: fadeOutDown 0.3s ease-in forwards;
   transform-origin: center center;
 }
@@ -661,7 +672,7 @@ const handleRotateStart = (e: MouseEvent) => {
   }
   to {
     opacity: 0;
-    transform: translateY(20);
+    transform: translateY(20px);
   }
 }
 </style>

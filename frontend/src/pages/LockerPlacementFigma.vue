@@ -4086,7 +4086,7 @@ const transformToFrontViewNew = () => {
       frontViewRotation: 0, // 모든 락커 아래 방향
     })
     
-    // CRITICAL: 자식 락커 위치 계산 수정
+    // CRITICAL: 자식 락커 위치 계산 수정 - 배치 업데이트를 위해 저장만 함
     if (locker.parentLockrCd) {
       // 자식 락커는 부모 락커 위치 기반으로 계산
       const parentLocker = renderData.find(r => r.lockrCd === locker.parentLockrCd)
@@ -4115,36 +4115,26 @@ const transformToFrontViewNew = () => {
         
         // Positioning child locker
         
-        // 자식 락커 위치 업데이트
-        lockerStore.updateLocker(locker.id, {
-          frontViewX: childX,
-          frontViewY: childY,
-          frontViewRotation: 0
-        })
-        
-        // renderData에도 올바른 위치 저장
+        // renderData에 위치 저장 (나중에 배치 업데이트)
         renderData[renderData.length - 1].frontViewX = childX
         renderData[renderData.length - 1].frontViewY = childY
+        renderData[renderData.length - 1].frontViewRotation = 0
         
         // 자식 락커는 currentX를 증가시키지 않음 (부모 위에 스택)
       } else {
         console.error(`[CHILD POSITION] Parent not found for ${locker.number}, parentLockrCd: ${locker.parentLockrCd}`)
         
-        // 부모를 찾지 못한 경우 기본 위치 사용
-        lockerStore.updateLocker(locker.id, {
-          frontViewX: currentX,
-          frontViewY: FLOOR_Y - height,
-          frontViewRotation: 0
-        })
+        // 부모를 찾지 못한 경우 기본 위치 사용 (나중에 배치 업데이트)
+        renderData[renderData.length - 1].frontViewX = currentX
+        renderData[renderData.length - 1].frontViewY = FLOOR_Y - height
+        renderData[renderData.length - 1].frontViewRotation = 0
         currentX += width
       }
     } else {
-      // 부모 락커는 기존 로직 사용
-      lockerStore.updateLocker(locker.id, {
-        frontViewX: currentX,
-        frontViewY: FLOOR_Y - height,
-        frontViewRotation: 0
-      })
+      // 부모 락커도 renderData에 위치 저장 (나중에 배치 업데이트)
+      renderData[renderData.length - 1].frontViewX = currentX
+      renderData[renderData.length - 1].frontViewY = FLOOR_Y - height
+      renderData[renderData.length - 1].frontViewRotation = 0
       
       currentX += width // 락커 너비만큼 이동
     }
@@ -4158,16 +4148,9 @@ const transformToFrontViewNew = () => {
   
   // Center alignment calculation
   
-  renderData.forEach((item, index) => {
-    const oldX = item.frontViewX
+  // 모든 renderData 아이템에 중앙 정렬 적용
+  renderData.forEach((item) => {
     item.frontViewX += centerOffset
-    
-    // Store 업데이트도 중앙 정렬 적용
-    lockerStore.updateLocker(item.id, {
-      frontViewX: item.frontViewX,
-      frontViewY: item.frontViewY,
-      frontViewRotation: 0
-    })
   })
   
   // 8. 화면 위쪽 경계를 넘어가는 락커 감지 및 삭제
@@ -4236,6 +4219,29 @@ const transformToFrontViewNew = () => {
       })
     })
   }
+  
+  // 8.5. 배치 업데이트 - 모든 락커를 한번에 업데이트하여 동시에 렌더링되도록 함
+  console.log('[Batch Update] Starting batch update for all lockers...')
+  
+  // 배치 업데이트를 위한 준비
+  const batchUpdates = []
+  
+  renderData.forEach((item) => {
+    batchUpdates.push({
+      id: item.id,
+      updates: {
+        frontViewX: item.frontViewX,
+        frontViewY: item.frontViewY,
+        frontViewRotation: item.frontViewRotation || 0
+      }
+    })
+  })
+  
+  // 배치 업데이트 함수를 사용하여 모든 락커를 한 번에 업데이트
+  // 이렇게 하면 Vue의 반응성 시스템이 한 번만 트리거되어
+  // 모든 자식 락커가 동시에 fade-in 애니메이션을 시작합니다
+  lockerStore.batchUpdateLockers(batchUpdates)
+  console.log(`[Batch Update] Updated ${batchUpdates.length} lockers simultaneously`)
   
   // 9. 시퀀스 저장
   frontViewSequence.value = finalSequence

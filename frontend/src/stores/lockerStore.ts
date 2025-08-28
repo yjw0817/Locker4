@@ -226,6 +226,29 @@ export const useLockerStore = defineStore('locker', () => {
     }
     return null
   }
+  
+  // Batch update function for simultaneous updates
+  const batchUpdateLockers = (updates: Array<{ id: string, updates: Partial<Locker> }>) => {
+    saveHistory()
+    
+    // Create a map for O(1) lookup
+    const updateMap = new Map(updates.map(u => [u.id, u.updates]))
+    
+    // Update all lockers in a single array modification
+    lockers.value = lockers.value.map(locker => {
+      const update = updateMap.get(locker.id)
+      if (update) {
+        // Apply updates with rotation validation
+        if ('rotation' in update && (isNaN(update.rotation!) || update.rotation === undefined)) {
+          update.rotation = locker.rotation || 0
+        }
+        return { ...locker, ...update }
+      }
+      return locker
+    })
+    
+    console.log(`[Store] Batch updated ${updates.length} lockers simultaneously`)
+  }
 
   // ID로 락커 찾기
   const getLockerById = (id: string) => {
@@ -530,6 +553,7 @@ export const useLockerStore = defineStore('locker', () => {
     // Actions
     addLocker,
     updateLocker,
+    batchUpdateLockers,
     deleteLocker,
     selectLocker,
     addZone,
