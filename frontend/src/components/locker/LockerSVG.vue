@@ -362,8 +362,8 @@ const fontSize = computed(() => {
 // 텍스트 Y 위치 계산 (세로배치 모드에서는 하단)
 const textYPosition = computed(() => {
   if (props.viewMode === 'front') {
-    // 세로배치 모드: 하단에 위치 (기존 8px에서 18px로 증가하여 10px 더 아래로)
-    return logicalDimensions.value.height - (18 * LOCKER_VISUAL_SCALE)
+    // 세로배치 모드: 하단에 위치 (값이 작을수록 더 아래로)
+    return logicalDimensions.value.height - (5 * LOCKER_VISUAL_SCALE)
   }
   // 평면배치 모드: 중앙에 위치
   return logicalDimensions.value.height / 2
@@ -372,8 +372,8 @@ const textYPosition = computed(() => {
 // 텍스트 정렬 기준선
 const textBaseline = computed(() => {
   if (props.viewMode === 'front') {
-    // 세로배치 모드: 하단 정렬
-    return 'text-after-edge'
+    // 세로배치 모드: 하단 정렬을 middle로 변경 (text-after-edge가 올바르게 작동하지 않음)
+    return 'middle'
   }
   // 평면배치 모드: 중앙 정렬
   return 'middle'
