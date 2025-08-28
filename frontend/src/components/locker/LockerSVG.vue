@@ -367,7 +367,7 @@ const strokeWidth = computed(() => {
 const fontSize = computed(() => {
   // 세로배치 모드에서는 더 작은 폰트 사용
   if (props.viewMode === 'front') {
-    return 5 * LOCKER_VISUAL_SCALE  // 더 작은 폰트 크기 (5px)
+    return 4 * LOCKER_VISUAL_SCALE  // 더 작은 폰트 크기 (4px * 2 = 8px)
   }
   // 평면배치 모드에서도 약간 작은 크기
   return 10 * LOCKER_VISUAL_SCALE  // 기존 12px에서 10px로 축소
