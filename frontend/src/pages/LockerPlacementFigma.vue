@@ -4495,8 +4495,14 @@ const deleteSelectedLockersOriginal = async () => {
 // Find smallest unassigned number
 const findSmallestUnassignedNumber = () => {
   const isFloorView = currentViewMode.value === 'floor'
+  
+  // Get ALL lockers in the selected zone, not just visible ones
+  const zoneLockers = selectedZone.value 
+    ? lockerStore.lockers.filter(l => l.zoneId === selectedZone.value.id)
+    : []
+  
   const assignedNumbers = new Set(
-    currentLockers.value
+    zoneLockers
       .map(l => {
         const num = isFloorView ? l.number : l.frontViewNumber
         return parseInt(num?.replace('L', '')) || 0
@@ -4511,7 +4517,13 @@ const findSmallestUnassignedNumber = () => {
 // Check for gaps in numbering
 const findNumberGaps = () => {
   const isFloorView = currentViewMode.value === 'floor'
-  const numbers = currentLockers.value
+  
+  // Get ALL lockers in the selected zone, not just visible ones
+  const zoneLockers = selectedZone.value 
+    ? lockerStore.lockers.filter(l => l.zoneId === selectedZone.value.id)
+    : currentLockers.value
+    
+  const numbers = zoneLockers
     .map(l => {
       const num = isFloorView ? l.number : l.frontViewNumber
       return parseInt(num?.replace('L', '')) || 0
@@ -4937,8 +4949,14 @@ const assignNumbers = () => {
   
   // Assign numbers based on view mode
   let currentNum = start
+  
+  // Get ALL lockers in the selected zone to check for duplicates, not just visible ones
+  const zoneLockers = selectedZone.value 
+    ? lockerStore.lockers.filter(l => l.zoneId === selectedZone.value.id)
+    : currentLockers.value
+    
   const assignedNumbers = new Set(
-    currentLockers.value
+    zoneLockers
       .map(l => {
         const num = isFloorView ? l.number : l.frontViewNumber
         return parseInt(num?.replace('L', '')) || 0
@@ -4947,7 +4965,7 @@ const assignNumbers = () => {
   )
   
   sortedLockers.forEach(locker => {
-    // Skip already assigned numbers
+    // Skip already assigned numbers (checks across ALL locker types in zone)
     while (assignedNumbers.has(currentNum)) {
       currentNum++
     }
@@ -4958,6 +4976,9 @@ const assignNumbers = () => {
     } else {
       lockerStore.updateLocker(locker.id, { frontViewNumber: `L${currentNum}` })
     }
+    
+    // Add to set to prevent duplicates in current batch
+    assignedNumbers.add(currentNum)
     currentNum++
   })
   
