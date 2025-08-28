@@ -4836,14 +4836,17 @@ const showGroupingAnalysis = () => {
   
   console.log('[REAL DATA] Now analyzing actual lockers...')
   
-  let result = '대그룹 분석 결과\n'
+  let result = '세로배치 순서별 그룹 분석\n'
   result += '━━━━━━━━━━━━━━━━━━━━━\n'
   
   try {
     // 1. Find major groups using new Adjacent/Connected logic
     const majorGroups = findMajorGroups(lockers)
     
-    // 2. Collect all connection relationships for display
+    // 2. Sort major groups by front view order (same as 세로배치)
+    const sortedMajorGroups = sortMajorGroups(majorGroups)
+    
+    // 3. Collect connection relationships for display
     const connections: string[] = []
     for (let i = 0; i < lockers.length; i++) {
       for (let j = i + 1; j < lockers.length; j++) {
@@ -4859,14 +4862,22 @@ const showGroupingAnalysis = () => {
       }
     }
     
-    majorGroups.forEach((majorGroup, majorIndex) => {
+    // 4. Display in front view order
+    sortedMajorGroups.forEach((majorGroup, majorIndex) => {
       result += `대그룹 ${majorIndex + 1} (${majorGroup.length}개 락커):\n`
       
-      // 2. Find minor groups within each major group
+      // Find and sort minor groups within each major group
       const minorGroups = findMinorGroups(majorGroup)
+      const sortedMinorGroups = sortMinorGroups(minorGroups)
       
-      minorGroups.forEach((minorGroup, minorIndex) => {
-        const lockerDescs = minorGroup.map(l => `${l.number || l.id}(${l.rotation || 0}°)`).join(', ')
+      sortedMinorGroups.forEach((minorGroup, minorIndex) => {
+        // Apply same rotation processing as front view
+        const rotatedLockers = applyRotationToMinorGroup(minorGroup)
+        
+        const lockerDescs = rotatedLockers.map(l => {
+          const originalLocker = lockers.find(orig => orig.id === l.id)
+          return `${originalLocker?.number || l.id}(${originalLocker?.rotation || 0}°)`
+        }).join(', ')
         
         // Determine grouping reason
         let reason = ''
@@ -4879,7 +4890,7 @@ const showGroupingAnalysis = () => {
           if (allSameRotation) {
             reason = '같은방향+인접'
           } else {
-            reason = '다른방향'
+            reason = '다른방향+인접'
           }
         }
         
@@ -4889,14 +4900,21 @@ const showGroupingAnalysis = () => {
       result += '\n'
     })
     
-    // 3. Show connection relationships
+    // 5. Show connection relationships
     if (connections.length > 0) {
-      result += `연결 관계: ${connections.join(', ')}\n`
+      result += '연결 관계:\n'
+      result += '━━━━━━━━━━━━━━━━━━━━━\n'
+      connections.forEach(conn => {
+        result += `${conn}\n`
+      })
+      result += '\n'
     }
     
+    result += '요약:\n'
     result += '━━━━━━━━━━━━━━━━━━━━━\n'
     result += `총 대그룹: ${majorGroups.length}개\n`
-    result += `총 소그룹: ${majorGroups.reduce((sum, major) => sum + findMinorGroups(major).length, 0)}개`
+    result += `총 소그룹: ${sortedMajorGroups.reduce((sum, major) => sum + findMinorGroups(major).length, 0)}개\n`
+    result += '\n💡 이 순서는 세로배치 시 실제 표시 순서와 동일합니다.'
     
   } catch (error) {
     console.error('[Grouping Analysis] Error:', error)
