@@ -362,8 +362,8 @@ const fontSize = computed(() => {
 // 텍스트 Y 위치 계산 (세로배치 모드에서는 하단)
 const textYPosition = computed(() => {
   if (props.viewMode === 'front') {
-    // 세로배치 모드: 하단에 위치 (하단에서 8px 패딩)
-    return logicalDimensions.value.height - (8 * LOCKER_VISUAL_SCALE)
+    // 세로배치 모드: 하단에 위치 (하단에서 5px 패딩)
+    return logicalDimensions.value.height - (5 * LOCKER_VISUAL_SCALE)
   }
   // 평면배치 모드: 중앙에 위치
   return logicalDimensions.value.height / 2
