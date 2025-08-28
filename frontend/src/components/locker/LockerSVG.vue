@@ -68,15 +68,10 @@
     />
     
     <!-- 세로배치 모드에서 하단 라벨 배경 -->
-    <rect
+    <path
       v-if="viewMode === 'front' && showNumber !== false && getDisplayNumber()"
-      :x="1"
-      :y="logicalDimensions.height - (15 * LOCKER_VISUAL_SCALE)"
-      :width="logicalDimensions.width - 2"
-      :height="(15 * LOCKER_VISUAL_SCALE) - 1"
+      :d="labelBackgroundPath"
       :fill="labelBackgroundColor"
-      :rx="0"
-      :ry="0"
       shape-rendering="crispEdges"
     />
     
@@ -416,6 +411,26 @@ const labelBackgroundColor = computed(() => {
     case 'maintenance': return '#374151' // gray-700
     default: return '#6b7280'
   }
+})
+
+// 라벨 배경 경로 (하단 모서리만 라운딩)
+const labelBackgroundPath = computed(() => {
+  const x = 1
+  const y = logicalDimensions.value.height - (15 * LOCKER_VISUAL_SCALE)
+  const width = logicalDimensions.value.width - 2
+  const height = (15 * LOCKER_VISUAL_SCALE) - 1
+  const radius = cornerRadius.value // 락커와 동일한 라운딩 사용
+  
+  // 하단 모서리만 라운딩된 사각형 경로
+  return `
+    M ${x} ${y}
+    L ${x + width} ${y}
+    L ${x + width} ${y + height - radius}
+    Q ${x + width} ${y + height} ${x + width - radius} ${y + height}
+    L ${x + radius} ${y + height}
+    Q ${x} ${y + height} ${x} ${y + height - radius}
+    Z
+  `
 })
 
 const textColor = computed(() => {
