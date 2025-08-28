@@ -376,8 +376,8 @@ const fontSize = computed(() => {
 // 텍스트 Y 위치 계산 (세로배치 모드에서는 하단)
 const textYPosition = computed(() => {
   if (props.viewMode === 'front') {
-    // 세로배치 모드: 라벨 배경의 중앙에 위치
-    return logicalDimensions.value.height - (7.5 * LOCKER_VISUAL_SCALE)
+    // 세로배치 모드: 하단에 위치 (하단에서 5px 패딩) - 기존 위치 유지
+    return logicalDimensions.value.height - (5 * LOCKER_VISUAL_SCALE)
   }
   // 평면배치 모드: 중앙에 위치
   return logicalDimensions.value.height / 2
@@ -416,9 +416,9 @@ const labelBackgroundColor = computed(() => {
 // 라벨 배경 경로 (하단 모서리만 라운딩)
 const labelBackgroundPath = computed(() => {
   const x = 1
-  const y = logicalDimensions.value.height - (15 * LOCKER_VISUAL_SCALE)
+  const y = logicalDimensions.value.height - (12 * LOCKER_VISUAL_SCALE)
   const width = logicalDimensions.value.width - 2
-  const height = (15 * LOCKER_VISUAL_SCALE) - 1
+  const height = (12 * LOCKER_VISUAL_SCALE) - 1
   const radius = cornerRadius.value // 락커와 동일한 라운딩 사용
   
   // 하단 모서리만 라운딩된 사각형 경로
