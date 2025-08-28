@@ -497,7 +497,7 @@
   
   <!-- Number Assignment Dialog -->
   <div v-if="numberAssignVisible" class="modal-overlay" @click="handleNumberModalOverlayClick">
-    <div class="modal-content" @click.stop>
+    <div class="modal-content number-assign-modal" @click.stop>
       <h3>번호 부여</h3>
       <div class="form-group">
         <label>시작 번호:</label>
@@ -506,37 +506,67 @@
           type="number" 
           :min="1" 
           placeholder="시작 번호"
-          class="form-control"
+          class="form-control number-input"
         >
       </div>
-      <div class="form-group">
-        <label>정렬 방향:</label>
-        <div class="radio-group">
-          <label>
-            <input type="radio" v-model="numberDirection" value="horizontal">
-            가로
-          </label>
-          <label>
-            <input type="radio" v-model="numberDirection" value="vertical">
-            세로
-          </label>
+      <div class="form-section">
+        <div class="form-labels-row">
+          <label class="section-label">정렬 방향:</label>
+        </div>
+        <div class="form-options-row">
+          <div class="radio-group-horizontal">
+            <label class="radio-label">
+              <input type="radio" v-model="numberDirection" value="horizontal">
+              <span>가로</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" v-model="numberDirection" value="vertical">
+              <span>세로</span>
+            </label>
+          </div>
         </div>
       </div>
-      <div class="form-group">
-        <label>
-          <input type="checkbox" v-model="reverseDirection">
-          역방향
-        </label>
+      <div class="form-section">
+        <div class="form-labels-row">
+          <label class="section-label">역방향:</label>
+          <label class="section-label" style="margin-left: -40px;">아래에서부터:</label>
+        </div>
+        <div class="form-options-row">
+          <div class="checkbox-container" style="margin-left: 10px;">
+            <input type="checkbox" v-model="reverseDirection">
+          </div>
+          <div class="checkbox-container" style="margin-left: 20px;">
+            <input type="checkbox" v-model="fromTop">
+          </div>
+        </div>
       </div>
-      <div class="form-group" v-if="numberDirection === 'vertical'">
-        <label>
-          <input type="checkbox" v-model="fromTop">
-          위에서부터
-        </label>
+      
+      <!-- Progress indicator -->
+      <div v-if="isAssigningNumbers" class="progress-section">
+        <div class="progress-indicator">
+          <div class="loading-spinner"></div>
+          <span class="progress-text">{{ assignmentProgress }}</span>
+        </div>
       </div>
+      
       <div class="modal-buttons">
-        <button class="btn btn-secondary" @click="numberAssignVisible = false">취소</button>
-        <button class="btn btn-primary" @click="assignNumbers">번호 부여</button>
+        <button 
+          class="btn btn-secondary" 
+          @click="numberAssignVisible = false"
+          :disabled="isAssigningNumbers"
+        >
+          취소
+        </button>
+        <button 
+          class="btn btn-primary" 
+          @click="assignNumbers"
+          :disabled="isAssigningNumbers"
+        >
+          <span v-if="isAssigningNumbers">
+            <i class="fas fa-spinner fa-spin"></i> 처리중...
+          </span>
+          <span v-else>번호 부여</span>
+        </button>
       </div>
     </div>
   </div>
@@ -736,6 +766,10 @@ const startNumber = ref(1)
 const numberDirection = ref<'horizontal' | 'vertical'>('horizontal')
 const reverseDirection = ref(false)
 const fromTop = ref(false)
+
+// Loading states for number assignment
+const isAssigningNumbers = ref(false)
+const assignmentProgress = ref('')
 
 // Display scale for visual rendering - 모든 뷰모드에서 동일한 스케일 사용
 const FLOOR_VIEW_SCALE = 1.0  // 평면배치 모드
@@ -1125,16 +1159,46 @@ const updateLockerPlacement = async (lockerId: string, placementData: any) => {
       body: JSON.stringify(placementData)
     })
     
-    if (!response.ok) throw new Error('Failed to update locker placement')
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Failed to update locker placement: ${response.status} - ${errorText}`)
+    }
+    
     const result = await response.json()
     
     if (result.success) {
-      
       return result
     }
   } catch (error) {
     console.error('[API] Locker placement update failed:', error)
     saveError.value = 'Failed to update locker placement'
+    throw error
+  }
+}
+
+// Batch update locker numbers for improved performance
+const batchUpdateLockerNumbers = async (updates: Array<{lockrCd: string, LOCKR_NO: number}>) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/lockrs/batch-numbers`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ updates })
+    })
+    
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Failed to batch update locker numbers: ${response.status} - ${errorText}`)
+    }
+    
+    const result = await response.json()
+    
+    if (result.success) {
+      return result
+    } else {
+      throw new Error(`Batch update failed: ${result.message || 'Unknown error'}`)
+    }
+  } catch (error) {
+    console.error('[API] Batch locker number update failed:', error)
     throw error
   }
 }
@@ -1547,39 +1611,44 @@ const sortedLockers = computed(() => {
   const lockers = displayLockers.value.map(locker => {
     if (currentViewMode.value === 'front') {
       // For front view, override x, y, and RESET rotation (all face forward)
-      // actualHeight를 확실히 전달 (30 또는 90)
       const frontViewHeight = locker.actualHeight || locker.height || 60
+      const targetX = locker.displayX / getCurrentScale()
+      const targetY = locker.displayY / getCurrentScale()
+      const targetRotation = locker.frontViewRotation !== undefined ? locker.frontViewRotation : 0
       
-      // Debug info removed
+      // 값이 변경되지 않았으면 원본 객체 반환 (바운스 방지)
+      if (locker.x === targetX && 
+          locker.y === targetY && 
+          locker.height === frontViewHeight &&
+          locker.rotation === targetRotation) {
+        return locker
+      }
       
-      const resultLocker = {
+      // 값이 변경된 경우에만 새 객체 생성
+      return {
         ...locker,
-        // ALWAYS use calculated positions from displayLockers, never cached frontViewX/Y
-        x: locker.displayX / getCurrentScale(),
-        y: locker.displayY / getCurrentScale(),
-        height: frontViewHeight,  // LockerSVG에서 이 값을 사용
-        actualHeight: frontViewHeight,  // actualHeight도 명시적으로 설정
-        // Use new algorithm rotation if available, otherwise default to 0
-        rotation: locker.frontViewRotation !== undefined ? locker.frontViewRotation : 0
+        x: targetX,
+        y: targetY,
+        height: frontViewHeight,
+        actualHeight: frontViewHeight,
+        rotation: targetRotation
       }
-      
-      // FINAL DEBUG: Check final result passed to LockerSVG
-      if (locker.number === 'L3' || locker.number === 'L4') {
-        
-      }
-      
-      return resultLocker
     }
     return locker
   })
   
+  // 세로 모드에서는 z-index 재정렬 하지 않음 (바운스 방지)
+  if (currentViewMode.value === 'front') {
+    return lockers
+  }
+  
+  // 평면 모드에서만 선택된 락커를 위로
   if (selectedLocker.value) {
     const selectedIndex = lockers.findIndex(l => l.id === selectedLocker.value.id)
     if (selectedIndex > -1) {
       // 선택된 락커를 배열 끝으로 이동
       const [selected] = lockers.splice(selectedIndex, 1)
       lockers.push(selected)
-      
     }
   }
   return lockers
@@ -1948,7 +2017,7 @@ const addLocker = async () => {
     zoneId: selectedZone.value.id,
     status: 'available',
     rotation: 0,
-    number: `L${findSmallestUnassignedNumber()}`
+    number: `L${findNextAvailableNumber()}`
   }
   
   // Creating locker
@@ -2156,7 +2225,7 @@ const addLockerByDoubleClick = async (type: any) => {
     rotation: 0,
     type: type.name,
     status: 'available',
-    number: `L${findSmallestUnassignedNumber()}`,
+    number: `L${findNextAvailableNumber()}`,
     zoneId: selectedZone.value.id
   }
   
@@ -2644,7 +2713,7 @@ const startDragLocker = (locker, event) => {
         }
         const newLocker = lockerStore.addLocker(copy)
         // Assign unique number after adding
-        lockerStore.updateLocker(newLocker.id, { number: `L${findSmallestUnassignedNumber()}` })
+        lockerStore.updateLocker(newLocker.id, { lockrNo: `L${findNextAvailableNumber()}` })
         copiesMap.set(original.id, newLocker.id)
         copiedLockers.push(newLocker)
       }
@@ -4512,41 +4581,16 @@ const deleteSelectedLockersOriginal = async () => {
 
 // Context menu and number management functions
 // Find smallest unassigned number
-const findSmallestUnassignedNumber = () => {
-  const isFloorView = currentViewMode.value === 'floor'
-  
-  // Get ALL lockers in the selected zone, not just visible ones
-  const zoneLockers = selectedZone.value 
-    ? lockerStore.lockers.filter(l => l.zoneId === selectedZone.value.id)
-    : []
-  
-  const assignedNumbers = new Set(
-    zoneLockers
-      .map(l => {
-        const num = isFloorView ? l.number : l.frontViewNumber
-        return parseInt(num?.replace('L', '')) || 0
-      })
-      .filter(n => n > 0)
-  )
-  let num = 1
-  while (assignedNumbers.has(num)) num++
-  return num
-}
 
 // Check for gaps in numbering
 const findNumberGaps = () => {
-  const isFloorView = currentViewMode.value === 'floor'
-  
-  // Get ALL lockers in the selected zone, not just visible ones
-  const zoneLockers = selectedZone.value 
+  // Get ALL lockers in the selected zone that are visible in front view (세로모드)
+  const frontViewLockers = selectedZone.value 
     ? lockerStore.lockers.filter(l => l.zoneId === selectedZone.value.id)
     : currentLockers.value
     
-  const numbers = zoneLockers
-    .map(l => {
-      const num = isFloorView ? l.number : l.frontViewNumber
-      return parseInt(num?.replace('L', '')) || 0
-    })
+  const numbers = frontViewLockers
+    .map(l => parseInt(String(l.lockrNo || 0)))
     .filter(n => n > 0)
     .sort((a, b) => a - b)
   
@@ -4776,7 +4820,7 @@ const validateFloorCount = (event: Event) => {
 const showNumberAssignDialog = () => {
   hideContextMenu()
   numberAssignVisible.value = true
-  startNumber.value = findSmallestUnassignedNumber()
+  startNumber.value = findNextAvailableNumber()
   numberDirection.value = 'horizontal'
   reverseDirection.value = false
   fromTop.value = false
@@ -4932,15 +4976,119 @@ const showGroupingAnalysis = () => {
   showGroupingPopup.value = true
 }
 
-// Assign numbers (번호 부여)
-const assignNumbers = () => {
-  const start = Number(startNumber.value)
-  const isFloorView = currentViewMode.value === 'floor'
+// Find next available number starting from the smallest gap
+const findNextAvailableNumber = () => {
+  // Get ALL lockers in the selected zone that are visible in front view (세로모드)
+  const frontViewLockers = selectedZone.value 
+    ? lockerStore.lockers.filter(l => l.zoneId === selectedZone.value.id)
+    : currentLockers.value
+    
+  const assignedNumbers = frontViewLockers
+    .map(l => parseInt(String(l.lockrNo || 0)))
+    .filter(n => n > 0)
+    .sort((a, b) => a - b)
   
-  // Check if start number is already assigned based on view mode
-  const existingLocker = currentLockers.value.find(l => {
-    const checkNumber = isFloorView ? l.number : l.frontViewNumber
-    return parseInt(checkNumber?.replace('L', '')) === start
+  if (assignedNumbers.length === 0) return 1
+  
+  // Look for gaps first
+  for (let i = 1; i < assignedNumbers[assignedNumbers.length - 1]; i++) {
+    if (!assignedNumbers.includes(i)) {
+      return i
+    }
+  }
+  
+  // No gaps found, return next number
+  return assignedNumbers[assignedNumbers.length - 1] + 1
+}
+
+// Create 2D grid from selected lockers
+const createLockerGrid = (lockers, isHorizontal) => {
+  if (lockers.length === 0) return []
+  
+  const TOLERANCE = 20 // pixels tolerance for grouping
+  
+  if (isHorizontal) {
+    // Group by Y coordinate (rows)
+    const rows = new Map()
+    
+    lockers.forEach(locker => {
+      const y = locker.frontViewY || locker.y
+      let foundRow = null
+      
+      // Find existing row within tolerance
+      for (let [rowY] of rows) {
+        if (Math.abs(y - rowY) <= TOLERANCE) {
+          foundRow = rowY
+          break
+        }
+      }
+      
+      if (foundRow !== null) {
+        rows.get(foundRow).push(locker)
+      } else {
+        rows.set(y, [locker])
+      }
+    })
+    
+    // Sort rows by Y coordinate and sort lockers within each row by X
+    return Array.from(rows.entries())
+      .sort((a, b) => a[0] - b[0]) // Sort rows by Y
+      .map(([, rowLockers]) => 
+        rowLockers.sort((a, b) => (a.frontViewX || a.x) - (b.frontViewX || b.x)) // Sort within row by X
+      )
+  } else {
+    // Group by X coordinate (columns)  
+    const cols = new Map()
+    
+    lockers.forEach(locker => {
+      const x = locker.frontViewX || locker.x
+      let foundCol = null
+      
+      // Find existing column within tolerance
+      for (let [colX] of cols) {
+        if (Math.abs(x - colX) <= TOLERANCE) {
+          foundCol = colX
+          break
+        }
+      }
+      
+      if (foundCol !== null) {
+        cols.get(foundCol).push(locker)
+      } else {
+        cols.set(x, [locker])
+      }
+    })
+    
+    // Sort columns by X coordinate and sort lockers within each column by Y
+    return Array.from(cols.entries())
+      .sort((a, b) => a[0] - b[0]) // Sort columns by X
+      .map(([, colLockers]) => 
+        colLockers.sort((a, b) => (a.frontViewY || a.y) - (b.frontViewY || b.y)) // Sort within column by Y
+      )
+  }
+}
+
+// Assign numbers (번호 부여)
+const assignNumbers = async () => {
+  // Start loading state
+  isAssigningNumbers.value = true
+  assignmentProgress.value = '번호 할당을 준비중입니다...'
+  
+  try {
+    let start = Number(startNumber.value)
+    
+    // If start number is 0 or invalid, auto-detect next available number
+    if (!start || start <= 0) {
+      start = findNextAvailableNumber()
+    }
+  
+  // Check if start number is already assigned
+  const frontViewLockers = selectedZone.value 
+    ? lockerStore.lockers.filter(l => l.zoneId === selectedZone.value.id)
+    : currentLockers.value
+    
+  const existingLocker = frontViewLockers.find(l => {
+    return parseInt(String(l.lockrNo || 0)) === start
   })
   
   if (existingLocker) {
@@ -4953,97 +5101,155 @@ const assignNumbers = () => {
     currentLockers.value.find(l => l.id === id)
   ).filter(Boolean)
   
-  // Sort lockers based on direction and options
-  let sortedLockers = [...selectedLockers]
+  // Create 2D grid based on direction
+  const isHorizontal = numberDirection.value === 'horizontal'
+  let grid = createLockerGrid(selectedLockers, isHorizontal)
   
-  if (numberDirection.value === 'horizontal') {
-    // Sort by X position (left to right)
-    if (isFloorView) {
-      sortedLockers.sort((a, b) => a.x - b.x)
-    } else {
-      // In front view, use frontViewX if available
-      sortedLockers.sort((a, b) => (a.frontViewX || a.x) - (b.frontViewX || b.x))
-    }
-    if (reverseDirection.value) sortedLockers.reverse()
-  } else {
-    // Sort by Y position
-    if (isFloorView) {
-      if (fromTop.value) {
-        sortedLockers.sort((a, b) => a.y - b.y)
-      } else {
-        sortedLockers.sort((a, b) => b.y - a.y)
-      }
-    } else {
-      // In front view, use frontViewY
-      if (fromTop.value) {
-        sortedLockers.sort((a, b) => (a.frontViewY || a.y) - (b.frontViewY || b.y))
-      } else {
-        sortedLockers.sort((a, b) => (b.frontViewY || b.y) - (a.frontViewY || a.y))
-      }
-    }
-    if (reverseDirection.value) sortedLockers.reverse()
+  // Apply direction options
+  if (fromTop.value) {
+    // 아래에서부터: reverse row/column order
+    grid.reverse()
   }
   
-  // Assign numbers based on view mode
-  let currentNum = start
+  if (reverseDirection.value) {
+    // 역방향: reverse within each row/column
+    grid.forEach(group => group.reverse())
+  }
   
-  // Get ALL lockers in the selected zone to check for duplicates, not just visible ones
-  const zoneLockers = selectedZone.value 
-    ? lockerStore.lockers.filter(l => l.zoneId === selectedZone.value.id)
-    : currentLockers.value
-    
+  // Flatten grid to get final order
+  const sortedLockers = grid.flat()
+  
+  console.log(`[Number Assignment] Direction: ${numberDirection.value}, Reverse: ${reverseDirection.value}, FromBottom: ${fromTop.value}`)
+  console.log(`[Number Assignment] Created ${grid.length} ${isHorizontal ? 'rows' : 'columns'} with lockers:`, grid.map(group => group.length))
+  console.log(`[Number Assignment] Final order:`, sortedLockers.map((l, i) => `${i+1}: ${l.id.slice(-4)}`))
+  
+  // Get assigned numbers for duplicate checking
   const assignedNumbers = new Set(
-    zoneLockers
-      .map(l => {
-        const num = isFloorView ? l.number : l.frontViewNumber
-        return parseInt(num?.replace('L', '')) || 0
-      })
+    frontViewLockers
+      .map(l => parseInt(String(l.lockrNo || 0)))
       .filter(n => n > 0)
   )
   
-  sortedLockers.forEach(locker => {
-    // Skip already assigned numbers (checks across ALL locker types in zone)
+  console.log(`[Number Assignment] Existing numbers:`, Array.from(assignedNumbers).sort((a, b) => a - b))
+  console.log(`[Number Assignment] Starting from: L${start}`)
+  
+  // Assign numbers
+  let currentNum = start
+  const assignments = []
+  
+  // Collect assignments first for batch processing
+  const batchUpdates = []
+  
+  assignmentProgress.value = `락커 번호를 준비중입니다... (0/${sortedLockers.length})`
+  
+  let processedCount = 0
+  for (let index = 0; index < sortedLockers.length; index++) {
+    const locker = sortedLockers[index]
+    
+    // Skip lockers that already have numbers assigned
+    if (locker.lockrNo && locker.lockrNo > 0) {
+      assignments.push(`${index + 1}. ${locker.id.slice(-4)} → L${locker.lockrNo} (기존 번호 유지)`)
+      processedCount++
+      assignmentProgress.value = `락커 번호를 준비중입니다... (${processedCount}/${sortedLockers.length})`
+      continue
+    }
+    
+    // Find next available number for lockers without numbers
     while (assignedNumbers.has(currentNum)) {
       currentNum++
     }
     
-    // Update the appropriate number field based on view mode
-    if (isFloorView) {
-      lockerStore.updateLocker(locker.id, { number: `L${currentNum}` })
-    } else {
-      lockerStore.updateLocker(locker.id, { frontViewNumber: `L${currentNum}` })
+    const assignedNumber = currentNum
+    
+    // Update local store first for immediate UI feedback (store as number)
+    lockerStore.updateLocker(locker.id, { lockrNo: assignedNumber })
+    
+    // Collect database update for batch processing
+    if (locker.lockrCd) {
+      batchUpdates.push({
+        lockrCd: locker.lockrCd,
+        LOCKR_NO: assignedNumber
+      })
     }
+    
+    assignments.push(`${index + 1}. ${locker.id.slice(-4)} → L${assignedNumber} (새로 부여)`)
     
     // Add to set to prevent duplicates in current batch
     assignedNumbers.add(currentNum)
     currentNum++
-  })
-  
-  // Check for gaps after assignment
-  const gaps = findNumberGaps()
-  if (gaps.length > 0) {
-    alert(`주의: 중간에 빈 번호가 있습니다: ${gaps.join(', ')}`)
+    processedCount++
+    
+    // Update progress
+    assignmentProgress.value = `락커 번호를 준비중입니다... (${processedCount}/${sortedLockers.length})`
   }
   
-  numberAssignVisible.value = false
-  console.log(`[Context Menu] Assigned numbers to ${sortedLockers.length} lockers`)
+  // Perform batch database update for improved performance
+  if (batchUpdates.length > 0) {
+    try {
+      assignmentProgress.value = `데이터베이스에 ${batchUpdates.length}개 락커 번호를 저장중입니다...`
+      console.log(`[Number Assignment] Batch updating ${batchUpdates.length} lockers in database...`)
+      await batchUpdateLockerNumbers(batchUpdates)
+      console.log(`[Number Assignment] Batch database update completed successfully`)
+      assignmentProgress.value = '데이터베이스 저장이 완료되었습니다!'
+    } catch (error) {
+      console.error(`[Number Assignment] Batch database update failed:`, error)
+      assignmentProgress.value = '데이터베이스 저장에 실패했습니다.'
+      // Update assignments to show DB save failure
+      assignments.forEach((assignment, index) => {
+        assignments[index] = assignment + ' (⚠️ Batch DB save failed)'
+      })
+    }
+  }
+  
+  console.log(`[Number Assignment] Assignments:`, assignments)
+  
+    // Check for gaps after assignment
+    const gaps = findNumberGaps()
+    if (gaps.length > 0) {
+      alert(`주의: 중간에 빈 번호가 있습니다: ${gaps.join(', ')}`)
+    }
+    
+    assignmentProgress.value = '번호 할당이 완료되었습니다!'
+    console.log(`[Number Assignment] Successfully processed ${sortedLockers.length} lockers (${batchUpdates.length} new assignments, ${sortedLockers.length - batchUpdates.length} existing numbers maintained)`)
+    
+    // Close modal after successful completion
+    setTimeout(() => {
+      numberAssignVisible.value = false
+    }, 500)
+    
+  } catch (error) {
+    console.error('[Number Assignment] Assignment failed:', error)
+    assignmentProgress.value = '번호 할당 중 오류가 발생했습니다.'
+    alert('번호 할당 중 오류가 발생했습니다. 다시 시도해주세요.')
+  } finally {
+    // Reset loading state
+    isAssigningNumbers.value = false
+  }
 }
 
 // Delete numbers (번호 삭제)
-const deleteNumbers = () => {
+const deleteNumbers = async () => {
   hideContextMenu()
   
   if (confirm('선택된 락커의 번호를 삭제하시겠습니까?')) {
-    const isFloorView = currentViewMode.value === 'floor'
-    Array.from(selectedLockerIds.value).forEach(id => {
-      // Delete the appropriate number based on view mode
-      if (isFloorView) {
-        lockerStore.updateLocker(id, { number: '' })
-      } else {
-        lockerStore.updateLocker(id, { frontViewNumber: '' })
+    const deletePromises = Array.from(selectedLockerIds.value).map(async (id) => {
+      try {
+        // Update local store first for immediate UI feedback (set to undefined)
+        lockerStore.updateLocker(id, { lockrNo: undefined })
+        
+        // Save to database if locker has database ID
+        const locker = currentLockers.value.find(l => l.id === id)
+        if (locker && locker.lockrCd) {
+          await updateLockerPlacement(locker.lockrCd, { LOCKR_NO: 0 })
+        }
+      } catch (error) {
+        console.error(`[Number Deletion] Failed to delete number for locker ${id}:`, error)
+        // Keep local update even if database save fails
       }
     })
-    console.log(`[Context Menu] Deleted ${isFloorView ? 'floor' : 'front view'} numbers from ${selectedLockerIds.value.size} lockers`)
+    
+    // Wait for all deletions to complete
+    await Promise.all(deletePromises)
   }
 }
 
@@ -6390,7 +6596,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
       const newLocker = {
         ...copiedLocker,
         id: `locker-${Date.now()}-${Math.random()}`,
-        number: `L${findSmallestUnassignedNumber()}`,
+        number: `L${findNextAvailableNumber()}`,
         x: copiedLocker.x + 20,
         y: copiedLocker.y + 20,
         zoneId: selectedZone.value.id
@@ -6647,6 +6853,37 @@ onUnmounted(() => {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Progress indicator styles */
+.progress-section {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  border-left: 4px solid #0768AE;
+}
+
+.progress-indicator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.progress-indicator .loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #e9ecef;
+  border-top: 2px solid #0768AE;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+.progress-text {
+  color: #495057;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .loading-overlay p {
@@ -7477,6 +7714,86 @@ onUnmounted(() => {
 
 .radio-group input[type="radio"] {
   cursor: pointer;
+}
+
+/* Number assignment modal specific styles */
+.number-assign-modal .number-input {
+  width: 150px !important;  /* Make input smaller */
+}
+
+.form-section {
+  margin-bottom: 16px;
+}
+
+.form-labels-row {
+  display: flex;
+  gap: 140px;
+  margin-bottom: 8px;
+}
+
+.section-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.form-options-row {
+  display: flex;
+  gap: 110px;
+  align-items: center;
+}
+
+.radio-group-horizontal {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+
+.radio-label {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: normal;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.radio-label input[type="radio"] {
+  cursor: pointer;
+  margin: 0;
+  margin-right: -5px;
+  flex-shrink: 0;
+}
+
+.radio-label span {
+  white-space: nowrap;
+}
+
+
+.checkbox-container {
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-container input[type="checkbox"] {
+  cursor: pointer;
+  margin: 0;
+}
+
+.checkbox-label-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-weight: normal;
+  margin: 0;
+}
+
+.checkbox-label-left input[type="checkbox"] {
+  cursor: pointer;
+  margin: 0;
 }
 
 .form-group input[type="checkbox"] {
