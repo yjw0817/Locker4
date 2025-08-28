@@ -416,9 +416,9 @@ const labelBackgroundColor = computed(() => {
 // 라벨 배경 경로 (하단 모서리만 라운딩)
 const labelBackgroundPath = computed(() => {
   const x = 1
-  const y = logicalDimensions.value.height - (12 * LOCKER_VISUAL_SCALE)
+  const y = logicalDimensions.value.height - (10 * LOCKER_VISUAL_SCALE)  // 12에서 10으로 줄여서 상단을 아래로
   const width = logicalDimensions.value.width - 2
-  const height = (12 * LOCKER_VISUAL_SCALE) - 1
+  const height = (10 * LOCKER_VISUAL_SCALE) - 1  // 높이도 함께 조정
   const radius = cornerRadius.value // 락커와 동일한 라운딩 사용
   
   // 하단 모서리만 라운딩된 사각형 경로
