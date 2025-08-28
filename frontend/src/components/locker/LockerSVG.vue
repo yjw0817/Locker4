@@ -269,13 +269,13 @@ const logicalDimensions = computed(() => {
   }
 })
 
-// 모서리 라운드 값 - 세로배치 모드에서 더 둥글게 (스케일 적용)
+// 모서리 라운드 값 - 세로배치 모드는 6px (스케일 적용)
 const cornerRadius = computed(() => {
-  // front view (세로배치)일 때 더 둥글게
+  // front view (세로배치)일 때
   if (props.viewMode === 'front') {
-    return 6 * LOCKER_VISUAL_SCALE // 더 둥근 모서리 (2x 스케일)
+    return 3 * LOCKER_VISUAL_SCALE // 6px 라운딩 (3 * 2 스케일)
   }
-  return 2 * LOCKER_VISUAL_SCALE // 평면배치일 때는 약간만 둥글게 (2x 스케일)
+  return 2 * LOCKER_VISUAL_SCALE // 평면배치일 때는 4px 라운딩
 })
 
 const lockerFill = computed(() => {
