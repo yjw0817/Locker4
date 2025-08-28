@@ -5133,8 +5133,8 @@ const assignNumbers = async () => {
   console.log(`[Number Assignment] Existing numbers:`, Array.from(assignedNumbers).sort((a, b) => a - b))
   console.log(`[Number Assignment] Starting from: L${start}`)
   
-  // Assign numbers
-  let currentNum = start
+  // Assign numbers - use start number if provided, otherwise start from 1
+  let currentNum = start || 1
   const assignments = []
   
   // Collect assignments first for batch processing
