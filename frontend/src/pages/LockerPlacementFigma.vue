@@ -1937,7 +1937,7 @@ const addLocker = async () => {
     zoneId: selectedZone.value.id,
     status: 'available',
     rotation: 0,
-    number: `L${currentLockers.value.length + 1}`
+    number: `L${findSmallestUnassignedNumber()}`
   }
   
   // Creating locker
@@ -2145,7 +2145,7 @@ const addLockerByDoubleClick = async (type: any) => {
     rotation: 0,
     type: type.name,
     status: 'available',
-    number: `L${currentLockers.value?.length + 1}`,
+    number: `L${findSmallestUnassignedNumber()}`,
     zoneId: selectedZone.value.id
   }
   
@@ -2627,11 +2627,13 @@ const startDragLocker = (locker, event) => {
         const copy = {
           ...original,
           id: `locker-${Date.now()}-${Math.random()}`,
-          number: `L${currentLockers.value.length + copiesMap.size + 1}`,
+          number: '', // Will be assigned after adding to store
           x: original.x + 20, // Offset to show it's a copy
           y: original.y + 20
         }
         const newLocker = lockerStore.addLocker(copy)
+        // Assign unique number after adding
+        lockerStore.updateLocker(newLocker.id, { number: `L${findSmallestUnassignedNumber()}` })
         copiesMap.set(original.id, newLocker.id)
         copiedLockers.push(newLocker)
       }
@@ -6353,7 +6355,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
       const newLocker = {
         ...copiedLocker,
         id: `locker-${Date.now()}-${Math.random()}`,
-        number: `L${currentLockers.value.length + index + 1}`,
+        number: `L${findSmallestUnassignedNumber()}`,
         x: copiedLocker.x + 20,
         y: copiedLocker.y + 20,
         zoneId: selectedZone.value.id
