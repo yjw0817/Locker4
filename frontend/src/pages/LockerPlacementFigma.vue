@@ -5117,12 +5117,27 @@ const assignNumbers = async () => {
       currentLockers.value.find(l => l.id === id)
     ).filter(Boolean)
     
+    // 디버그: 첫 번째 락커의 데이터 구조 확인
+    if (allSelectedLockers.length > 0) {
+      console.log('[Number Assignment] 샘플 락커 데이터:', {
+        id: allSelectedLockers[0].id,
+        lockrNo: allSelectedLockers[0].lockrNo,
+        number: allSelectedLockers[0].number,
+        lockrCd: allSelectedLockers[0].lockrCd
+      })
+    }
+    
     // 번호가 있는 락커와 없는 락커 분리 (lockrNo만 체크)
     const lockersWithNumbers = []
     const lockersWithoutNumbers = []
     
     allSelectedLockers.forEach(locker => {
-      if (locker.lockrNo && locker.lockrNo > 0) {
+      // lockrNo가 숫자이고 0보다 큰 경우에만 번호가 있는 것으로 간주
+      const hasNumber = locker.lockrNo && typeof locker.lockrNo === 'number' && locker.lockrNo > 0
+      
+      console.log(`[Number Assignment] 락커 ${locker.id.slice(-4)}: lockrNo=${locker.lockrNo}, hasNumber=${hasNumber}`)
+      
+      if (hasNumber) {
         lockersWithNumbers.push(locker)
       } else {
         lockersWithoutNumbers.push(locker)
