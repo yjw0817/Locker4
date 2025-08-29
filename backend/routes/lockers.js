@@ -512,6 +512,9 @@ router.put('/batch-numbers', async (req, res) => {
   try {
     const { updates } = req.body;
     
+    // 디버그: 받은 데이터 확인
+    console.log('[API] Batch number update - raw body:', JSON.stringify(req.body, null, 2));
+    
     if (!updates || !Array.isArray(updates) || updates.length === 0) {
       return res.status(400).json({
         success: false,
@@ -520,6 +523,7 @@ router.put('/batch-numbers', async (req, res) => {
     }
     
     console.log(`[API] Batch number update request: ${updates.length} updates`);
+    console.log('[API] First update sample:', updates[0]);
     
     const connection = await pool.getConnection();
     await connection.beginTransaction();
