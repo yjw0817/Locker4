@@ -197,6 +197,25 @@
                 <span>그룹핑 확인</span>
               </button>
               
+              <!-- 줌 컨트롤 - 평면배치 모드에서만 표시 -->
+              <div v-if="currentViewMode === 'flat'" class="zoom-controls">
+                <button 
+                  class="zoom-btn"
+                  @click="resetZoom"
+                  title="줌 리셋 (100%)"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.35-4.35"/>
+                  </svg>
+                  <span>{{ Math.round(zoomLevel * 100) }}%</span>
+                </button>
+                <div class="zoom-hints">
+                  <span class="hint">Ctrl+스크롤: 줌</span>
+                  <span class="hint">휠클릭+드래그: 이동</span>
+                </div>
+              </div>
+              
               <button 
                 class="mode-btn debug-btn"
                 @click="debugPopupVisible = true"
@@ -220,9 +239,10 @@
             class="canvas"
             width="100%"
             height="100%"
-            :viewBox="`0 0 ${canvasWidth} ${canvasHeight}`"
+            :viewBox="computedViewBox"
             :style="{ cursor: getCursorStyle, margin: 0, padding: 0 }"
             preserveAspectRatio="none"
+            @wheel.prevent="handleWheel"
             @mousedown="handleCanvasMouseDown"
             @mousemove="handleCanvasMouseMove"
             @mouseup="handleCanvasMouseUp"
@@ -801,6 +821,14 @@ const canvasHeight = ref(720)  // 평면배치 시 720px
 // 세로모드일 때 동적 viewBox 크기
 const dynamicCanvasWidth = ref(1550)
 const dynamicCanvasHeight = ref(700)
+
+// 줌 및 팬 관련 상태
+const zoomLevel = ref(1)  // 현재 줌 레벨 (1 = 100%)
+const minZoom = 0.2  // 최소 줌 (20%)
+const maxZoom = 5    // 최대 줌 (500%)
+const panOffset = ref({ x: 0, y: 0 })  // 팬 오프셋
+const isPanning = ref(false)  // 팬 진행 중인지
+const panStartPoint = ref({ x: 0, y: 0 })  // 팬 시작 지점
 
 // Update canvas size to fill container
 const updateCanvasSize = () => {
@@ -2334,8 +2362,57 @@ const getMousePosition = (event: MouseEvent) => {
   }
 }
 
+// 줌 이벤트 핸들러
+const handleWheel = (event: WheelEvent) => {
+  // 평면모드에서만 작동
+  if (currentViewMode.value !== 'flat') return
+  
+  // Ctrl 키가 눌려있을 때만 줌
+  if (!event.ctrlKey) return
+  
+  event.preventDefault()
+  
+  // 마우스 위치 (SVG 좌표계)
+  const svg = event.currentTarget as SVGElement
+  const pt = svg.createSVGPoint()
+  pt.x = event.clientX
+  pt.y = event.clientY
+  const svgP = pt.matrixTransform(svg.getScreenCTM()!.inverse())
+  
+  // 줌 계산
+  const delta = event.deltaY > 0 ? 0.9 : 1.1
+  const newZoom = Math.min(Math.max(zoomLevel.value * delta, minZoom), maxZoom)
+  
+  // 마우스 위치를 중심으로 줌
+  if (newZoom !== zoomLevel.value) {
+    const scale = newZoom / zoomLevel.value
+    panOffset.value = {
+      x: svgP.x - (svgP.x - panOffset.value.x) * scale,
+      y: svgP.y - (svgP.y - panOffset.value.y) * scale
+    }
+    zoomLevel.value = newZoom
+  }
+}
+
+// 줌 리셋 함수
+const resetZoom = () => {
+  zoomLevel.value = 1
+  panOffset.value = { x: 0, y: 0 }
+}
+
 // 캔버스 마우스 다운 처리
 const handleCanvasMouseDown = (event) => {
+  // 평면모드에서 중간 마우스 버튼 (휠 클릭) 처리
+  if (currentViewMode.value === 'flat' && event.button === 1) {
+    event.preventDefault()
+    isPanning.value = true
+    panStartPoint.value = {
+      x: event.clientX,
+      y: event.clientY
+    }
+    return
+  }
+  
   // Get correct SVG coordinates
   const pos = getMousePosition(event)
   const x = pos.x
@@ -2377,6 +2454,23 @@ const handleCanvasMouseDown = (event) => {
 
 // 캔버스 마우스 이동 처리
 const handleCanvasMouseMove = (event) => {
+  // 평면모드에서 팬 처리
+  if (currentViewMode.value === 'flat' && isPanning.value) {
+    const deltaX = (event.clientX - panStartPoint.value.x) / zoomLevel.value
+    const deltaY = (event.clientY - panStartPoint.value.y) / zoomLevel.value
+    
+    panOffset.value = {
+      x: panOffset.value.x - deltaX,
+      y: panOffset.value.y - deltaY
+    }
+    
+    panStartPoint.value = {
+      x: event.clientX,
+      y: event.clientY
+    }
+    return
+  }
+  
   // Get correct SVG coordinates
   const pos = getMousePosition(event)
   const currentX = pos.x
@@ -2405,6 +2499,12 @@ const handleCanvasMouseMove = (event) => {
 
 // 캔버스 마우스 업 처리
 const handleCanvasMouseUp = (event) => {
+  // 평면모드에서 팬 종료
+  if (currentViewMode.value === 'flat' && isPanning.value) {
+    isPanning.value = false
+    return
+  }
+  
   // Don't handle if rotating or just finished rotating
   if (isRotating.value || rotationJustEnded.value) {
     // console.log('[Canvas MouseUp] Ignored - rotation in progress or just ended')
@@ -7072,11 +7172,28 @@ watch(() => currentViewMode.value, async (newViewMode, oldViewMode) => {
 
 // Computed property for cursor style
 const getCursorStyle = computed(() => {
+  if (isPanning.value) return 'grabbing'
   if (isDragging.value) return 'grabbing'
   if (isDragSelecting.value) return 'crosshair'
   if (isCopyMode.value && selectedLockerIds.value.size > 0) return 'copy'
   if (selectedLockerIds.value.size > 0) return 'move'
   return 'default'
+})
+
+// Computed property for viewBox with zoom and pan
+const computedViewBox = computed(() => {
+  if (currentViewMode.value === 'front') {
+    // 세로모드에서는 줌/팬 미적용
+    return `0 0 ${canvasWidth.value} ${canvasHeight.value}`
+  }
+  
+  // 평면모드에서 줌과 팬 적용
+  const effectiveWidth = canvasWidth.value / zoomLevel.value
+  const effectiveHeight = canvasHeight.value / zoomLevel.value
+  const x = panOffset.value.x
+  const y = panOffset.value.y
+  
+  return `${x} ${y} ${effectiveWidth} ${effectiveHeight}`
 })
 
 
@@ -8247,6 +8364,65 @@ onUnmounted(() => {
   border-radius: 8px;
   border: 1px solid #e5e7eb;
   overflow: hidden;
+}
+
+/* Zoom Controls */
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: 16px;
+  padding: 6px 12px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.zoom-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.zoom-btn:hover {
+  background: #e5e7eb;
+  border-color: #d1d5db;
+}
+
+.zoom-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.zoom-level {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  min-width: 50px;
+  text-align: center;
+}
+
+.zoom-hints {
+  display: flex;
+  gap: 12px;
+  margin-left: 8px;
+  padding-left: 12px;
+  border-left: 1px solid #e5e7eb;
+}
+
+.zoom-hints .hint {
+  font-size: 11px;
+  color: #9ca3af;
+  white-space: nowrap;
 }
 
 .mode-toggle-inline .mode-btn {
