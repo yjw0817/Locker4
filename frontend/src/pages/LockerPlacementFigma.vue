@@ -2232,6 +2232,7 @@ const addLockerByDoubleClick = async (type: any) => {
   // Creating locker with properties
   
   // Save to database first (this will also add to store via loadLockers)
+  let created = null
   try {
     const saveData = {
       LOCKR_KND: selectedZone.value.id,
@@ -2245,19 +2246,28 @@ const addLockerByDoubleClick = async (type: any) => {
     
     const result = await saveLocker(saveData)
     if (result && result.lockrCd) {
-      // Locker saved
+      // Locker saved successfully, it will be loaded via loadLockers
+      await loadLockers()
+      // Find the newly created locker
+      created = currentLockers.value.find(l => 
+        l.x === newLocker.x && 
+        l.y === newLocker.y && 
+        l.number === newLocker.number
+      )
     }
   } catch (error) {
     console.error('[Database] Failed to save locker:', error)
     // If save fails, add locally only
-    lockerStore.addLocker(newLocker)
+    created = lockerStore.addLocker(newLocker)
   }
   
-  // Select the newly added locker
-  selectedLocker.value = created
-  selectedLockerIds.value.clear()
-  selectedLockerIds.value.add(created.id)
-  showSelectionUI.value = true
+  // Select the newly added locker if created
+  if (created) {
+    selectedLocker.value = created
+    selectedLockerIds.value.clear()
+    selectedLockerIds.value.add(created.id)
+    showSelectionUI.value = true
+  }
   
   // Debug all locker dimensions after adding
   debugLockerDimensions()
