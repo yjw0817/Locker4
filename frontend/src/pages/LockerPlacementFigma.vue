@@ -3958,10 +3958,21 @@ const getMinorGroupContaining = (locker: any, minorGroups: any[][]): any[] | nul
   return null
 }
 
+// Get center position of a minor group
+const getGroupCenter = (group: any[]): { x: number, y: number } => {
+  const sumX = group.reduce((sum, locker) => sum + locker.x, 0)
+  const sumY = group.reduce((sum, locker) => sum + locker.y, 0)
+  return {
+    x: sumX / group.length,
+    y: sumY / group.length
+  }
+}
+
 // Find next connected minor group in clockwise direction
 const findNextConnectedGroup = (currentGroup: any[], visitedGroups: Set<any[]>, minorGroups: any[][]): any[] | null => {
   // Find all connected groups that haven't been visited
   const connectedGroups: { group: any[], angle: number }[] = []
+  const currentCenter = getGroupCenter(currentGroup)
   
   for (const group of minorGroups) {
     if (visitedGroups.has(group)) continue
@@ -3972,19 +3983,23 @@ const findNextConnectedGroup = (currentGroup: any[], visitedGroups: Set<any[]>, 
       for (const locker2 of group) {
         if (isConnected(locker1, locker2)) {
           isConnectedToGroup = true
-          
-          // Calculate angle for clockwise ordering
-          const dx = locker2.x - locker1.x
-          const dy = locker2.y - locker1.y
-          let angle = Math.atan2(dy, dx) * 180 / Math.PI
-          // Convert to 0-360 range where 0 is right, 90 is down, 180 is left, 270 is up
-          if (angle < 0) angle += 360
-          
-          connectedGroups.push({ group, angle })
           break
         }
       }
       if (isConnectedToGroup) break
+    }
+    
+    if (isConnectedToGroup) {
+      // Calculate angle from current group center to connected group center
+      const targetCenter = getGroupCenter(group)
+      const dx = targetCenter.x - currentCenter.x
+      const dy = targetCenter.y - currentCenter.y
+      let angle = Math.atan2(dy, dx) * 180 / Math.PI
+      
+      // Convert to 0-360 range where 0 is right, 90 is down, 180 is left, 270 is up
+      if (angle < 0) angle += 360
+      
+      connectedGroups.push({ group, angle })
     }
   }
   
