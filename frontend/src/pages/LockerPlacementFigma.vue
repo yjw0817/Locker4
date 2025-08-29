@@ -4921,7 +4921,8 @@ const showGroupingAnalysis = () => {
   console.log('[TEST] Running test with known data first...')
   testGroupingWithKnownData()
   
-  const lockers = currentLockers.value
+  // Filter out child lockers - only analyze parent lockers
+  const lockers = currentLockers.value.filter(locker => !locker.parentLockrCd)
   
   if (lockers.length === 0) {
     groupingAnalysisResult.value = '분석할 락커가 없습니다.'
