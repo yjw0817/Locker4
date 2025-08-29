@@ -4819,8 +4819,31 @@ const validateFloorCount = (event: Event) => {
 // Show number assignment dialog
 const showNumberAssignDialog = () => {
   hideContextMenu()
+  
+  // 자동으로 첫 번째 빈 번호 찾기
+  const allLockersInZone = selectedZone.value 
+    ? lockerStore.lockers.filter(l => l.zoneId === selectedZone.value.id)
+    : currentLockers.value
+  
+  // 이미 부여된 번호들 수집
+  const existingNumbers = new Set(
+    allLockersInZone
+      .map(l => l.lockrNo)
+      .filter(n => n && n > 0)
+  )
+  
+  // 첫 번째 빈 번호 찾기
+  let firstEmpty = 1
+  while (existingNumbers.has(firstEmpty)) {
+    firstEmpty++
+  }
+  
+  console.log(`[Number Dialog] 기존 번호:`, Array.from(existingNumbers).sort((a, b) => a - b))
+  console.log(`[Number Dialog] 첫 번째 빈 번호: ${firstEmpty}`)
+  
+  // 다이얼로그 초기값 설정
   numberAssignVisible.value = true
-  startNumber.value = 1  // Always start from 1 to allow gap filling
+  startNumber.value = firstEmpty  // 자동으로 첫 번째 빈 번호로 설정
   numberDirection.value = 'horizontal'
   reverseDirection.value = false
   fromTop.value = false
@@ -5075,143 +5098,140 @@ const assignNumbers = async () => {
   assignmentProgress.value = '번호 할당을 준비중입니다...'
   
   try {
-    // Get all lockers in the zone for number checking
-    const frontViewLockers = selectedZone.value 
+    // ===== STEP 1: 전체 락커 중 부여된 번호들 체크하고 임시 저장 =====
+    const allLockersInZone = selectedZone.value 
       ? lockerStore.lockers.filter(l => l.zoneId === selectedZone.value.id)
       : currentLockers.value
     
-    // Get selected lockers - filter out those that already have numbers
+    // 이미 부여된 모든 번호들을 Set으로 수집
+    const existingNumbers = new Set(
+      allLockersInZone
+        .map(l => l.lockrNo)
+        .filter(n => n && n > 0)
+    )
+    
+    console.log(`[Number Assignment] Step 1 - 기존 번호들:`, Array.from(existingNumbers).sort((a, b) => a - b))
+    
+    // ===== STEP 2: 선택된 락커 분류 및 정렬 =====
     const allSelectedLockers = Array.from(selectedLockerIds.value).map(id =>
       currentLockers.value.find(l => l.id === id)
     ).filter(Boolean)
-  
-  // Debug: Check locker data structure
-  if (allSelectedLockers.length > 0) {
-    console.log('[Number Assignment] Sample locker data:', allSelectedLockers[0])
-  }
-  
-  // Separate lockers with and without numbers - check both lockrNo and number fields
-  const lockersWithNumbers = allSelectedLockers.filter(l => {
-    const hasNumber = (l.lockrNo && l.lockrNo > 0) || (l.number && l.number !== '' && l.number !== 'L0')
-    return hasNumber
-  })
-  const selectedLockers = allSelectedLockers.filter(l => {
-    const hasNumber = (l.lockrNo && l.lockrNo > 0) || (l.number && l.number !== '' && l.number !== 'L0')
-    return !hasNumber
-  })
-  
-  console.log(`[Number Assignment] Selected: ${allSelectedLockers.length} total, ${lockersWithNumbers.length} with numbers, ${selectedLockers.length} without numbers`)
-  
-  // Early return if no lockers need numbering
-  if (selectedLockers.length === 0) {
-    alert('선택한 모든 락커에 이미 번호가 부여되어 있습니다.')
-    return
-  }
-  
-  // Create 2D grid based on direction
-  const isHorizontal = numberDirection.value === 'horizontal'
-  let grid = createLockerGrid(selectedLockers, isHorizontal)
-  
-  // Apply direction options
-  if (fromTop.value) {
-    // 아래에서부터: reverse row/column order
-    grid.reverse()
-  }
-  
-  if (reverseDirection.value) {
-    // 역방향: reverse within each row/column
-    grid.forEach(group => group.reverse())
-  }
-  
-  // Flatten grid to get final order
-  const sortedLockers = grid.flat()
-  
-  console.log(`[Number Assignment] Direction: ${numberDirection.value}, Reverse: ${reverseDirection.value}, FromBottom: ${fromTop.value}`)
-  console.log(`[Number Assignment] Created ${grid.length} ${isHorizontal ? 'rows' : 'columns'} with lockers:`, grid.map(group => group.length))
-  console.log(`[Number Assignment] Final order:`, sortedLockers.map((l, i) => `${i+1}: ${l.id.slice(-4)}`))
-  
-  // Get assigned numbers for duplicate checking
-  const assignedNumbers = new Set(
-    frontViewLockers
-      .map(l => parseInt(String(l.lockrNo || 0)))
-      .filter(n => n > 0)
-  )
-  
-  console.log(`[Number Assignment] Existing numbers:`, Array.from(assignedNumbers).sort((a, b) => a - b))
-  console.log(`[Number Assignment] Will fill gaps starting from L1`)
-  
-  // Assign numbers - always start from 1 to find gaps
-  let currentNum = 1
-  const assignments = []
-  
-  // Collect assignments first for batch processing
-  const batchUpdates = []
-  
-  assignmentProgress.value = `락커 번호를 준비중입니다... (0/${sortedLockers.length})`
-  
-  let processedCount = 0
-  for (let index = 0; index < sortedLockers.length; index++) {
-    const locker = sortedLockers[index]
     
-    // Find next available number (filling gaps from 1)
-    while (assignedNumbers.has(currentNum)) {
+    // 번호가 있는 락커와 없는 락커 분리 (lockrNo만 체크)
+    const lockersWithNumbers = []
+    const lockersWithoutNumbers = []
+    
+    allSelectedLockers.forEach(locker => {
+      if (locker.lockrNo && locker.lockrNo > 0) {
+        lockersWithNumbers.push(locker)
+      } else {
+        lockersWithoutNumbers.push(locker)
+      }
+    })
+    
+    console.log(`[Number Assignment] Step 2 - 선택된 락커: 총 ${allSelectedLockers.length}개`)
+    console.log(`  - 번호 있음: ${lockersWithNumbers.length}개`, lockersWithNumbers.map(l => `L${l.lockrNo}`))
+    console.log(`  - 번호 없음: ${lockersWithoutNumbers.length}개`)
+    
+    // 번호를 부여할 락커가 없으면 종료
+    if (lockersWithoutNumbers.length === 0) {
+      alert('선택한 모든 락커에 이미 번호가 부여되어 있습니다.')
+      isAssigningNumbers.value = false
+      return
+    }
+    
+    // 번호 부여할 락커들을 방향에 따라 정렬
+    const isHorizontal = numberDirection.value === 'horizontal'
+    let grid = createLockerGrid(lockersWithoutNumbers, isHorizontal)
+    
+    // 방향 옵션 적용
+    if (fromTop.value) {
+      grid.reverse()
+    }
+    
+    if (reverseDirection.value) {
+      grid.forEach(group => group.reverse())
+    }
+    
+    // 최종 순서로 평탄화
+    const sortedLockers = grid.flat()
+    
+    console.log(`[Number Assignment] Step 2 - 정렬 완료:`, sortedLockers.map((l, i) => `${i+1}번째: ${l.id.slice(-4)}`))
+    
+    // ===== STEP 3: 시작번호부터 번호 할당 =====
+    const start = startNumber.value || 1  // 사용자가 입력한 시작번호
+    let currentNum = start
+    const batchUpdates = []
+    const assignments = []
+    
+    console.log(`[Number Assignment] Step 3 - 시작번호: ${start}, 할당할 락커 수: ${sortedLockers.length}`)
+    
+    assignmentProgress.value = `락커 번호를 할당중입니다... (0/${sortedLockers.length})`
+    
+    let processedCount = 0
+    for (const locker of sortedLockers) {
+      // 사용 가능한 다음 번호 찾기
+      while (existingNumbers.has(currentNum)) {
+        console.log(`  - ${currentNum}번은 이미 사용중, 다음 번호 확인`)
+        currentNum++
+      }
+      
+      console.log(`  - ${locker.id.slice(-4)} 락커에 ${currentNum}번 할당`)
+      
+      // 로컬 스토어 즉시 업데이트 (UI 반영)
+      lockerStore.updateLocker(locker.id, { lockrNo: currentNum })
+      
+      // DB 업데이트용 배치 수집
+      if (locker.lockrCd) {
+        batchUpdates.push({
+          lockrCd: locker.lockrCd,
+          LOCKR_NO: currentNum
+        })
+      }
+      
+      assignments.push(`${processedCount + 1}. ${locker.id.slice(-4)} → L${currentNum}`)
+      
+      // 현재 배치에서 중복 방지를 위해 Set에 추가
+      existingNumbers.add(currentNum)
       currentNum++
+      processedCount++
+      
+      // 진행 상황 업데이트
+      assignmentProgress.value = `락커 번호를 할당중입니다... (${processedCount}/${sortedLockers.length})`
     }
     
-    const assignedNumber = currentNum
+    console.log(`[Number Assignment] Step 3 완료 - 할당 내역:`, assignments)
     
-    // Update local store first for immediate UI feedback (store as number)
-    lockerStore.updateLocker(locker.id, { lockrNo: assignedNumber })
-    
-    // Collect database update for batch processing
-    if (locker.lockrCd) {
-      batchUpdates.push({
-        lockrCd: locker.lockrCd,
-        LOCKR_NO: assignedNumber
-      })
+    // ===== STEP 4: 데이터베이스에 배치 업데이트 =====
+    if (batchUpdates.length > 0) {
+      try {
+        assignmentProgress.value = `데이터베이스에 ${batchUpdates.length}개 락커 번호를 저장중입니다...`
+        console.log(`[Number Assignment] Step 4 - DB 배치 업데이트 시작: ${batchUpdates.length}개`)
+        
+        await batchUpdateLockerNumbers(batchUpdates)
+        
+        console.log(`[Number Assignment] Step 4 완료 - DB 업데이트 성공`)
+        assignmentProgress.value = '번호 할당이 완료되었습니다!'
+      } catch (error) {
+        console.error(`[Number Assignment] DB 업데이트 실패:`, error)
+        assignmentProgress.value = '데이터베이스 저장에 실패했습니다.'
+        alert('데이터베이스 저장 중 오류가 발생했습니다. 다시 시도해주세요.')
+        return
+      }
     }
     
-    assignments.push(`${index + 1}. ${locker.id.slice(-4)} → L${assignedNumber} (새로 부여)`)
+    // ===== 완료 처리 =====
+    console.log(`[Number Assignment] 전체 프로세스 완료`)
+    console.log(`  - 총 ${lockersWithoutNumbers.length}개 락커에 번호 할당 완료`)
+    console.log(`  - ${lockersWithNumbers.length}개 락커는 기존 번호 유지`)
     
-    // Add to set to prevent duplicates in current batch
-    assignedNumbers.add(currentNum)
-    currentNum++
-    processedCount++
-    
-    // Update progress
-    assignmentProgress.value = `락커 번호를 준비중입니다... (${processedCount}/${sortedLockers.length})`
-  }
-  
-  // Perform batch database update for improved performance
-  if (batchUpdates.length > 0) {
-    try {
-      assignmentProgress.value = `데이터베이스에 ${batchUpdates.length}개 락커 번호를 저장중입니다...`
-      console.log(`[Number Assignment] Batch updating ${batchUpdates.length} lockers in database...`)
-      await batchUpdateLockerNumbers(batchUpdates)
-      console.log(`[Number Assignment] Batch database update completed successfully`)
-      assignmentProgress.value = '데이터베이스 저장이 완료되었습니다!'
-    } catch (error) {
-      console.error(`[Number Assignment] Batch database update failed:`, error)
-      assignmentProgress.value = '데이터베이스 저장에 실패했습니다.'
-      // Update assignments to show DB save failure
-      assignments.forEach((assignment, index) => {
-        assignments[index] = assignment + ' (⚠️ Batch DB save failed)'
-      })
-    }
-  }
-  
-  console.log(`[Number Assignment] Assignments:`, assignments)
-  
-    // Check for gaps after assignment
+    // 갭 체크
     const gaps = findNumberGaps()
     if (gaps.length > 0) {
-      alert(`주의: 중간에 빈 번호가 있습니다: ${gaps.join(', ')}`)
+      console.log(`[Number Assignment] 번호 갭 발견:`, gaps)
     }
     
-    assignmentProgress.value = '번호 할당이 완료되었습니다!'
-    console.log(`[Number Assignment] Successfully processed ${sortedLockers.length} lockers (${batchUpdates.length} new assignments, ${sortedLockers.length - batchUpdates.length} existing numbers maintained)`)
-    
-    // Close modal after successful completion
+    // 모달 닫기
     setTimeout(() => {
       numberAssignVisible.value = false
     }, 500)

@@ -75,20 +75,36 @@
       shape-rendering="crispEdges"
     />
     
-    <!-- 락커 번호 -->
+    <!-- 락커 레이블 (하단 중앙) -->
     <text
       v-if="showNumber !== false && getDisplayNumber()"
       :x="logicalDimensions.width / 2"
-      :y="textYPosition"
+      :y="viewMode === 'front' ? (logicalDimensions.height - (3 * LOCKER_VISUAL_SCALE)) : (logicalDimensions.height / 2)"
       text-anchor="middle"
-      :dominant-baseline="textBaseline"
+      :dominant-baseline="viewMode === 'front' ? 'middle' : 'middle'"
       :font-size="fontSize"
-      :fill="textColor"
+      :fill="viewMode === 'front' ? '#ffffff' : textColor"
       font-weight="600"
       class="locker-number"
       style="user-select: none; pointer-events: none;"
     >
       {{ getDisplayNumber() }}
+    </text>
+    
+    <!-- 락커 번호 (좌측 상단 - 세로모드에서만) -->
+    <text
+      v-if="viewMode === 'front' && props.locker.lockrNo"
+      :x="4 * LOCKER_VISUAL_SCALE"
+      :y="6 * LOCKER_VISUAL_SCALE"
+      text-anchor="start"
+      dominant-baseline="middle"
+      :font-size="fontSize"
+      fill="#374151"
+      font-weight="600"
+      class="locker-number-top"
+      style="user-select: none; pointer-events: none;"
+    >
+      {{ props.locker.lockrNo }}
     </text>
     
     <!-- 회전 핸들 (선택 시만 표시) -->
@@ -269,11 +285,11 @@ const logicalDimensions = computed(() => {
   }
 })
 
-// 모서리 라운드 값 - 세로배치 모드는 5px (스케일 적용)
+// 모서리 라운드 값 - 세로배치 모드는 6px (스케일 적용)
 const cornerRadius = computed(() => {
   // front view (세로배치)일 때
   if (props.viewMode === 'front') {
-    return 2.5 * LOCKER_VISUAL_SCALE // 5px 라운딩 (2.5 * 2 스케일)
+    return 3 * LOCKER_VISUAL_SCALE // 6px 라운딩 (3 * 2 스케일)
   }
   return 2 * LOCKER_VISUAL_SCALE // 평면배치일 때는 4px 라운딩
 })
@@ -325,6 +341,11 @@ const lockerStroke = computed(() => {
   // 에러가 있는 락커는 빨간색 테두리
   if (props.hasError || props.locker.hasError) return '#ef4444'
   
+  // 세로모드에서는 더 진한 회색 테두리
+  if (props.viewMode === 'front') {
+    return '#9ca3af'  // gray-400 (더 진한 회색)
+  }
+  
   // Get base stroke color
   let baseStroke = '#D1D5DB'
   
@@ -371,16 +392,6 @@ const fontSize = computed(() => {
   }
   // 평면배치 모드에서도 약간 작은 크기
   return 10 * LOCKER_VISUAL_SCALE  // 기존 12px에서 10px로 축소
-})
-
-// 텍스트 Y 위치 계산 (세로배치 모드에서는 하단)
-const textYPosition = computed(() => {
-  if (props.viewMode === 'front') {
-    // 세로배치 모드: 라벨 배경 중앙에 위치 (3.5px 위치)
-    return logicalDimensions.value.height - (3.5 * LOCKER_VISUAL_SCALE)
-  }
-  // 평면배치 모드: 중앙에 위치
-  return logicalDimensions.value.height / 2
 })
 
 // 텍스트 정렬 기준선
@@ -438,9 +449,9 @@ const labelBackgroundPath = computed(() => {
 })
 
 const textColor = computed(() => {
-  // 세로배치 모드에서는 항상 흰색
+  // 세로배치 모드에서는 상단 좌측 배치이므로 어두운 색상 사용 (가독성 확보)
   if (props.viewMode === 'front') {
-    return '#ffffff'
+    return '#374151'  // 어두운 회색으로 가독성 확보
   }
   
   // 평면배치 모드에서는 기존 색상 로직 유지
@@ -469,7 +480,7 @@ const shouldFadeOutChildLocker = computed(() => {
          props.locker.tierLevel > 0
 })
 
-// Get the appropriate number to display based on view mode
+// Get the appropriate label to display based on view mode (for bottom center display)
 const getDisplayNumber = () => {
   // ✅ Defensive programming: Handle undefined props.locker
   if (!props.locker) return ''
@@ -478,9 +489,9 @@ const getDisplayNumber = () => {
     // In floor view, show the zone management number (only for parent lockers)
     return !props.locker.parentLockerId ? (props.locker.number || '') : ''
   } else {
-    // In front view, show the assignment number or fallback to regular number
-    // frontViewNumber가 없으면 일반 number를 표시
-    return props.locker.frontViewNumber || props.locker.number || ''
+    // In front view, show the label (lockrLabel) which contains L1, L2, etc.
+    // Fall back to other number fields if label is not set
+    return props.locker.lockrLabel || props.locker.frontViewNumber || props.locker.number || ''
   }
 }
 
