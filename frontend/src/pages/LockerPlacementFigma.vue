@@ -4104,7 +4104,22 @@ const applyRotationToMinorGroup = (minorGroup: any[]): any[] => {
 
 // 세로모드 전용: 타입 및 소그룹 기반 그룹 정보 판단
 const getActualGroupForFrontView = (prevLocker: any, currentLocker: any, minorGroups: any[]): any => {
-  // 1) 타입 정보 가져오기
+  // 1) 먼저 소그룹 멤버십 확인 (타입보다 우선)
+  let prevMinorGroup = null
+  let currentMinorGroup = null
+  
+  minorGroups.forEach((group, index) => {
+    if (group.some((l: any) => l.id === prevLocker.id)) {
+      prevMinorGroup = index
+    }
+    if (group.some((l: any) => l.id === currentLocker.id)) {
+      currentMinorGroup = index
+    }
+  })
+  
+  const sameMinorGroup = prevMinorGroup !== null && currentMinorGroup !== null && prevMinorGroup === currentMinorGroup
+  
+  // 2) 타입 정보 가져오기
   const getType = (locker: any): string => {
     // 타입ID 기반 판단
     if (locker.typeId === 'custom-1755675491548') return 'normal'  // 일반 락커
@@ -4125,31 +4140,26 @@ const getActualGroupForFrontView = (prevLocker: any, currentLocker: any, minorGr
   
   const prevType = getType(prevLocker)
   const currentType = getType(currentLocker)
+  const sameType = prevType === currentType
   
-  // 타입이 다르면 다른 그룹
-  if (prevType !== currentType) {
-    return { same: false, sameType: false, prevType, currentType }
+  // 3) 같은 소그룹이면 타입과 관계없이 같은 그룹으로 처리
+  if (sameMinorGroup) {
+    return { 
+      same: true, 
+      sameType,
+      sameMinorGroup: true,
+      prevMinorGroup,
+      currentMinorGroup,
+      prevType,
+      currentType
+    }
   }
   
-  // 2) 타입은 같지만 다른 소그룹에 있는지 확인
-  let prevMinorGroup = null
-  let currentMinorGroup = null
-  
-  minorGroups.forEach((group, index) => {
-    if (group.some((l: any) => l.id === prevLocker.id)) {
-      prevMinorGroup = index
-    }
-    if (group.some((l: any) => l.id === currentLocker.id)) {
-      currentMinorGroup = index
-    }
-  })
-  
-  const sameMinorGroup = prevMinorGroup !== null && currentMinorGroup !== null && prevMinorGroup === currentMinorGroup
-  
+  // 4) 다른 소그룹인 경우
   return { 
-    same: sameMinorGroup, 
-    sameType: true,
-    sameMinorGroup,
+    same: false, 
+    sameType,
+    sameMinorGroup: false,
     prevMinorGroup,
     currentMinorGroup,
     prevType,
@@ -4164,16 +4174,16 @@ const getGroupSpacingForFrontView = (prevLocker: any, currentLocker: any, minorG
   // Checking group spacing
   console.log('  Group info:', groupInfo)
   
-  if (!groupInfo.sameType) {
-    // 다른 타입: 20px 간격
-    console.log('  → Different type: 20px gap')
-    return 20
-  } else if (groupInfo.sameMinorGroup) {
-    // 같은 소그룹: 완전히 붙음
+  if (groupInfo.sameMinorGroup) {
+    // 같은 소그룹: 완전히 붙음 (타입과 관계없이)
     console.log('  → Same minor group: 0px gap')
     return 0
+  } else if (!groupInfo.sameType) {
+    // 다른 소그룹, 다른 타입: 20px 간격
+    console.log('  → Different type, different minor group: 20px gap')
+    return 20
   } else {
-    // 같은 타입, 다른 소그룹: 10px 간격
+    // 다른 소그룹, 같은 타입: 10px 간격
     console.log('  → Same type, different minor group: 10px gap')
     return 10
   }
