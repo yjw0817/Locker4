@@ -201,8 +201,8 @@
               <div v-if="currentViewMode === 'floor'" class="zoom-controls">
                 <button 
                   class="zoom-btn"
-                  @click="resetZoom"
-                  title="줌 리셋 (100%)"
+                  @click="autoFitLockers"
+                  title="모든 락커 보기"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="11" cy="11" r="8"/>
@@ -815,8 +815,14 @@ const FLOOR_Y = 550  // 바닥선 Y 위치 (100px 아래로 이동)
 // Log scale configuration removed - was causing syntax error
 
 // 캔버스 크기 (동적으로 조정)
-const canvasWidth = ref(1550)  // 고정 너비
-const canvasHeight = ref(720)  // 평면배치 시 720px
+// 실제 캔버스 크기는 크게 설정하여 더 많은 락커 배치 가능
+const ACTUAL_CANVAS_WIDTH = 3100  // 실제 캔버스 너비 (2배)
+const ACTUAL_CANVAS_HEIGHT = 1440  // 실제 캔버스 높이 (2배)
+const INITIAL_VIEWPORT_WIDTH = 1550  // 초기 뷰포트 너비
+const INITIAL_VIEWPORT_HEIGHT = 720  // 초기 뷰포트 높이
+
+const canvasWidth = ref(ACTUAL_CANVAS_WIDTH)  // 실제 캔버스 크기
+const canvasHeight = ref(ACTUAL_CANVAS_HEIGHT)  // 실제 캔버스 크기
 
 // 세로모드일 때 동적 viewBox 크기
 const dynamicCanvasWidth = ref(1550)
@@ -824,7 +830,7 @@ const dynamicCanvasHeight = ref(700)
 
 // 줌 및 팬 관련 상태
 const zoomLevel = ref(1)  // 현재 줌 레벨 (1 = 100%)
-const minZoom = 0.2  // 최소 줌 (20%)
+const minZoom = 0.1  // 최소 줌 (10%) - 전체 캔버스 보기
 const maxZoom = 5    // 최대 줌 (500%)
 const panOffset = ref({ x: 0, y: 0 })  // 팬 오프셋
 const isPanning = ref(false)  // 팬 진행 중인지
@@ -2067,6 +2073,8 @@ const addLocker = async () => {
     if (result && result.lockrCd) {
       // Locker saved successfully, reload to get it from server
       await loadLockers()
+      // Auto-fit zoom to show all lockers
+      autoFitLockers()
       // Find the newly created locker
       created = currentLockers.value.find(l => 
         l.x === newLocker.x && 
@@ -2288,6 +2296,8 @@ const addLockerByDoubleClick = async (type: any) => {
     if (result && result.lockrCd) {
       // Locker saved successfully, it will be loaded via loadLockers
       await loadLockers()
+      // Auto-fit zoom to show all lockers
+      autoFitLockers()
       // Find the newly created locker
       created = currentLockers.value.find(l => 
         l.x === newLocker.x && 
@@ -2407,6 +2417,77 @@ const handleWheel = (event: WheelEvent) => {
 const resetZoom = () => {
   zoomLevel.value = 1
   panOffset.value = { x: 0, y: 0 }
+}
+
+// 자동 줌 조정 함수 - 모든 락커가 화면에 보이도록
+const autoFitLockers = () => {
+  // 평면모드에서만 작동
+  if (currentViewMode.value !== 'floor') return
+  
+  // 배치된 락커가 없으면 기본 줌으로
+  if (currentLockers.value.length === 0) {
+    zoomLevel.value = 1
+    panOffset.value = { x: 0, y: 0 }
+    return
+  }
+  
+  // 모든 락커의 경계 계산
+  let minX = Infinity, minY = Infinity
+  let maxX = -Infinity, maxY = -Infinity
+  
+  currentLockers.value.forEach(locker => {
+    // 부모 락커만 계산 (tier 락커 제외)
+    if (locker.parentLockerId) return
+    
+    const left = locker.x
+    const top = locker.y
+    const right = locker.x + (locker.width || 40)
+    const bottom = locker.y + (locker.height || locker.depth || 40)
+    
+    minX = Math.min(minX, left)
+    minY = Math.min(minY, top)
+    maxX = Math.max(maxX, right)
+    maxY = Math.max(maxY, bottom)
+  })
+  
+  // 락커가 없거나 유효하지 않은 경계인 경우
+  if (minX === Infinity || minY === Infinity) {
+    zoomLevel.value = 1
+    panOffset.value = { x: 0, y: 0 }
+    return
+  }
+  
+  // 필요한 영역 크기
+  const requiredWidth = maxX - minX
+  const requiredHeight = maxY - minY
+  
+  // 여백 추가 (10%)
+  const margin = 0.1
+  const totalWidth = requiredWidth * (1 + margin)
+  const totalHeight = requiredHeight * (1 + margin)
+  
+  // 필요한 줌 레벨 계산
+  const zoomForWidth = INITIAL_VIEWPORT_WIDTH / totalWidth
+  const zoomForHeight = INITIAL_VIEWPORT_HEIGHT / totalHeight
+  let newZoom = Math.min(zoomForWidth, zoomForHeight)
+  
+  // 줌 범위 제한
+  newZoom = Math.max(minZoom, Math.min(newZoom, maxZoom))
+  
+  // 중앙 정렬을 위한 팬 오프셋 계산
+  const centerX = (minX + maxX) / 2
+  const centerY = (minY + maxY) / 2
+  const viewCenterX = INITIAL_VIEWPORT_WIDTH / (2 * newZoom)
+  const viewCenterY = INITIAL_VIEWPORT_HEIGHT / (2 * newZoom)
+  
+  // 줌과 팬 적용
+  zoomLevel.value = newZoom
+  panOffset.value = {
+    x: centerX - viewCenterX,
+    y: centerY - viewCenterY
+  }
+  
+  console.log('[AutoFit] Zoom:', newZoom, 'Pan:', panOffset.value, 'Bounds:', {minX, minY, maxX, maxY})
 }
 
 // 캔버스 마우스 다운 처리
@@ -3464,6 +3545,11 @@ const endDragLocker = () => {
   draggedLockers.value = []
   // 가이드라인 숨기기
   showAlignmentGuides.value = false
+  
+  // 드래그 종료 후 자동 줌 조정
+  if (currentViewMode.value === 'floor') {
+    autoFitLockers()
+  }
   horizontalGuides.value = []
   verticalGuides.value = []
   
@@ -7196,12 +7282,13 @@ const getCursorStyle = computed(() => {
 const computedViewBox = computed(() => {
   if (currentViewMode.value === 'front') {
     // 세로모드에서는 줌/팬 미적용
-    return `0 0 ${canvasWidth.value} ${canvasHeight.value}`
+    return `0 0 ${dynamicCanvasWidth.value} ${dynamicCanvasHeight.value}`
   }
   
   // 평면모드에서 줌과 팬 적용
-  const effectiveWidth = canvasWidth.value / zoomLevel.value
-  const effectiveHeight = canvasHeight.value / zoomLevel.value
+  // 초기 뷰포트는 1550x720으로 설정
+  const effectiveWidth = INITIAL_VIEWPORT_WIDTH / zoomLevel.value
+  const effectiveHeight = INITIAL_VIEWPORT_HEIGHT / zoomLevel.value
   const x = panOffset.value.x
   const y = panOffset.value.y
   
@@ -7246,6 +7333,14 @@ onMounted(async () => {
     isLoadingLockers.value = false
     
     console.log('All data loading completed')
+    
+    // Auto-fit zoom to show all lockers after initial load
+    if (currentViewMode.value === 'floor' && currentLockers.value.length > 0) {
+      // 약간의 지연 후 자동 줌 (DOM 업데이트 대기)
+      setTimeout(() => {
+        autoFitLockers()
+      }, 100)
+    }
     
     // Check and fix any overlapping lockers
     await nextTick()
@@ -7817,10 +7912,10 @@ onUnmounted(() => {
 
 /* 캔버스 */
 .canvas-wrapper {
-  width: 1550px; /* 고정 너비 - flex 제거 */
-  height: 720px; /* 평면배치 시 720px */
+  width: 1550px; /* 뷰포트 너비 (실제 캔버스는 3100px) */
+  height: 720px; /* 뷰포트 높이 (실제 캔버스는 1440px) */
   background: white;
-  overflow: hidden; /* 캔버스 내부 스크롤 비활성화 */
+  overflow: hidden; /* 캔버스 내부 스크롤 비활성화 - 줌/팬으로 탐색 */
   border: none; /* 경계 제거로 12px 차이 해소 */
   position: relative; /* SVG 포지셔닝용 */
   border-radius: 4px;
