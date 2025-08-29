@@ -831,7 +831,11 @@ const dynamicCanvasHeight = ref(700)
 // 줌 및 팬 관련 상태
 const zoomLevel = ref(1)  // 현재 줌 레벨 (1 = 100%)
 const minZoom = 0.1  // 최소 줌 (10%) - 전체 캔버스 보기
-const maxZoom = 5    // 최대 줌 (500%)
+// 최대 줌은 캔버스 실제 크기까지만 (뷰포트 크기 대비)
+const maxZoom = Math.min(
+  ACTUAL_CANVAS_WIDTH / INITIAL_VIEWPORT_WIDTH,
+  ACTUAL_CANVAS_HEIGHT / INITIAL_VIEWPORT_HEIGHT
+)  // 3100/1550 = 2, 1440/720 = 2 → 최대 2배
 const panOffset = ref({ x: 0, y: 0 })  // 팬 오프셋
 const isPanning = ref(false)  // 팬 진행 중인지
 const panStartPoint = ref({ x: 0, y: 0 })  // 팬 시작 지점
@@ -2374,21 +2378,16 @@ const getMousePosition = (event: MouseEvent) => {
 
 // 줌 이벤트 핸들러
 const handleWheel = (event: WheelEvent) => {
-  console.log('[Wheel Event] triggered, ctrlKey:', event.ctrlKey, 'mode:', currentViewMode.value)
-  
   // 평면모드에서만 작동 (floor mode)
   if (currentViewMode.value !== 'floor') {
-    console.log('[Wheel] Not in floor mode, ignoring')
     return
   }
   
   // Ctrl 키가 눌려있을 때만 줌
   if (!event.ctrlKey) {
-    console.log('[Wheel] Ctrl key not pressed, ignoring')
     return
   }
   
-  console.log('[Wheel] Processing zoom, deltaY:', event.deltaY)
   event.preventDefault()
   
   // 마우스 위치 (SVG 좌표계)
@@ -2405,11 +2404,32 @@ const handleWheel = (event: WheelEvent) => {
   // 마우스 위치를 중심으로 줌
   if (newZoom !== zoomLevel.value) {
     const scale = newZoom / zoomLevel.value
-    panOffset.value = {
+    const newOffset = {
       x: svgP.x - (svgP.x - panOffset.value.x) * scale,
       y: svgP.y - (svgP.y - panOffset.value.y) * scale
     }
+    
+    // 팬 오프셋을 경계 내로 제한
+    panOffset.value = clampPanOffset(newOffset, newZoom)
     zoomLevel.value = newZoom
+  }
+}
+
+// 팬 오프셋을 캔버스 경계 내로 제한하는 함수
+const clampPanOffset = (offset: { x: number, y: number }, zoom: number) => {
+  // 현재 줌 레벨에서의 뷰포트 크기
+  const viewportWidth = INITIAL_VIEWPORT_WIDTH / zoom
+  const viewportHeight = INITIAL_VIEWPORT_HEIGHT / zoom
+  
+  // 팬 가능한 최소/최대 오프셋
+  const minX = 0
+  const minY = 0
+  const maxX = Math.max(0, ACTUAL_CANVAS_WIDTH - viewportWidth)
+  const maxY = Math.max(0, ACTUAL_CANVAS_HEIGHT - viewportHeight)
+  
+  return {
+    x: Math.max(minX, Math.min(maxX, offset.x)),
+    y: Math.max(minY, Math.min(maxY, offset.y))
   }
 }
 
@@ -2482,21 +2502,21 @@ const autoFitLockers = () => {
   
   // 줌과 팬 적용
   zoomLevel.value = newZoom
-  panOffset.value = {
+  const newOffset = {
     x: centerX - viewCenterX,
     y: centerY - viewCenterY
   }
+  
+  // 팬 오프셋을 경계 내로 제한
+  panOffset.value = clampPanOffset(newOffset, newZoom)
   
   console.log('[AutoFit] Zoom:', newZoom, 'Pan:', panOffset.value, 'Bounds:', {minX, minY, maxX, maxY})
 }
 
 // 캔버스 마우스 다운 처리
 const handleCanvasMouseDown = (event) => {
-  console.log('[MouseDown] Button:', event.button, 'Mode:', currentViewMode.value)
-  
   // 평면모드에서 중간 마우스 버튼 (휠 클릭) 처리 (floor mode)
   if (currentViewMode.value === 'floor' && event.button === 1) {
-    console.log('[MouseDown] Middle button detected, starting pan')
     event.preventDefault()
     isPanning.value = true
     panStartPoint.value = {
@@ -2552,10 +2572,13 @@ const handleCanvasMouseMove = (event) => {
     const deltaX = (event.clientX - panStartPoint.value.x) / zoomLevel.value
     const deltaY = (event.clientY - panStartPoint.value.y) / zoomLevel.value
     
-    panOffset.value = {
+    const newOffset = {
       x: panOffset.value.x - deltaX,
       y: panOffset.value.y - deltaY
     }
+    
+    // 팬 오프셋을 경계 내로 제한
+    panOffset.value = clampPanOffset(newOffset, zoomLevel.value)
     
     panStartPoint.value = {
       x: event.clientX,
