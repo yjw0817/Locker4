@@ -15,14 +15,14 @@ The locker grouping system organizes lockers into hierarchical groups based on t
 
 #### Adjacent (인접)
 Lockers that are very close and facing the same direction:
-- **Distance Requirement**: At least 2 corner pairs must have distance < 43px
+- **Distance Requirement**: At least 2 corner pairs must have distance < 55px
 - **Direction Requirement**: Same door direction (identical rotation angle)
 - **Purpose**: Identifies lockers that form a cohesive unit
 
 #### Connected (연결)
 Lockers that are close but may have different orientations:
-- **Option 1**: At least 1 corner pair with distance < 43px
-- **Option 2**: At least 2 corner pairs with distance < 43px AND different door directions
+- **Option 1**: At least 1 corner pair with distance < 55px
+- **Option 2**: At least 2 corner pairs with distance < 55px AND different door directions
 - **Purpose**: Identifies lockers that are related but not necessarily aligned
 
 ## Group Hierarchy
@@ -119,7 +119,7 @@ const countCloseCornerPairs = (locker1: any, locker2: any, threshold: number): n
 ### Relationship Detection
 
 ```javascript
-const CORNER_THRESHOLD = 43 // pixels
+const CORNER_THRESHOLD = 55 // pixels
 
 // Check if two lockers are adjacent
 const isAdjacent = (locker1: any, locker2: any): boolean => {
@@ -284,7 +284,7 @@ Major Group 1 ↔ Major Group 2: 85px (separated)
 
 ```javascript
 // Threshold for corner-based proximity detection
-const CORNER_THRESHOLD = 43 // pixels
+const CORNER_THRESHOLD = 55 // pixels (updated from 43px)
 
 // Rotation normalization range
 const ROTATION_RANGE = 360 // degrees
@@ -328,7 +328,8 @@ const DEFAULT_HEIGHT = 40 // pixels
 
 ## Version History
 
-- **v2.0.0** (Current): Corner-based distance calculation with 43px threshold
+- **v2.1.0** (Current): Corner-based distance calculation with 55px threshold
+- **v2.0.0**: Corner-based distance calculation with 43px threshold
 - **v1.0.0** (Deprecated): Center-to-center distance with variable thresholds
 
 ## Related Documentation
