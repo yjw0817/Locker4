@@ -5032,27 +5032,43 @@ const findNextAvailableLabel = () => {
     ? lockerStore.lockers.filter(l => l.zoneId === selectedZone.value.id)
     : currentLockers.value
     
+  console.log('[findNextAvailableLabel] Total lockers in zone:', floorViewLockers.length)
+  
   // Extract numbers from labels (L1 -> 1, L2 -> 2, etc.)
+  // Note: LOCKR_LABEL is stored in the 'number' field when loaded from DB
   const assignedLabelNumbers = floorViewLockers
     .map(l => {
-      const label = l.lockrLabel || l.number || ''
-      const match = label.match(/^L(\d+)$/)
-      return match ? parseInt(match[1]) : 0
+      // Check both number and lockrLabel fields as LOCKR_LABEL might be in either
+      const label = l.number || l.lockrLabel || ''
+      const match = label.toString().match(/^L(\d+)$/)
+      const extractedNumber = match ? parseInt(match[1]) : 0
+      if (extractedNumber > 0) {
+        console.log(`[findNextAvailableLabel] Found label ${label} -> number ${extractedNumber}`)
+      }
+      return extractedNumber
     })
     .filter(n => n > 0)
     .sort((a, b) => a - b)
   
-  if (assignedLabelNumbers.length === 0) return 'L1'
+  console.log('[findNextAvailableLabel] Assigned numbers:', assignedLabelNumbers)
+  
+  if (assignedLabelNumbers.length === 0) {
+    console.log('[findNextAvailableLabel] No existing labels, returning L1')
+    return 'L1'
+  }
   
   // Look for gaps first
   for (let i = 1; i < assignedLabelNumbers[assignedLabelNumbers.length - 1]; i++) {
     if (!assignedLabelNumbers.includes(i)) {
+      console.log(`[findNextAvailableLabel] Found gap at ${i}, returning L${i}`)
       return `L${i}`
     }
   }
   
   // No gaps found, return next label
-  return `L${assignedLabelNumbers[assignedLabelNumbers.length - 1] + 1}`
+  const nextNumber = assignedLabelNumbers[assignedLabelNumbers.length - 1] + 1
+  console.log(`[findNextAvailableLabel] No gaps found, returning L${nextNumber}`)
+  return `L${nextNumber}`
 }
 
 // Create 2D grid from selected lockers
