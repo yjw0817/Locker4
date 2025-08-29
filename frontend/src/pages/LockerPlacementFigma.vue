@@ -4103,7 +4103,7 @@ const applyRotationToMinorGroup = (minorGroup: any[]): any[] => {
 }
 
 // 세로모드 전용: 타입 및 소그룹 기반 그룹 정보 판단
-const getActualGroupForFrontView = (prevLocker: any, currentLocker: any, minorGroups: any[]): any => {
+const getActualGroupForFrontView = (prevLocker: any, currentLocker: any, minorGroups: any[], lockerToMajorGroup?: Map<string, number>): any => {
   // 1) 먼저 소그룹 멤버십 확인 (타입보다 우선)
   let prevMinorGroup = null
   let currentMinorGroup = null
@@ -4119,7 +4119,15 @@ const getActualGroupForFrontView = (prevLocker: any, currentLocker: any, minorGr
   
   const sameMinorGroup = prevMinorGroup !== null && currentMinorGroup !== null && prevMinorGroup === currentMinorGroup
   
-  // 2) 타입 정보 가져오기
+  // 2) 대그룹 멤버십 확인
+  let sameMajorGroup = false
+  if (lockerToMajorGroup) {
+    const prevMajorGroup = lockerToMajorGroup.get(prevLocker.id)
+    const currentMajorGroup = lockerToMajorGroup.get(currentLocker.id)
+    sameMajorGroup = prevMajorGroup !== undefined && currentMajorGroup !== undefined && prevMajorGroup === currentMajorGroup
+  }
+  
+  // 3) 타입 정보 가져오기
   const getType = (locker: any): string => {
     // 타입ID 기반 판단
     if (locker.typeId === 'custom-1755675491548') return 'normal'  // 일반 락커
@@ -4142,12 +4150,13 @@ const getActualGroupForFrontView = (prevLocker: any, currentLocker: any, minorGr
   const currentType = getType(currentLocker)
   const sameType = prevType === currentType
   
-  // 3) 같은 소그룹이면 타입과 관계없이 같은 그룹으로 처리
+  // 4) 같은 소그룹이면 타입과 관계없이 같은 그룹으로 처리
   if (sameMinorGroup) {
     return { 
       same: true, 
       sameType,
       sameMinorGroup: true,
+      sameMajorGroup,
       prevMinorGroup,
       currentMinorGroup,
       prevType,
@@ -4155,11 +4164,12 @@ const getActualGroupForFrontView = (prevLocker: any, currentLocker: any, minorGr
     }
   }
   
-  // 4) 다른 소그룹인 경우
+  // 5) 다른 소그룹인 경우
   return { 
     same: false, 
     sameType,
     sameMinorGroup: false,
+    sameMajorGroup,
     prevMinorGroup,
     currentMinorGroup,
     prevType,
@@ -4168,8 +4178,8 @@ const getActualGroupForFrontView = (prevLocker: any, currentLocker: any, minorGr
 }
 
 // 세로모드 전용: 세분화된 간격 계산
-const getGroupSpacingForFrontView = (prevLocker: any, currentLocker: any, minorGroups: any[]): number => {
-  const groupInfo = getActualGroupForFrontView(prevLocker, currentLocker, minorGroups)
+const getGroupSpacingForFrontView = (prevLocker: any, currentLocker: any, minorGroups: any[], lockerToMajorGroup?: Map<string, number>): number => {
+  const groupInfo = getActualGroupForFrontView(prevLocker, currentLocker, minorGroups, lockerToMajorGroup)
   
   // Checking group spacing
   console.log(`  Group spacing between ${prevLocker.number} and ${currentLocker.number}:`, groupInfo)
@@ -4178,14 +4188,14 @@ const getGroupSpacingForFrontView = (prevLocker: any, currentLocker: any, minorG
     // 같은 소그룹: 완전히 붙음 (타입과 관계없이)
     console.log('  → Same minor group: 0px gap')
     return 0
-  } else if (!groupInfo.sameType) {
-    // 다른 소그룹, 다른 타입: 20px 간격
-    console.log('  → Different type, different minor group: 20px gap')
-    return 20
-  } else {
-    // 다른 소그룹, 같은 타입: 10px 간격
-    console.log('  → Same type, different minor group: 10px gap')
+  } else if (groupInfo.sameMajorGroup) {
+    // 같은 대그룹, 다른 소그룹: 10px 간격 (타입과 관계없이)
+    console.log('  → Same major group, different minor group: 10px gap')
     return 10
+  } else {
+    // 다른 대그룹: 20px 간격
+    console.log('  → Different major group: 20px gap')
+    return 20
   }
 }
 
@@ -4225,10 +4235,17 @@ const transformToFrontViewNew = () => {
   const allLockersSequence: any[] = []
   // 모든 소그룹을 저장할 배열
   const allMinorGroups: any[] = []
+  // 각 락커가 속한 대그룹 인덱스를 저장하는 Map
+  const lockerToMajorGroup = new Map<string, number>()
   
   sortedMajorGroups.forEach((majorGroup, majorIndex) => {
     console.log(`[Front View] Processing major group ${majorIndex + 1}:`, 
       majorGroup.map(l => `${l.number || l.id}(rot:${l.rotation || 0})`))
+    
+    // 이 대그룹의 모든 락커에 대그룹 인덱스 할당
+    majorGroup.forEach(locker => {
+      lockerToMajorGroup.set(locker.id, majorIndex)
+    })
     
     // 4. 소그룹 분류 및 정렬
     const minorGroups = findMinorGroups(majorGroup)
@@ -4262,13 +4279,13 @@ const transformToFrontViewNew = () => {
   allLockersSequence.forEach((locker, index) => {
     finalSequence.push(locker)
     
-    // 이전 락커와의 간격 계산 - allMinorGroups를 전달
+    // 이전 락커와의 간격 계산 - allMinorGroups와 lockerToMajorGroup을 전달
     if (prevLocker && index > 0) {
       // 자식 락커가 포함된 경우 spacing은 0
       let spacing = 0
       if (!prevLocker.parentLockrCd && !locker.parentLockrCd) {
         // 둘 다 부모 락커인 경우에만 그룹 스페이싱 적용
-        spacing = getGroupSpacingForFrontView(prevLocker, locker, allMinorGroups)
+        spacing = getGroupSpacingForFrontView(prevLocker, locker, allMinorGroups, lockerToMajorGroup)
       }
       currentX += spacing
       
