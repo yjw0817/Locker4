@@ -6135,13 +6135,13 @@ const testGroupingWithKnownData = () => {
 // ==========================================
 
 // ✅ UPDATED THRESHOLDS - New grouping definitions
-const ADJACENT_THRESHOLD = 35     // ≤ 35px + same direction = adjacent
-const CONNECTED_MIN = 35          // > 35px AND < 50px = connected  
-const CONNECTED_MAX = 50          // (direction irrelevant for connected)
+const ADJACENT_THRESHOLD = 10     // ≤ 10px + same direction = adjacent
+const CONNECTED_MIN = 10          // > 10px AND < 35px = connected  
+const CONNECTED_MAX = 35          // (direction irrelevant for connected)
 
 // ⚠️ CRITICAL FUNCTION - UPDATED LOGIC
 // Implementation updated with new thresholds
-// Adjacent = distance ≤ 35px + same rotation
+// Adjacent = distance ≤ 10px + same rotation
 const isAdjacent = (locker1: any, locker2: any): boolean => {
   const distance = getMinDistance(locker1, locker2)
   // 회전각을 정규화하여 비교 (270°와 -90°를 같은 값으로 처리)
@@ -6155,7 +6155,7 @@ const isAdjacent = (locker1: any, locker2: any): boolean => {
 
 // ⚠️ CRITICAL FUNCTION - UPDATED LOGIC
 // Implementation updated with new thresholds
-// Connected = 35px < distance < 50px (any rotation)
+// Connected = 10px < distance < 35px (any rotation)
 const isConnected = (locker1: any, locker2: any): boolean => {
   const distance = getMinDistance(locker1, locker2)
   const result = distance > CONNECTED_MIN && distance < CONNECTED_MAX
