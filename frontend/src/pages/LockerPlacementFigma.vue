@@ -2017,7 +2017,7 @@ const addLocker = async () => {
     zoneId: selectedZone.value.id,
     status: 'available',
     rotation: 0,
-    number: `L${findNextAvailableNumber()}`
+    number: findNextAvailableLabel()  // Use label for floor mode
   }
   
   // Creating locker
@@ -2225,7 +2225,7 @@ const addLockerByDoubleClick = async (type: any) => {
     rotation: 0,
     type: type.name,
     status: 'available',
-    number: `L${findNextAvailableNumber()}`,
+    number: findNextAvailableLabel(),  // Use label for floor mode
     zoneId: selectedZone.value.id
   }
   
@@ -2713,7 +2713,7 @@ const startDragLocker = (locker, event) => {
         }
         const newLocker = lockerStore.addLocker(copy)
         // Assign unique number after adding
-        lockerStore.updateLocker(newLocker.id, { lockrNo: `L${findNextAvailableNumber()}` })
+        lockerStore.updateLocker(newLocker.id, { lockrNo: findNextAvailableLabel() })  // Use label for duplicate
         copiesMap.set(original.id, newLocker.id)
         copiedLockers.push(newLocker)
       }
@@ -4999,7 +4999,8 @@ const showGroupingAnalysis = () => {
   showGroupingPopup.value = true
 }
 
-// Find next available number starting from the smallest gap
+// Find next available number for front view mode (정면배치모드)
+// This returns a number (1, 2, 3...) for LOCKR_NO field
 const findNextAvailableNumber = () => {
   // Get ALL lockers in the selected zone that are visible in front view (세로모드)
   const frontViewLockers = selectedZone.value 
@@ -5022,6 +5023,36 @@ const findNextAvailableNumber = () => {
   
   // No gaps found, return next number
   return assignedNumbers[assignedNumbers.length - 1] + 1
+}
+
+// Find next available label for floor view mode (평면배치모드)
+// This returns a label (L1, L2, L3...) for LOCKR_LABEL field
+const findNextAvailableLabel = () => {
+  const floorViewLockers = selectedZone.value 
+    ? lockerStore.lockers.filter(l => l.zoneId === selectedZone.value.id)
+    : currentLockers.value
+    
+  // Extract numbers from labels (L1 -> 1, L2 -> 2, etc.)
+  const assignedLabelNumbers = floorViewLockers
+    .map(l => {
+      const label = l.lockrLabel || l.number || ''
+      const match = label.match(/^L(\d+)$/)
+      return match ? parseInt(match[1]) : 0
+    })
+    .filter(n => n > 0)
+    .sort((a, b) => a - b)
+  
+  if (assignedLabelNumbers.length === 0) return 'L1'
+  
+  // Look for gaps first
+  for (let i = 1; i < assignedLabelNumbers[assignedLabelNumbers.length - 1]; i++) {
+    if (!assignedLabelNumbers.includes(i)) {
+      return `L${i}`
+    }
+  }
+  
+  // No gaps found, return next label
+  return `L${assignedLabelNumbers[assignedLabelNumbers.length - 1] + 1}`
 }
 
 // Create 2D grid from selected lockers
@@ -6648,7 +6679,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
       const newLocker = {
         ...copiedLocker,
         id: `locker-${Date.now()}-${Math.random()}`,
-        number: `L${findNextAvailableNumber()}`,
+        number: findNextAvailableLabel(),  // Use label for paste
         x: copiedLocker.x + 20,
         y: copiedLocker.y + 20,
         zoneId: selectedZone.value.id
