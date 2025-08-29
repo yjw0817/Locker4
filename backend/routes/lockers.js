@@ -158,6 +158,91 @@ router.post('/', async (req, res) => {
   }
 });
 
+// Batch update locker numbers for performance optimization
+// IMPORTANT: This route must be defined BEFORE the generic /:lockrCd route
+router.put('/batch-numbers', async (req, res) => {
+  try {
+    const { updates } = req.body;
+    
+    // 디버그: 받은 데이터 확인
+    console.log('[API] Batch number update - raw body:', JSON.stringify(req.body, null, 2));
+    
+    if (!updates || !Array.isArray(updates) || updates.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Updates array is required and cannot be empty'
+      });
+    }
+    
+    console.log(`[API] Batch number update request: ${updates.length} updates`);
+    console.log('[API] First update sample:', updates[0]);
+    
+    const connection = await pool.getConnection();
+    await connection.beginTransaction();
+    
+    try {
+      let successCount = 0;
+      const errors = [];
+      
+      for (const update of updates) {
+        if (!update.lockrCd || update.LOCKR_NO === undefined || update.LOCKR_NO === null) {
+          errors.push(`Invalid update data: ${JSON.stringify(update)}`);
+          continue;
+        }
+        
+        try {
+          const [result] = await connection.query(
+            `UPDATE lockrs SET LOCKR_NO = ?, UPDATE_DT = NOW(), UPDATE_BY = ? WHERE LOCKR_CD = ?`,
+            [update.LOCKR_NO, 'system', update.lockrCd]
+          );
+          
+          if (result.affectedRows > 0) {
+            successCount++;
+          } else {
+            errors.push(`Locker not found: ${update.lockrCd}`);
+          }
+        } catch (updateError) {
+          errors.push(`Error updating ${update.lockrCd}: ${updateError.message}`);
+        }
+      }
+      
+      if (errors.length > 0 && successCount === 0) {
+        await connection.rollback();
+        return res.status(500).json({
+          success: false,
+          error: 'All updates failed',
+          details: errors
+        });
+      }
+      
+      await connection.commit();
+      
+      console.log(`[API] Batch update completed: ${successCount} successful, ${errors.length} errors`);
+      
+      res.json({
+        success: true,
+        successCount,
+        totalRequested: updates.length,
+        errors: errors.length > 0 ? errors : undefined
+      });
+      
+    } catch (transactionError) {
+      await connection.rollback();
+      throw transactionError;
+    } finally {
+      connection.release();
+    }
+    
+  } catch (error) {
+    console.error('[API] Error in batch number update:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Batch update failed',
+      details: error.message
+    });
+  }
+});
+
 // Update locker
 router.put('/:lockrCd', async (req, res) => {
   try {
@@ -507,89 +592,7 @@ router.post('/:lockrCd/tiers', async (req, res) => {
   }
 });
 
-// Batch update locker numbers for performance optimization
-router.put('/batch-numbers', async (req, res) => {
-  try {
-    const { updates } = req.body;
-    
-    // 디버그: 받은 데이터 확인
-    console.log('[API] Batch number update - raw body:', JSON.stringify(req.body, null, 2));
-    
-    if (!updates || !Array.isArray(updates) || updates.length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'Updates array is required and cannot be empty'
-      });
-    }
-    
-    console.log(`[API] Batch number update request: ${updates.length} updates`);
-    console.log('[API] First update sample:', updates[0]);
-    
-    const connection = await pool.getConnection();
-    await connection.beginTransaction();
-    
-    try {
-      let successCount = 0;
-      const errors = [];
-      
-      for (const update of updates) {
-        if (!update.lockrCd || !update.LOCKR_NO) {
-          errors.push(`Invalid update data: ${JSON.stringify(update)}`);
-          continue;
-        }
-        
-        try {
-          const [result] = await connection.query(
-            `UPDATE lockrs SET LOCKR_NO = ?, UPDATE_DT = NOW(), UPDATE_BY = ? WHERE LOCKR_CD = ?`,
-            [update.LOCKR_NO, 'system', update.lockrCd]
-          );
-          
-          if (result.affectedRows > 0) {
-            successCount++;
-          } else {
-            errors.push(`Locker not found: ${update.lockrCd}`);
-          }
-        } catch (updateError) {
-          errors.push(`Error updating ${update.lockrCd}: ${updateError.message}`);
-        }
-      }
-      
-      if (errors.length > 0 && successCount === 0) {
-        await connection.rollback();
-        return res.status(500).json({
-          success: false,
-          error: 'All updates failed',
-          details: errors
-        });
-      }
-      
-      await connection.commit();
-      
-      console.log(`[API] Batch update completed: ${successCount} successful, ${errors.length} errors`);
-      
-      res.json({
-        success: true,
-        successCount,
-        totalRequested: updates.length,
-        errors: errors.length > 0 ? errors : undefined
-      });
-      
-    } catch (transactionError) {
-      await connection.rollback();
-      throw transactionError;
-    } finally {
-      connection.release();
-    }
-    
-  } catch (error) {
-    console.error('[API] Error in batch number update:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Batch update failed',
-      details: error.message
-    });
-  }
-});
+// [REMOVED - Moved before generic /:lockrCd route to fix routing conflict]
 
 // Clean up duplicate tier lockers
 router.post('/cleanup-duplicates', async (req, res) => {
