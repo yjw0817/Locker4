@@ -2023,6 +2023,7 @@ const addLocker = async () => {
   // Creating locker
   
   // Save to database first (this will also add to store via loadLockers)
+  let created = null
   try {
     const saveData = {
       LOCKR_KND: selectedZone.value.id,
@@ -2036,12 +2037,23 @@ const addLocker = async () => {
     
     const result = await saveLocker(saveData)
     if (result && result.lockrCd) {
-      // Locker saved
+      // Locker saved successfully, reload to get it from server
+      await loadLockers()
+      // Find the newly created locker
+      created = currentLockers.value.find(l => 
+        l.x === newLocker.x && 
+        l.y === newLocker.y && 
+        l.number === newLocker.number
+      )
     }
   } catch (error) {
     console.error('[Database] Failed to save locker:', error)
     // If save fails, add locally only
-    const created = lockerStore.addLocker(newLocker)
+    created = lockerStore.addLocker(newLocker)
+  }
+  
+  // Select the newly added locker if created
+  if (created) {
     selectedLocker.value = created
     selectedLockerIds.value.clear()
     selectedLockerIds.value.add(created.id)
