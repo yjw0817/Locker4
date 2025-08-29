@@ -5119,11 +5119,16 @@ const assignNumbers = async () => {
     
     // 디버그: 첫 번째 락커의 데이터 구조 확인
     if (allSelectedLockers.length > 0) {
-      console.log('[Number Assignment] 샘플 락커 데이터:', {
+      console.log('[Number Assignment] 샘플 락커 전체 데이터:', allSelectedLockers[0])
+      console.log('[Number Assignment] 샘플 락커 주요 필드:', {
         id: allSelectedLockers[0].id,
         lockrNo: allSelectedLockers[0].lockrNo,
+        lockrNoType: typeof allSelectedLockers[0].lockrNo,
         number: allSelectedLockers[0].number,
-        lockrCd: allSelectedLockers[0].lockrCd
+        numberType: typeof allSelectedLockers[0].number,
+        lockrCd: allSelectedLockers[0].lockrCd,
+        LOCKR_NO: allSelectedLockers[0].LOCKR_NO,
+        LOCKR_NO_Type: typeof allSelectedLockers[0].LOCKR_NO
       })
     }
     
@@ -5131,13 +5136,26 @@ const assignNumbers = async () => {
     const lockersWithNumbers = []
     const lockersWithoutNumbers = []
     
-    allSelectedLockers.forEach(locker => {
+    allSelectedLockers.forEach((locker, idx) => {
       // lockrNo가 숫자이고 0보다 큰 경우에만 번호가 있는 것으로 간주
-      const hasNumber = locker.lockrNo && typeof locker.lockrNo === 'number' && locker.lockrNo > 0
+      // 문자열일 수도 있으므로 Number로 변환 시도
+      const lockrNoValue = locker.lockrNo || locker.LOCKR_NO || locker.number
+      const lockrNoNumber = Number(lockrNoValue)
+      const hasNumber = !isNaN(lockrNoNumber) && lockrNoNumber > 0
       
-      console.log(`[Number Assignment] 락커 ${locker.id.slice(-4)}: lockrNo=${locker.lockrNo}, hasNumber=${hasNumber}`)
+      if (idx < 3) {  // 처음 3개만 상세 로그
+        console.log(`[Number Assignment] 락커 ${idx+1} 상세:`, {
+          id: locker.id.slice(-4),
+          lockrNo: locker.lockrNo,
+          LOCKR_NO: locker.LOCKR_NO,
+          number: locker.number,
+          converted: lockrNoNumber,
+          hasNumber: hasNumber
+        })
+      }
       
       if (hasNumber) {
+        locker.lockrNo = lockrNoNumber  // 숫자로 정규화
         lockersWithNumbers.push(locker)
       } else {
         lockersWithoutNumbers.push(locker)
