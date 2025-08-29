@@ -4172,7 +4172,7 @@ const getGroupSpacingForFrontView = (prevLocker: any, currentLocker: any, minorG
   const groupInfo = getActualGroupForFrontView(prevLocker, currentLocker, minorGroups)
   
   // Checking group spacing
-  console.log('  Group info:', groupInfo)
+  console.log(`  Group spacing between ${prevLocker.number} and ${currentLocker.number}:`, groupInfo)
   
   if (groupInfo.sameMinorGroup) {
     // 같은 소그룹: 완전히 붙음 (타입과 관계없이)
