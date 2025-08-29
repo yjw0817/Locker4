@@ -5085,9 +5085,20 @@ const assignNumbers = async () => {
       currentLockers.value.find(l => l.id === id)
     ).filter(Boolean)
   
-  // Separate lockers with and without numbers
-  const lockersWithNumbers = allSelectedLockers.filter(l => l.lockrNo && l.lockrNo > 0)
-  const selectedLockers = allSelectedLockers.filter(l => !l.lockrNo || l.lockrNo <= 0)
+  // Debug: Check locker data structure
+  if (allSelectedLockers.length > 0) {
+    console.log('[Number Assignment] Sample locker data:', allSelectedLockers[0])
+  }
+  
+  // Separate lockers with and without numbers - check both lockrNo and number fields
+  const lockersWithNumbers = allSelectedLockers.filter(l => {
+    const hasNumber = (l.lockrNo && l.lockrNo > 0) || (l.number && l.number !== '' && l.number !== 'L0')
+    return hasNumber
+  })
+  const selectedLockers = allSelectedLockers.filter(l => {
+    const hasNumber = (l.lockrNo && l.lockrNo > 0) || (l.number && l.number !== '' && l.number !== 'L0')
+    return !hasNumber
+  })
   
   console.log(`[Number Assignment] Selected: ${allSelectedLockers.length} total, ${lockersWithNumbers.length} with numbers, ${selectedLockers.length} without numbers`)
   
