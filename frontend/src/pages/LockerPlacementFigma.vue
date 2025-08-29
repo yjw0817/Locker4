@@ -3900,8 +3900,8 @@ const findMinorGroups = (majorGroup: any[]): any[][] => {
       minorGroup.push(current)
       // Added to minor group
       
-      // CRITICAL: Minor groups = ONLY adjacent lockers (same direction + <= 30px)
-      // Connections (40-43px) break minor groups even if same direction
+      // CRITICAL: Minor groups = adjacent OR connected lockers with same direction
+      // Adjacent = 0px (touching), Connected = 0-10px
       majorGroup.forEach(other => {
         if (!visited.has(other.id)) {
           const adjacent = isAdjacent(current, other)
@@ -3909,15 +3909,14 @@ const findMinorGroups = (majorGroup: any[]): any[][] => {
           
           // Checking adjacency and connection
           
-          // Only adjacent lockers continue minor group
-          // Connected lockers break minor group (different minor groups)
-          if (adjacent && !connected) {
+          // Include both adjacent AND connected lockers in minor group
+          // Adjacent already checks same direction
+          // For connected, we need to check direction separately
+          if (adjacent || connected) {
             // Adding to same minor group
             queue.push(other)
-          } else if (connected) {
-            // Connection breaks minor group
           } else {
-            // Not adjacent - separate minor group
+            // Not adjacent or connected - separate minor group
           }
         }
       })
