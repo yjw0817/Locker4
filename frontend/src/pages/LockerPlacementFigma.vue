@@ -198,7 +198,7 @@
               </button>
               
               <!-- 줌 컨트롤 - 평면배치 모드에서만 표시 -->
-              <div v-if="currentViewMode === 'flat'" class="zoom-controls">
+              <div v-if="currentViewMode === 'floor'" class="zoom-controls">
                 <button 
                   class="zoom-btn"
                   @click="resetZoom"
@@ -2364,12 +2364,21 @@ const getMousePosition = (event: MouseEvent) => {
 
 // 줌 이벤트 핸들러
 const handleWheel = (event: WheelEvent) => {
-  // 평면모드에서만 작동
-  if (currentViewMode.value !== 'flat') return
+  console.log('[Wheel Event] triggered, ctrlKey:', event.ctrlKey, 'mode:', currentViewMode.value)
+  
+  // 평면모드에서만 작동 (floor mode)
+  if (currentViewMode.value !== 'floor') {
+    console.log('[Wheel] Not in floor mode, ignoring')
+    return
+  }
   
   // Ctrl 키가 눌려있을 때만 줌
-  if (!event.ctrlKey) return
+  if (!event.ctrlKey) {
+    console.log('[Wheel] Ctrl key not pressed, ignoring')
+    return
+  }
   
+  console.log('[Wheel] Processing zoom, deltaY:', event.deltaY)
   event.preventDefault()
   
   // 마우스 위치 (SVG 좌표계)
@@ -2402,8 +2411,11 @@ const resetZoom = () => {
 
 // 캔버스 마우스 다운 처리
 const handleCanvasMouseDown = (event) => {
-  // 평면모드에서 중간 마우스 버튼 (휠 클릭) 처리
-  if (currentViewMode.value === 'flat' && event.button === 1) {
+  console.log('[MouseDown] Button:', event.button, 'Mode:', currentViewMode.value)
+  
+  // 평면모드에서 중간 마우스 버튼 (휠 클릭) 처리 (floor mode)
+  if (currentViewMode.value === 'floor' && event.button === 1) {
+    console.log('[MouseDown] Middle button detected, starting pan')
     event.preventDefault()
     isPanning.value = true
     panStartPoint.value = {
@@ -2454,8 +2466,8 @@ const handleCanvasMouseDown = (event) => {
 
 // 캔버스 마우스 이동 처리
 const handleCanvasMouseMove = (event) => {
-  // 평면모드에서 팬 처리
-  if (currentViewMode.value === 'flat' && isPanning.value) {
+  // 평면모드에서 팬 처리 (floor mode)
+  if (currentViewMode.value === 'floor' && isPanning.value) {
     const deltaX = (event.clientX - panStartPoint.value.x) / zoomLevel.value
     const deltaY = (event.clientY - panStartPoint.value.y) / zoomLevel.value
     
@@ -2499,8 +2511,8 @@ const handleCanvasMouseMove = (event) => {
 
 // 캔버스 마우스 업 처리
 const handleCanvasMouseUp = (event) => {
-  // 평면모드에서 팬 종료
-  if (currentViewMode.value === 'flat' && isPanning.value) {
+  // 평면모드에서 팬 종료 (floor mode)
+  if (currentViewMode.value === 'floor' && isPanning.value) {
     isPanning.value = false
     return
   }
