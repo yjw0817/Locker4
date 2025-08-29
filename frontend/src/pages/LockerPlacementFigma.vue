@@ -3877,8 +3877,9 @@ const areFullyAdjacent = (locker1: any, locker2: any): boolean => {
 // 2. 다른 문방향 = 각각 다른 소그룹 (인접해도)
 // 3. 같은 문방향이지만 인접하지 않음 = 각각 다른 소그룹 (연결만 되어있어도)
 // ⚠️ CRITICAL FUNCTION - MINOR GROUP DETECTION  
-// DO NOT MODIFY - Implements "연결은 각기 다른 소그룹으로 나뉜다" rule
-// Creates minor groups using ONLY Adjacent relationships (connections break groups)
+// CORNER-BASED MINOR GROUP FORMATION
+// Creates minor groups using ONLY Adjacent relationships
+// Minor Group = Adjacent lockers (2+ corners < 43px + same direction) OR single lockers
 const findMinorGroups = (majorGroup: any[]): any[][] => {
   const minorGroups: any[][] = []
   const visited = new Set<string>()
@@ -3900,24 +3901,18 @@ const findMinorGroups = (majorGroup: any[]): any[][] => {
       minorGroup.push(current)
       // Added to minor group
       
-      // CRITICAL: Minor groups = adjacent OR connected lockers with same direction
-      // Adjacent = 0px (touching), Connected = 0-10px
+      // CRITICAL: Minor groups = ONLY adjacent lockers
+      // Adjacent = 2+ corner pairs < 43px AND same direction
       majorGroup.forEach(other => {
         if (!visited.has(other.id)) {
           const adjacent = isAdjacent(current, other)
-          const connected = isConnected(current, other)
           
-          // Checking adjacency and connection
-          
-          // Include both adjacent AND connected lockers in minor group
-          // Adjacent already checks same direction
-          // For connected, we need to check direction separately
-          if (adjacent || connected) {
-            // Adding to same minor group
+          // Only include adjacent lockers in minor group
+          if (adjacent) {
+            // Adding to same minor group (adjacent)
             queue.push(other)
-          } else {
-            // Not adjacent or connected - separate minor group
           }
+          // Connected lockers form separate minor groups
         }
       })
     }
@@ -3936,19 +3931,113 @@ const findMinorGroups = (majorGroup: any[]): any[][] => {
   return minorGroups
 }
 
-// 소그룹 우선순위 정렬
-const sortMinorGroups = (minorGroups: any[][]): any[][] => {
-  return minorGroups.sort((a, b) => {
-    const aTopLeft = getTopLeftLocker(a)
-    const bTopLeft = getTopLeftLocker(b)
-    
-    // 위쪽 우선
-    if (Math.abs(aTopLeft.y - bTopLeft.y) > 1) {
-      return aTopLeft.y - bTopLeft.y
+// Find the bottom-most or earliest position in clockwise direction
+const findClockwiseStart = (minorGroups: any[][]): any => {
+  let bottomMost: any = null
+  let bottomY = -Infinity
+  
+  for (const group of minorGroups) {
+    for (const locker of group) {
+      if (!bottomMost || locker.y > bottomY) {
+        bottomY = locker.y
+        bottomMost = locker
+      }
     }
-    // 같은 높이면 왼쪽 우선
-    return aTopLeft.x - bTopLeft.x
-  })
+  }
+  
+  return bottomMost
+}
+
+// Get the minor group containing a specific locker
+const getMinorGroupContaining = (locker: any, minorGroups: any[][]): any[] | null => {
+  for (const group of minorGroups) {
+    if (group.some(l => l.id === locker.id)) {
+      return group
+    }
+  }
+  return null
+}
+
+// Find next connected minor group in clockwise direction
+const findNextConnectedGroup = (currentGroup: any[], visitedGroups: Set<any[]>, minorGroups: any[][]): any[] | null => {
+  // Find all connected groups that haven't been visited
+  const connectedGroups: { group: any[], angle: number }[] = []
+  
+  for (const group of minorGroups) {
+    if (visitedGroups.has(group)) continue
+    
+    // Check if this group is connected to current group
+    let isConnectedToGroup = false
+    for (const locker1 of currentGroup) {
+      for (const locker2 of group) {
+        if (isConnected(locker1, locker2)) {
+          isConnectedToGroup = true
+          
+          // Calculate angle for clockwise ordering
+          const dx = locker2.x - locker1.x
+          const dy = locker2.y - locker1.y
+          let angle = Math.atan2(dy, dx) * 180 / Math.PI
+          // Convert to 0-360 range where 0 is right, 90 is down, 180 is left, 270 is up
+          if (angle < 0) angle += 360
+          
+          connectedGroups.push({ group, angle })
+          break
+        }
+      }
+      if (isConnectedToGroup) break
+    }
+  }
+  
+  if (connectedGroups.length === 0) return null
+  
+  // Sort by angle to get clockwise order
+  connectedGroups.sort((a, b) => a.angle - b.angle)
+  
+  return connectedGroups[0].group
+}
+
+// 소그룹 시계방향 순회 정렬
+const sortMinorGroups = (minorGroups: any[][]): any[][] => {
+  if (minorGroups.length <= 1) return minorGroups
+  
+  const sortedGroups: any[][] = []
+  const visitedGroups = new Set<any[]>()
+  
+  // Find starting point (bottom-most locker)
+  const startLocker = findClockwiseStart(minorGroups)
+  const startGroup = getMinorGroupContaining(startLocker, minorGroups)
+  
+  if (!startGroup) {
+    // Fallback to original sorting if no valid start
+    return minorGroups.sort((a, b) => {
+      const aTopLeft = getTopLeftLocker(a)
+      const bTopLeft = getTopLeftLocker(b)
+      
+      if (Math.abs(aTopLeft.y - bTopLeft.y) > 1) {
+        return aTopLeft.y - bTopLeft.y
+      }
+      return aTopLeft.x - bTopLeft.x
+    })
+  }
+  
+  // Start clockwise traversal
+  let currentGroup: any[] | null = startGroup
+  while (currentGroup && !visitedGroups.has(currentGroup)) {
+    sortedGroups.push(currentGroup)
+    visitedGroups.add(currentGroup)
+    
+    // Find next connected group in clockwise direction
+    currentGroup = findNextConnectedGroup(currentGroup, visitedGroups, minorGroups)
+  }
+  
+  // Add any remaining unvisited groups (isolated groups)
+  for (const group of minorGroups) {
+    if (!visitedGroups.has(group)) {
+      sortedGroups.push(group)
+    }
+  }
+  
+  return sortedGroups
 }
 
 // 소그룹에 회전 처리 적용 및 순서 조정
@@ -4941,25 +5030,10 @@ const showGroupingAnalysis = () => {
     // 2. Sort major groups by front view order (same as 세로배치)
     const sortedMajorGroups = sortMajorGroups(majorGroups)
     
-    // 3. Collect connection relationships for display
-    const connections: string[] = []
-    for (let i = 0; i < lockers.length; i++) {
-      for (let j = i + 1; j < lockers.length; j++) {
-        const locker1 = lockers[i]
-        const locker2 = lockers[j]
-        const distance = getMinDistance(locker1, locker2)
-        
-        if (isConnected(locker1, locker2)) {
-          const l1 = locker1.number || locker1.id
-          const l2 = locker2.number || locker2.id
-          connections.push(`${l1} ↔ ${l2} (${distance.toFixed(2)}px, 연결)`)
-        }
-      }
-    }
-    
-    // 4. Display in front view order
+    // 3. Display in front view order with distance information
     sortedMajorGroups.forEach((majorGroup, majorIndex) => {
       result += `대그룹 ${majorIndex + 1} (${majorGroup.length}개 락커):\n`
+      result += '━━━━━━━━━━━━━━━━━━━━━\n'
       
       // Find and sort minor groups within each major group
       const minorGroups = findMinorGroups(majorGroup)
@@ -4979,29 +5053,80 @@ const showGroupingAnalysis = () => {
         if (minorGroup.length === 1) {
           reason = '단독'
         } else {
-          const firstRotation = minorGroup[0].rotation || 0
-          const allSameRotation = minorGroup.every(l => (l.rotation || 0) === firstRotation)
-          
-          if (allSameRotation) {
-            reason = '같은방향+인접'
-          } else {
-            reason = '다른방향+인접'
-          }
+          reason = '인접 (같은방향)'
         }
         
         result += `  소그룹 ${majorIndex + 1}-${minorIndex + 1}: ${lockerDescs} - ${reason}\n`
+        
+        // Show distances within minor group (adjacent lockers)
+        if (minorGroup.length > 1) {
+          result += '    소그룹 내 거리:\n'
+          for (let i = 0; i < minorGroup.length - 1; i++) {
+            for (let j = i + 1; j < minorGroup.length; j++) {
+              if (isAdjacent(minorGroup[i], minorGroup[j])) {
+                const distance = getMinCornerDistance(minorGroup[i], minorGroup[j])
+                const l1 = minorGroup[i].number || minorGroup[i].id
+                const l2 = minorGroup[j].number || minorGroup[j].id
+                result += `      ${l1} ↔ ${l2}: ${distance.toFixed(2)}px\n`
+              }
+            }
+          }
+        }
       })
+      
+      // Show distances between minor groups within this major group
+      if (sortedMinorGroups.length > 1) {
+        result += '  소그룹 간 거리:\n'
+        for (let i = 0; i < sortedMinorGroups.length - 1; i++) {
+          for (let j = i + 1; j < sortedMinorGroups.length; j++) {
+            // Find minimum distance between any two lockers from different minor groups
+            let minDist = Infinity
+            let closestPair = { l1: '', l2: '' }
+            
+            for (const locker1 of sortedMinorGroups[i]) {
+              for (const locker2 of sortedMinorGroups[j]) {
+                const dist = getMinCornerDistance(locker1, locker2)
+                if (dist < minDist) {
+                  minDist = dist
+                  closestPair.l1 = locker1.number || locker1.id
+                  closestPair.l2 = locker2.number || locker2.id
+                }
+              }
+            }
+            
+            result += `    소그룹 ${majorIndex + 1}-${i + 1} ↔ 소그룹 ${majorIndex + 1}-${j + 1}: ${minDist.toFixed(2)}px (${closestPair.l1} - ${closestPair.l2})\n`
+          }
+        }
+      }
       
       result += '\n'
     })
     
-    // 5. Show connection relationships
-    if (connections.length > 0) {
-      result += '연결 관계:\n'
+    // 4. Show distances between major groups
+    if (sortedMajorGroups.length > 1) {
+      result += '대그룹 간 거리:\n'
       result += '━━━━━━━━━━━━━━━━━━━━━\n'
-      connections.forEach(conn => {
-        result += `${conn}\n`
-      })
+      
+      for (let i = 0; i < sortedMajorGroups.length - 1; i++) {
+        for (let j = i + 1; j < sortedMajorGroups.length; j++) {
+          // Find minimum distance between any two lockers from different major groups
+          let minDist = Infinity
+          let closestPair = { l1: '', l2: '' }
+          
+          for (const locker1 of sortedMajorGroups[i]) {
+            for (const locker2 of sortedMajorGroups[j]) {
+              const dist = getMinCornerDistance(locker1, locker2)
+              if (dist < minDist) {
+                minDist = dist
+                closestPair.l1 = locker1.number || locker1.id
+                closestPair.l2 = locker2.number || locker2.id
+              }
+            }
+          }
+          
+          result += `  대그룹 ${i + 1} ↔ 대그룹 ${j + 1}: ${minDist.toFixed(2)}px (${closestPair.l1} - ${closestPair.l2})\n`
+        }
+      }
       result += '\n'
     }
     
@@ -6126,40 +6251,119 @@ const testGroupingWithKnownData = () => {
 }
 
 // ==========================================
-// CRITICAL: WORKING GROUPING SYSTEM
+// CRITICAL: CORNER-BASED GROUPING SYSTEM V2.0
 // ⚠️ DO NOT MODIFY WITHOUT APPROVAL
-// Last verified working: 2025-08-25
-// Test case: L1-L6 configuration produces 1 major group, 2 minor groups
+// Last verified working: 2025-08-29
+// Uses corner-to-corner distance calculations (16 combinations)
 // Documentation: /docs/grouping-system-final.md
 // ==========================================
 
-// ✅ UPDATED THRESHOLDS - New grouping definitions
-const ADJACENT_THRESHOLD = 0      // = 0px + same direction = adjacent (touching)
-const CONNECTED_MIN = 0           // > 0px AND < 10px = connected  
-const CONNECTED_MAX = 10          // (direction irrelevant for connected)
+// ✅ CORNER-BASED THRESHOLD - New grouping definition
+const CORNER_THRESHOLD = 43 // pixels - threshold for corner proximity
 
-// ⚠️ CRITICAL FUNCTION - UPDATED LOGIC
-// Implementation updated with new thresholds
-// Adjacent = distance = 0px + same rotation (touching)
+// Type definition for points
+interface Point {
+  x: number
+  y: number
+}
+
+// Get all 4 corners of a locker considering rotation
+const getLockerCorners = (locker: any): Point[] => {
+  const x = locker.x || locker.left || 0
+  const y = locker.y || locker.top || 0
+  const width = locker.width || 60
+  const height = locker.height || locker.depth || 40
+  const rotation = (locker.rotation || 0) * Math.PI / 180
+  const cx = x + width / 2
+  const cy = y + height / 2
+  
+  // Define corners relative to center
+  const corners = [
+    { x: -width/2, y: -height/2 }, // Top-left
+    { x: width/2, y: -height/2 },  // Top-right
+    { x: width/2, y: height/2 },   // Bottom-right
+    { x: -width/2, y: height/2 }   // Bottom-left
+  ]
+  
+  // Apply rotation and translate to world coordinates
+  return corners.map(corner => ({
+    x: cx + corner.x * Math.cos(rotation) - corner.y * Math.sin(rotation),
+    y: cy + corner.x * Math.sin(rotation) + corner.y * Math.cos(rotation)
+  }))
+}
+
+// Calculate minimum distance between two lockers using corner points
+const getMinCornerDistance = (locker1: any, locker2: any): number => {
+  const corners1 = getLockerCorners(locker1)
+  const corners2 = getLockerCorners(locker2)
+  let minDistance = Infinity
+  
+  // Check all 16 corner combinations
+  for (const c1 of corners1) {
+    for (const c2 of corners2) {
+      const distance = Math.sqrt(
+        Math.pow(c1.x - c2.x, 2) + 
+        Math.pow(c1.y - c2.y, 2)
+      )
+      minDistance = Math.min(minDistance, distance)
+    }
+  }
+  
+  return minDistance
+}
+
+// Count corner pairs within threshold distance
+const countCloseCornerPairs = (locker1: any, locker2: any, threshold: number): number => {
+  const corners1 = getLockerCorners(locker1)
+  const corners2 = getLockerCorners(locker2)
+  let count = 0
+  
+  for (const c1 of corners1) {
+    for (const c2 of corners2) {
+      const distance = Math.sqrt(
+        Math.pow(c1.x - c2.x, 2) + 
+        Math.pow(c1.y - c2.y, 2)
+      )
+      if (distance < threshold) {
+        count++
+      }
+    }
+  }
+  
+  return count
+}
+
+// ⚠️ CRITICAL FUNCTION - CORNER-BASED ADJACENT CHECK
+// Adjacent = 2+ corner pairs < 43px AND same door direction
 const isAdjacent = (locker1: any, locker2: any): boolean => {
-  const distance = getMinDistance(locker1, locker2)
-  // 회전각을 정규화하여 비교 (270°와 -90°를 같은 값으로 처리)
+  const closeCornerPairs = countCloseCornerPairs(locker1, locker2, CORNER_THRESHOLD)
   const rotation1 = normalizeRotation(locker1.rotation || 0)
   const rotation2 = normalizeRotation(locker2.rotation || 0)
   const sameDirection = rotation1 === rotation2
-  const result = distance <= ADJACENT_THRESHOLD && sameDirection
-  // Adjacency check - logging removed
-  return result
+  
+  // Adjacent: 2+ close corner pairs AND same direction
+  return closeCornerPairs >= 2 && sameDirection
 }
 
-// ⚠️ CRITICAL FUNCTION - UPDATED LOGIC
-// Implementation updated with new thresholds
-// Connected = 0px < distance < 10px (any rotation)
+// ⚠️ CRITICAL FUNCTION - CORNER-BASED CONNECTED CHECK
+// Connected = 1+ corner pair < 43px OR (2+ corner pairs < 43px AND different direction)
 const isConnected = (locker1: any, locker2: any): boolean => {
-  const distance = getMinDistance(locker1, locker2)
-  const result = distance > CONNECTED_MIN && distance < CONNECTED_MAX
-  // Connection check - logging removed
-  return result
+  const closeCornerPairs = countCloseCornerPairs(locker1, locker2, CORNER_THRESHOLD)
+  
+  if (closeCornerPairs >= 1) {
+    // Connected if at least 1 corner pair is close
+    return true
+  }
+  
+  // Also connected if 2+ corner pairs are close with different directions
+  if (closeCornerPairs >= 2) {
+    const rotation1 = normalizeRotation(locker1.rotation || 0)
+    const rotation2 = normalizeRotation(locker2.rotation || 0)
+    const differentDirection = rotation1 !== rotation2
+    return differentDirection
+  }
+  
+  return false
 }
 
 // ⚠️ CRITICAL FUNCTION - MAJOR GROUP DETECTION
