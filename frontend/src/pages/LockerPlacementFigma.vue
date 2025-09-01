@@ -2382,8 +2382,8 @@ const getMousePosition = (event: MouseEvent) => {
 
 // 줌 이벤트 핸들러
 const handleWheel = (event: WheelEvent) => {
-  // 평면모드에서만 작동 (floor mode)
-  if (currentViewMode.value !== 'floor') {
+  // 평면모드(floor)와 세로배치(front) 모드에서만 작동
+  if (currentViewMode.value !== 'floor' && currentViewMode.value !== 'front') {
     return
   }
   
@@ -2532,8 +2532,8 @@ const autoFitLockers = () => {
 
 // 캔버스 마우스 다운 처리
 const handleCanvasMouseDown = (event) => {
-  // 평면모드에서 중간 마우스 버튼 (휠 클릭) 처리 (floor mode)
-  if (currentViewMode.value === 'floor' && event.button === 1) {
+  // 평면모드(floor)와 세로배치(front) 모드에서 중간 마우스 버튼 (휠 클릭) 처리
+  if ((currentViewMode.value === 'floor' || currentViewMode.value === 'front') && event.button === 1) {
     event.preventDefault()
     isPanning.value = true
     panStartPoint.value = {
@@ -2584,8 +2584,8 @@ const handleCanvasMouseDown = (event) => {
 
 // 캔버스 마우스 이동 처리
 const handleCanvasMouseMove = (event) => {
-  // 평면모드에서 팬 처리 (floor mode)
-  if (currentViewMode.value === 'floor' && isPanning.value) {
+  // 평면모드(floor)와 세로배치(front) 모드에서 팬 처리
+  if ((currentViewMode.value === 'floor' || currentViewMode.value === 'front') && isPanning.value) {
     const deltaX = (event.clientX - panStartPoint.value.x) / zoomLevel.value
     const deltaY = (event.clientY - panStartPoint.value.y) / zoomLevel.value
     
@@ -2632,8 +2632,8 @@ const handleCanvasMouseMove = (event) => {
 
 // 캔버스 마우스 업 처리
 const handleCanvasMouseUp = (event) => {
-  // 평면모드에서 팬 종료 (floor mode)
-  if (currentViewMode.value === 'floor' && isPanning.value) {
+  // 평면모드(floor)와 세로배치(front) 모드에서 팬 종료
+  if ((currentViewMode.value === 'floor' || currentViewMode.value === 'front') && isPanning.value) {
     isPanning.value = false
     return
   }
