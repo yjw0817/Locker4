@@ -197,16 +197,16 @@
                 <span>그룹핑 확인</span>
               </button>
               
-              <!-- 줌 컨트롤 - 평면배치 모드에서만 표시 -->
-              <div v-if="currentViewMode === 'floor'" class="zoom-controls">
+              <!-- 줌 컨트롤 - 평면배치와 정면배치 모드에서 표시 -->
+              <div v-if="currentViewMode === 'floor' || currentViewMode === 'front'" class="zoom-controls">
                 <button 
                   class="zoom-btn"
                   @click="autoFitLockers"
-                  title="모든 락커 보기"
+                  title="모든 락커가 화면에 맞춤 (클릭)"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="8"/>
-                    <path d="m21 21-4.35-4.35"/>
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <path d="M7 7h.01M7 12h.01M7 17h.01M12 7h.01M12 12h.01M12 17h.01M17 7h.01M17 12h.01M17 17h.01"/>
                   </svg>
                   <span>{{ Math.round(zoomLevel * 100) }}%</span>
                 </button>
@@ -2470,9 +2470,6 @@ const resetZoom = () => {
 
 // 자동 줌 조정 함수 - 모든 락커가 화면에 보이도록
 const autoFitLockers = () => {
-  // 평면모드에서만 작동
-  if (currentViewMode.value !== 'floor') return
-  
   // 배치된 락커가 없으면 기본 줌으로
   if (currentLockers.value.length === 0) {
     zoomLevel.value = 1
@@ -2484,14 +2481,31 @@ const autoFitLockers = () => {
   let minX = Infinity, minY = Infinity
   let maxX = -Infinity, maxY = -Infinity
   
+  // Visual scale for display
+  const LOCKER_VISUAL_SCALE = 2.0
+  
   currentLockers.value.forEach(locker => {
     // 부모 락커만 계산 (tier 락커 제외)
     if (locker.parentLockerId) return
     
-    const left = locker.x
-    const top = locker.y
-    const right = locker.x + (locker.width || 40)
-    const bottom = locker.y + (locker.height || locker.depth || 40)
+    let left, top, right, bottom
+    
+    if (currentViewMode.value === 'floor') {
+      // Floor mode: use x, y, width, depth
+      left = locker.x
+      top = locker.y
+      right = locker.x + (locker.width || 40) * LOCKER_VISUAL_SCALE
+      bottom = locker.y + (locker.depth || locker.height || 40) * LOCKER_VISUAL_SCALE
+    } else if (currentViewMode.value === 'front') {
+      // Front mode: use frontViewX, frontViewY, width, actualHeight
+      left = locker.frontViewX !== undefined ? locker.frontViewX : locker.x
+      top = locker.frontViewY !== undefined ? locker.frontViewY : locker.y
+      right = left + (locker.width || 40) * LOCKER_VISUAL_SCALE
+      // Use actualHeight for front view (for tall lockers)
+      bottom = top + (locker.actualHeight || locker.height || 60) * LOCKER_VISUAL_SCALE
+    } else {
+      return // Skip unsupported view modes
+    }
     
     minX = Math.min(minX, left)
     minY = Math.min(minY, top)
@@ -2510,8 +2524,8 @@ const autoFitLockers = () => {
   const requiredWidth = maxX - minX
   const requiredHeight = maxY - minY
   
-  // 여백 추가 (10%)
-  const margin = 0.1
+  // 여백 추가 (15% for better visibility)
+  const margin = 0.15
   const totalWidth = requiredWidth * (1 + margin)
   const totalHeight = requiredHeight * (1 + margin)
   
@@ -2539,7 +2553,7 @@ const autoFitLockers = () => {
   // 팬 오프셋을 경계 내로 제한
   panOffset.value = clampPanOffset(newOffset, newZoom)
   
-  console.log('[AutoFit] Zoom:', newZoom, 'Pan:', panOffset.value, 'Bounds:', {minX, minY, maxX, maxY})
+  console.log('[AutoFit]', currentViewMode.value, 'mode - Zoom:', newZoom, 'Pan:', panOffset.value, 'Bounds:', {minX, minY, maxX, maxY})
 }
 
 // 캔버스 마우스 다운 처리
@@ -2954,13 +2968,6 @@ const startDragLocker = (locker, event) => {
     return
   }
   
-  // Debug: Log zoom state at drag start
-  console.log('[Drag Start] Zoom state:', {
-    zoomLevel: zoomLevel.value,
-    panOffset: panOffset.value,
-    viewBox: computedViewBox.value
-  })
-  
   // Immediately hide buttons when starting drag
   isDragging.value = true
   showSelectionUI.value = false
@@ -3305,13 +3312,6 @@ const saveLockerRotation = async (lockerId: string, rotation: number) => {
 const handleDragMove = (event) => {
   if (!isDragging.value || draggedLockers.value.length === 0) return
   
-  // Debug: Log zoom state during drag
-  console.log('[Drag Move] Zoom state:', {
-    zoomLevel: zoomLevel.value,
-    panOffset: panOffset.value,
-    viewBox: computedViewBox.value
-  })
-  
   // Get mouse position in SVG coordinates
   const mousePos = getMousePosition(event)
   
@@ -3605,13 +3605,6 @@ const endDragLocker = () => {
     saveMultipleLockerPositions(positions)
   }
   
-  // Debug: Log zoom state at drag end
-  console.log('[Drag End] Zoom state preserved:', {
-    zoomLevel: zoomLevel.value,
-    panOffset: panOffset.value,
-    viewBox: computedViewBox.value
-  })
-  
   isDragging.value = false
   showSelectionUI.value = true
   dragOffset.value = { x: 0, y: 0 }
@@ -3825,51 +3818,23 @@ const setViewMode = (mode: 'floor' | 'front') => {
     }, 400) // 애니메이션 시간
   }
   
-  // 정면 모드로 전환 시 락커들이 중앙에 보이도록 뷰 조정
+  // 모드 변경
+  currentViewMode.value = mode
+  
+  // 정면 모드로 전환 시 모든 락커가 화면에 보이도록 자동 조정
   if (mode === 'front') {
-    try {
-      // 모든 락커의 경계 계산
-      const lockerBounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }
-      let hasLockers = false
-      
-      if (currentLockers.value && currentLockers.value.length > 0) {
-        currentLockers.value.forEach(locker => {
-          if (locker && locker.x != null && locker.y != null) {
-            hasLockers = true
-            const width = locker.width || 100  // 기본값 제공
-            const height = locker.height || 100  // 기본값 제공
-            lockerBounds.minX = Math.min(lockerBounds.minX, locker.x)
-            lockerBounds.minY = Math.min(lockerBounds.minY, locker.y)
-            lockerBounds.maxX = Math.max(lockerBounds.maxX, locker.x + width)
-            lockerBounds.maxY = Math.max(lockerBounds.maxY, locker.y + height)
-          }
-        })
-        
-        if (hasLockers) {
-          // 락커들이 있는 영역의 중심 계산
-          const centerX = (lockerBounds.minX + lockerBounds.maxX) / 2
-          const centerY = (lockerBounds.minY + lockerBounds.maxY) / 2
-          
-          // 뷰포트 중심에 락커 중심이 오도록 pan 설정
-          const viewportCenterX = INITIAL_VIEWPORT_WIDTH / 2
-          const viewportCenterY = INITIAL_VIEWPORT_HEIGHT / 2
-          
-          panOffset.value = {
-            x: centerX - viewportCenterX,
-            y: centerY - viewportCenterY
-          }
-          
-          // 바닥선 근처로 이동 (바닥선이 화면 하단 쪽에 보이도록)
-          panOffset.value.y = FLOOR_Y - INITIAL_VIEWPORT_HEIGHT + 100
-        }
-      }
-    } catch (error) {
-      console.error('[setViewMode] Error adjusting view for front mode:', error)
-      // 에러가 발생해도 모드 전환은 계속 진행
-    }
+    // 약간의 지연을 두어 뷰 모드가 완전히 변경된 후 autoFit 실행
+    setTimeout(() => {
+      autoFitLockers()
+    }, 50)
   }
   
-  currentViewMode.value = mode
+  // 평면 모드로 전환 시에도 자동 조정 (선택적)
+  if (mode === 'floor') {
+    setTimeout(() => {
+      autoFitLockers()
+    }, 50)
+  }
   
   updateViewMode()
   
