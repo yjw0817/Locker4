@@ -7320,12 +7320,7 @@ const getCursorStyle = computed(() => {
 
 // Computed property for viewBox with zoom and pan
 const computedViewBox = computed(() => {
-  if (currentViewMode.value === 'front') {
-    // 세로모드에서는 줌/팬 미적용
-    return `0 0 ${dynamicCanvasWidth.value} ${dynamicCanvasHeight.value}`
-  }
-  
-  // 평면모드에서 줌과 팬 적용
+  // 평면모드(floor)와 세로모드(front) 모두에서 줌과 팬 적용
   // 초기 뷰포트는 1550x720으로 설정
   const effectiveWidth = INITIAL_VIEWPORT_WIDTH / zoomLevel.value
   const effectiveHeight = INITIAL_VIEWPORT_HEIGHT / zoomLevel.value
