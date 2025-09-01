@@ -2524,8 +2524,8 @@ const autoFitLockers = () => {
   const requiredWidth = maxX - minX
   const requiredHeight = maxY - minY
   
-  // 여백 추가 (15% for better visibility)
-  const margin = 0.15
+  // 여백 추가 (30% for better visibility and comfortable viewing)
+  const margin = 0.30
   const totalWidth = requiredWidth * (1 + margin)
   const totalHeight = requiredHeight * (1 + margin)
   
