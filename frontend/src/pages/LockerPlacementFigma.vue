@@ -3793,6 +3793,7 @@ const isTransitioningToFloor = ref(false)
 
 // 뷰 모드 설정
 const setViewMode = (mode: 'floor' | 'front') => {
+  console.log('[setViewMode] Switching to:', mode)
   
   // 평면 모드로 전환 시 플래그 설정
   if (mode === 'floor' && currentViewMode.value === 'front') {
@@ -3805,36 +3806,45 @@ const setViewMode = (mode: 'floor' | 'front') => {
   
   // 정면 모드로 전환 시 락커들이 중앙에 보이도록 뷰 조정
   if (mode === 'front') {
-    // 모든 락커의 경계 계산
-    const lockerBounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }
-    let hasLockers = false
-    
-    lockers.value.forEach(locker => {
-      if (locker.x != null && locker.y != null) {
-        hasLockers = true
-        lockerBounds.minX = Math.min(lockerBounds.minX, locker.x)
-        lockerBounds.minY = Math.min(lockerBounds.minY, locker.y)
-        lockerBounds.maxX = Math.max(lockerBounds.maxX, locker.x + locker.width)
-        lockerBounds.maxY = Math.max(lockerBounds.maxY, locker.y + locker.height)
+    try {
+      // 모든 락커의 경계 계산
+      const lockerBounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }
+      let hasLockers = false
+      
+      if (currentLockers.value && currentLockers.value.length > 0) {
+        currentLockers.value.forEach(locker => {
+          if (locker && locker.x != null && locker.y != null) {
+            hasLockers = true
+            const width = locker.width || 100  // 기본값 제공
+            const height = locker.height || 100  // 기본값 제공
+            lockerBounds.minX = Math.min(lockerBounds.minX, locker.x)
+            lockerBounds.minY = Math.min(lockerBounds.minY, locker.y)
+            lockerBounds.maxX = Math.max(lockerBounds.maxX, locker.x + width)
+            lockerBounds.maxY = Math.max(lockerBounds.maxY, locker.y + height)
+          }
+        })
+        
+        if (hasLockers) {
+          // 락커들이 있는 영역의 중심 계산
+          const centerX = (lockerBounds.minX + lockerBounds.maxX) / 2
+          const centerY = (lockerBounds.minY + lockerBounds.maxY) / 2
+          
+          // 뷰포트 중심에 락커 중심이 오도록 pan 설정
+          const viewportCenterX = INITIAL_VIEWPORT_WIDTH / 2
+          const viewportCenterY = INITIAL_VIEWPORT_HEIGHT / 2
+          
+          panOffset.value = {
+            x: centerX - viewportCenterX,
+            y: centerY - viewportCenterY
+          }
+          
+          // 바닥선 근처로 이동 (바닥선이 화면 하단 쪽에 보이도록)
+          panOffset.value.y = FLOOR_Y - INITIAL_VIEWPORT_HEIGHT + 100
+        }
       }
-    })
-    
-    if (hasLockers) {
-      // 락커들이 있는 영역의 중심 계산
-      const centerX = (lockerBounds.minX + lockerBounds.maxX) / 2
-      const centerY = (lockerBounds.minY + lockerBounds.maxY) / 2
-      
-      // 뷰포트 중심에 락커 중심이 오도록 pan 설정
-      const viewportCenterX = INITIAL_VIEWPORT_WIDTH / 2
-      const viewportCenterY = INITIAL_VIEWPORT_HEIGHT / 2
-      
-      panOffset.value = {
-        x: centerX - viewportCenterX,
-        y: centerY - viewportCenterY
-      }
-      
-      // 바닥선 근처로 이동 (바닥선이 화면 하단 쪽에 보이도록)
-      panOffset.value.y = FLOOR_Y - INITIAL_VIEWPORT_HEIGHT + 100
+    } catch (error) {
+      console.error('[setViewMode] Error adjusting view for front mode:', error)
+      // 에러가 발생해도 모드 전환은 계속 진행
     }
   }
   
