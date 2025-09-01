@@ -4816,6 +4816,39 @@ const transformToFrontViewNew = () => {
   lockerStore.batchUpdateLockers(batchUpdates)
   console.log(`[Batch Update] Updated ${batchUpdates.length} lockers simultaneously`)
   
+  // 8.6. DB에 front view 좌표 저장 (비동기로 처리)
+  console.log('[DB Save] Saving front view coordinates to database...')
+  const savePromises = batchUpdates.map(async (update) => {
+    try {
+      // lockerStore.updateLocker를 사용하여 DB에 저장
+      // 이미 로컬 스토어는 업데이트했으므로 중복을 피하기 위해 직접 API 호출
+      const locker = currentLockers.value.find(l => l.id === update.id)
+      if (locker && locker.lockrCd) {
+        const response = await fetch(`${API_BASE_URL}/lockrs/${locker.lockrCd}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...update.updates,
+            lockrCd: locker.lockrCd
+          })
+        })
+        
+        if (!response.ok) {
+          console.error(`[DB Save] Failed to save locker ${locker.number}:`, await response.text())
+        }
+      }
+    } catch (error) {
+      console.error(`[DB Save] Failed to save locker ${update.id}:`, error)
+    }
+  })
+  
+  // 모든 저장 작업을 비동기로 처리 (UI 블로킹 방지)
+  Promise.all(savePromises).then(() => {
+    console.log('[DB Save] All front view coordinates saved to database')
+  }).catch((error) => {
+    console.error('[DB Save] Error saving some lockers:', error)
+  })
+  
   // 9. 시퀀스 저장
   frontViewSequence.value = finalSequence
   
