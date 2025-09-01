@@ -2954,6 +2954,13 @@ const startDragLocker = (locker, event) => {
     return
   }
   
+  // Debug: Log zoom state at drag start
+  console.log('[Drag Start] Zoom state:', {
+    zoomLevel: zoomLevel.value,
+    panOffset: panOffset.value,
+    viewBox: computedViewBox.value
+  })
+  
   // Immediately hide buttons when starting drag
   isDragging.value = true
   showSelectionUI.value = false
@@ -3298,6 +3305,13 @@ const saveLockerRotation = async (lockerId: string, rotation: number) => {
 const handleDragMove = (event) => {
   if (!isDragging.value || draggedLockers.value.length === 0) return
   
+  // Debug: Log zoom state during drag
+  console.log('[Drag Move] Zoom state:', {
+    zoomLevel: zoomLevel.value,
+    panOffset: panOffset.value,
+    viewBox: computedViewBox.value
+  })
+  
   // Get mouse position in SVG coordinates
   const mousePos = getMousePosition(event)
   
@@ -3591,6 +3605,13 @@ const endDragLocker = () => {
     saveMultipleLockerPositions(positions)
   }
   
+  // Debug: Log zoom state at drag end
+  console.log('[Drag End] Zoom state preserved:', {
+    zoomLevel: zoomLevel.value,
+    panOffset: panOffset.value,
+    viewBox: computedViewBox.value
+  })
+  
   isDragging.value = false
   showSelectionUI.value = true
   dragOffset.value = { x: 0, y: 0 }
@@ -3598,10 +3619,10 @@ const endDragLocker = () => {
   // 가이드라인 숨기기
   showAlignmentGuides.value = false
   
-  // 드래그 종료 후 자동 줌 조정
-  if (currentViewMode.value === 'floor') {
-    autoFitLockers()
-  }
+  // 드래그 종료 후 자동 줌 조정 제거 - 사용자가 설정한 줌 상태 유지
+  // if (currentViewMode.value === 'floor') {
+  //   autoFitLockers()
+  // }
   horizontalGuides.value = []
   verticalGuides.value = []
   
