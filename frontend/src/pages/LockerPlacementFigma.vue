@@ -7461,8 +7461,31 @@ watch(() => currentViewMode.value, async (newViewMode, oldViewMode) => {
         }
       })
     } else if (newViewMode === 'front' && oldViewMode === 'front') {
-      console.log('[ViewMode Change] Zone change in front view - using saved positions from DB')
-      // Positions are already loaded from DB in loadLockers(), no need to recalculate
+      console.log('[ViewMode Change] Zone change in front view - checking for missing coordinates...')
+      
+      // Check if any locker has missing front view coordinates
+      const lockersWithMissingCoords = currentLockers.value.filter(locker => 
+        locker.frontViewX === null || locker.frontViewX === undefined ||
+        locker.frontViewY === null || locker.frontViewY === undefined
+      )
+      
+      if (lockersWithMissingCoords.length > 0) {
+        console.log(`[ViewMode Change] Found ${lockersWithMissingCoords.length} lockers with missing front view coordinates`)
+        console.log('[ViewMode Change] Auto-calculating positions for lockers:', 
+          lockersWithMissingCoords.map(l => l.number).join(', '))
+        
+        // Calculate positions for lockers with missing coordinates
+        nextTick(() => {
+          try {
+            transformToFrontViewNew()
+            console.log('[ViewMode Change] Auto-calculation completed')
+          } catch (error) {
+            console.error('[ViewMode Change] Auto-calculation failed:', error)
+          }
+        })
+      } else {
+        console.log('[ViewMode Change] All lockers have saved positions - using DB coordinates')
+      }
     }
   } else if (!oldViewMode) {
     console.log('[ViewMode Watcher] Initial mount - skipping reload (onMounted will handle it)')
@@ -7536,6 +7559,30 @@ onMounted(async () => {
       setTimeout(() => {
         autoFitLockers()
       }, 100)
+    }
+    
+    // Check for missing front view coordinates if in front view mode
+    if (currentViewMode.value === 'front') {
+      const lockersWithMissingCoords = currentLockers.value.filter(locker => 
+        locker.frontViewX === null || locker.frontViewX === undefined ||
+        locker.frontViewY === null || locker.frontViewY === undefined
+      )
+      
+      if (lockersWithMissingCoords.length > 0) {
+        console.log(`[onMounted] Found ${lockersWithMissingCoords.length} lockers with missing front view coordinates`)
+        console.log('[onMounted] Auto-calculating positions for lockers:', 
+          lockersWithMissingCoords.map(l => l.number).join(', '))
+        
+        // Calculate positions for lockers with missing coordinates
+        nextTick(() => {
+          try {
+            transformToFrontViewNew()
+            console.log('[onMounted] Auto-calculation completed')
+          } catch (error) {
+            console.error('[onMounted] Auto-calculation failed:', error)
+          }
+        })
+      }
     }
     
     // Check and fix any overlapping lockers
