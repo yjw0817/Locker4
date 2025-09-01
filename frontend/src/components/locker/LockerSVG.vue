@@ -60,7 +60,7 @@
       :y1="logicalDimensions.height - 4"
       :x2="logicalDimensions.width - 10"
       :y2="logicalDimensions.height - 4"
-      stroke="#000000"
+      :stroke="lockerStroke"
       stroke-width="4"
       opacity="0.9"
       stroke-linecap="square"

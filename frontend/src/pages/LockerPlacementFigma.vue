@@ -77,7 +77,7 @@
                   :y1="(((type.depth || type.width) || 40) * 2.0) - 5"
                   :x2="((type.width || 40) * 2.0) - 10"
                   :y2="(((type.depth || type.width) || 40) * 2.0) - 5"
-                  stroke="#000000"
+                  :stroke="'#9ca3af'"
                   stroke-width="4"
                   opacity="0.9"
                   stroke-linecap="square"
