@@ -7404,9 +7404,10 @@ watch(() => currentViewMode.value, async (newViewMode, oldViewMode) => {
     console.log(`[ViewMode Change] ${oldViewMode} → ${newViewMode}, reloading lockers...`)
     await loadLockers()
     
-    // After loading lockers, apply front view transformation if needed
-    if (newViewMode === 'front') {
-      console.log('[ViewMode Change] Applying front view transformation after loading all lockers...')
+    // After loading lockers, apply front view transformation ONLY when transitioning from floor to front
+    // When staying in front mode (zone change), use saved positions from DB
+    if (newViewMode === 'front' && oldViewMode === 'floor') {
+      console.log('[ViewMode Change] Transitioning from floor to front - recalculating positions...')
       nextTick(() => {
         try {
           transformToFrontViewNew()
@@ -7416,6 +7417,9 @@ watch(() => currentViewMode.value, async (newViewMode, oldViewMode) => {
           transformToFrontView_BACKUP()
         }
       })
+    } else if (newViewMode === 'front' && oldViewMode === 'front') {
+      console.log('[ViewMode Change] Zone change in front view - using saved positions from DB')
+      // Positions are already loaded from DB in loadLockers(), no need to recalculate
     }
   } else if (!oldViewMode) {
     console.log('[ViewMode Watcher] Initial mount - skipping reload (onMounted will handle it)')
