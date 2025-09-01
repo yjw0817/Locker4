@@ -194,6 +194,7 @@ const props = defineProps<{
   hasError?: boolean
   shouldHideIndividualOutline?: boolean  // 개별 외곽선 숨김 여부
   adjacentSides?: string[]  // 인접한 면 정보 ['top', 'bottom', 'left', 'right']
+  zoomLevel?: number  // 현재 줌 레벨
 }>()
 
 const emit = defineEmits<{
@@ -341,8 +342,8 @@ const lockerStroke = computed(() => {
   // 에러가 있는 락커는 빨간색 테두리
   if (props.hasError || props.locker.hasError) return '#ef4444'
   
-  // 세로모드에서는 더 진한 회색 테두리
-  if (props.viewMode === 'front') {
+  // 평면배치 모드와 세로모드 모두 동일한 회색 테두리 사용
+  if (props.viewMode === 'front' || props.viewMode === 'floor') {
     return '#9ca3af'  // gray-400 (더 진한 회색)
   }
   
@@ -377,12 +378,15 @@ const lockerStroke = computed(() => {
 })
 
 const strokeWidth = computed(() => {
+  // 줌 레벨에 관계없이 일정한 두께를 유지하기 위해 줌 레벨로 나눔
+  const zoomAdjustment = props.zoomLevel || 1
+  
   // 에러가 있는 락커는 두꺼운 테두리 (스케일 적용)
-  if (props.hasError || props.locker.hasError) return 2 * LOCKER_VISUAL_SCALE
+  if (props.hasError || props.locker.hasError) return (2 * LOCKER_VISUAL_SCALE) / zoomAdjustment
   // 선택된 경우에도 원래 테두리 두께 유지 (선택 표시는 별도 점선으로)
-  if (props.isSelected || props.isMultiSelected) return 1 * LOCKER_VISUAL_SCALE
-  if (isHovered.value) return 1 * LOCKER_VISUAL_SCALE
-  return 0.5 * LOCKER_VISUAL_SCALE  // Thinner default border
+  if (props.isSelected || props.isMultiSelected) return (1 * LOCKER_VISUAL_SCALE) / zoomAdjustment
+  if (isHovered.value) return (1 * LOCKER_VISUAL_SCALE) / zoomAdjustment
+  return (0.5 * LOCKER_VISUAL_SCALE) / zoomAdjustment  // Thinner default border
 })
 
 const fontSize = computed(() => {

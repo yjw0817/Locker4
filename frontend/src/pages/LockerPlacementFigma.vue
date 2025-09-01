@@ -65,7 +65,7 @@
                   :width="Math.max(((type.width || 40) * 2.0) - 4, 1)"
                   :height="Math.max((((type.depth || type.width) || 40) * 2.0) - 4, 1)"
                   :fill="type.color ? `${type.color}20` : '#FFFFFF'"
-                  :stroke="type.color || '#D1D5DB'"
+                  :stroke="'#9ca3af'"
                   :stroke-width="0.5 * 2.0"
                   :rx="2 * 2.0"
                   :ry="2 * 2.0"
@@ -77,7 +77,7 @@
                   :y1="(((type.depth || type.width) || 40) * 2.0) - 5"
                   :x2="((type.width || 40) * 2.0) - 10"
                   :y2="(((type.depth || type.width) || 40) * 2.0) - 5"
-                  :stroke="type.color || '#1e40af'"
+                  :stroke="'#9ca3af'"
                   stroke-width="4"
                   opacity="0.9"
                   stroke-linecap="square"
@@ -323,6 +323,7 @@
               :is-transitioning-to-floor="isTransitioningToFloor"
               :show-number="true"
               :show-rotate-handle="selectedLocker?.id === locker.id"
+              :zoom-level="zoomLevel"
               @click="(locker, event) => selectLocker(locker, event)"
               @contextmenu.prevent="showContextMenu"
               @select="(id) => selectedLocker = currentLockers.find(l => l.id === id)"
@@ -2543,8 +2544,8 @@ const autoFitLockers = () => {
   const zoomForHeight = INITIAL_VIEWPORT_HEIGHT / totalHeight
   let newZoom = Math.min(zoomForWidth, zoomForHeight)
   
-  // 뷰 모드 전환 시 두 단계 더 줌아웃 (0.9 * 0.9 = 0.81)
-  newZoom = newZoom * 0.81
+  // 뷰 모드 전환 시 세 단계 더 줌아웃 (0.9 * 0.9 * 0.9 = 0.729)
+  newZoom = newZoom * 0.729
   
   // 줌 범위 제한
   newZoom = Math.max(minZoom, Math.min(newZoom, maxZoom))
