@@ -60,7 +60,7 @@
       :y1="logicalDimensions.height - 4"
       :x2="logicalDimensions.width - 10"
       :y2="logicalDimensions.height - 4"
-      :stroke="lockerStroke"
+      :stroke="locker.color || '#1e40af'"
       stroke-width="4"
       opacity="0.9"
       stroke-linecap="square"
@@ -342,8 +342,8 @@ const lockerStroke = computed(() => {
   // 에러가 있는 락커는 빨간색 테두리
   if (props.hasError || props.locker.hasError) return '#ef4444'
   
-  // 평면배치 모드와 세로모드 모두 동일한 회색 테두리 사용
-  if (props.viewMode === 'front' || props.viewMode === 'floor') {
+  // 세로모드에서는 더 진한 회색 테두리
+  if (props.viewMode === 'front') {
     return '#9ca3af'  // gray-400 (더 진한 회색)
   }
   

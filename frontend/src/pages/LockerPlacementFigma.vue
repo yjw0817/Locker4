@@ -77,7 +77,7 @@
                   :y1="(((type.depth || type.width) || 40) * 2.0) - 5"
                   :x2="((type.width || 40) * 2.0) - 10"
                   :y2="(((type.depth || type.width) || 40) * 2.0) - 5"
-                  :stroke="'#9ca3af'"
+                  :stroke="type.color || '#1e40af'"
                   stroke-width="4"
                   opacity="0.9"
                   stroke-linecap="square"
@@ -4227,19 +4227,77 @@ const findMinorGroups = (majorGroup: any[]): any[][] => {
 
 // Find the bottom-most or earliest position in clockwise direction
 const findClockwiseStart = (minorGroups: any[][]): any => {
-  let bottomMost: any = null
-  let bottomY = -Infinity
+  // Find the group that has no connections in the counter-clockwise direction
+  // (i.e., no connections to the left or above)
+  
+  let startGroup: any[] | null = null
+  let bestScore = -Infinity
   
   for (const group of minorGroups) {
-    for (const locker of group) {
-      if (!bottomMost || locker.y > bottomY) {
-        bottomY = locker.y
-        bottomMost = locker
+    const groupCenter = getGroupCenter(group)
+    let hasCounterClockwiseConnection = false
+    
+    // Check if this group has any connections in counter-clockwise direction
+    for (const otherGroup of minorGroups) {
+      if (group === otherGroup) continue
+      
+      // Check if groups are connected
+      let groupsConnected = false
+      for (const locker1 of group) {
+        for (const locker2 of otherGroup) {
+          if (isConnected(locker1, locker2)) {
+            groupsConnected = true
+            break
+          }
+        }
+        if (groupsConnected) break
+      }
+      
+      if (groupsConnected) {
+        const otherCenter = getGroupCenter(otherGroup)
+        const dx = otherCenter.x - groupCenter.x
+        const dy = otherCenter.y - groupCenter.y
+        let angle = Math.atan2(dy, dx) * 180 / Math.PI
+        
+        // Convert to 0-360 range
+        if (angle < 0) angle += 360
+        
+        // Check if in counter-clockwise range (roughly 180° to 360°, i.e., left and up)
+        // For U-shape, we want to start from the top-right or top-left endpoint
+        if (angle > 90 && angle < 270) {
+          // Connection is to the left (counter-clockwise)
+          hasCounterClockwiseConnection = true
+          break
+        }
+      }
+    }
+    
+    // If no counter-clockwise connection, this could be our start
+    if (!hasCounterClockwiseConnection) {
+      // Prefer top-right groups (higher score for up and right)
+      const score = -groupCenter.y + groupCenter.x  // negative y because up is smaller y
+      if (score > bestScore) {
+        bestScore = score
+        startGroup = group
       }
     }
   }
   
-  return bottomMost
+  // If no group found without counter-clockwise connections (circular structure),
+  // start from the top-right most group
+  if (!startGroup) {
+    for (const group of minorGroups) {
+      const groupCenter = getGroupCenter(group)
+      const score = -groupCenter.y + groupCenter.x
+      if (score > bestScore) {
+        bestScore = score
+        startGroup = group
+      }
+    }
+  }
+  
+  // Return the first locker of the start group
+  return startGroup ? startGroup[0] : null
 }
 
 // Get the minor group containing a specific locker
