@@ -278,20 +278,32 @@
               <line
                 :x1="0"
                 :y1="FLOOR_Y"
-                :x2="1550"
+                :x2="ACTUAL_CANVAS_WIDTH"
                 :y2="FLOOR_Y"
                 stroke="#94a3b8"
                 stroke-width="2"
                 stroke-dasharray="10,5"
               />
               
-              <!-- 바닥선 라벨 -->
+              <!-- 바닥선 라벨 (좌측 - 뷰포트 기준 고정) -->
               <text
-                :x="20"
+                :x="panOffset.x + 20 / zoomLevel"
                 :y="FLOOR_Y + 20"
                 fill="#64748b"
-                font-size="12"
+                :font-size="12 / zoomLevel"
                 font-weight="500"
+              >
+                바닥선
+              </text>
+              
+              <!-- 바닥선 라벨 (우측 - 뷰포트 기준 고정) -->
+              <text
+                :x="panOffset.x + (INITIAL_VIEWPORT_WIDTH - 80) / zoomLevel"
+                :y="FLOOR_Y + 20"
+                fill="#64748b"
+                :font-size="12 / zoomLevel"
+                font-weight="500"
+                text-anchor="end"
               >
                 바닥선
               </text>
@@ -810,7 +822,7 @@ const getCanvasDisplayWidth = () => {
 const DISPLAY_SCALE = 1.0
 
 // Floor line position for front view (logical units)
-const FLOOR_Y = 550  // 바닥선 Y 위치 (100px 아래로 이동)
+const FLOOR_Y = 1100  // 바닥선 Y 위치 (캔버스 높이 1440의 약 75% 위치)
 
 // Log scale configuration removed - was causing syntax error
 
@@ -3789,6 +3801,41 @@ const setViewMode = (mode: 'floor' | 'front') => {
     setTimeout(() => {
       isTransitioningToFloor.value = false
     }, 400) // 애니메이션 시간
+  }
+  
+  // 정면 모드로 전환 시 락커들이 중앙에 보이도록 뷰 조정
+  if (mode === 'front') {
+    // 모든 락커의 경계 계산
+    const lockerBounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }
+    let hasLockers = false
+    
+    lockers.value.forEach(locker => {
+      if (locker.x != null && locker.y != null) {
+        hasLockers = true
+        lockerBounds.minX = Math.min(lockerBounds.minX, locker.x)
+        lockerBounds.minY = Math.min(lockerBounds.minY, locker.y)
+        lockerBounds.maxX = Math.max(lockerBounds.maxX, locker.x + locker.width)
+        lockerBounds.maxY = Math.max(lockerBounds.maxY, locker.y + locker.height)
+      }
+    })
+    
+    if (hasLockers) {
+      // 락커들이 있는 영역의 중심 계산
+      const centerX = (lockerBounds.minX + lockerBounds.maxX) / 2
+      const centerY = (lockerBounds.minY + lockerBounds.maxY) / 2
+      
+      // 뷰포트 중심에 락커 중심이 오도록 pan 설정
+      const viewportCenterX = INITIAL_VIEWPORT_WIDTH / 2
+      const viewportCenterY = INITIAL_VIEWPORT_HEIGHT / 2
+      
+      panOffset.value = {
+        x: centerX - viewportCenterX,
+        y: centerY - viewportCenterY
+      }
+      
+      // 바닥선 근처로 이동 (바닥선이 화면 하단 쪽에 보이도록)
+      panOffset.value.y = FLOOR_Y - INITIAL_VIEWPORT_HEIGHT + 100
+    }
   }
   
   currentViewMode.value = mode
