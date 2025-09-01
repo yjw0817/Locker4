@@ -830,7 +830,11 @@ const dynamicCanvasHeight = ref(700)
 
 // 줌 및 팬 관련 상태
 const zoomLevel = ref(1)  // 현재 줌 레벨 (1 = 100%)
-const minZoom = 0.1  // 최소 줌 (10%) - 전체 캔버스 보기
+// 최소 줌: 뷰포트가 항상 캔버스로 채워지도록 계산
+const minZoom = Math.max(
+  INITIAL_VIEWPORT_WIDTH / ACTUAL_CANVAS_WIDTH,
+  INITIAL_VIEWPORT_HEIGHT / ACTUAL_CANVAS_HEIGHT
+)  // 0.5 (50%) - 빈 공간이 보이지 않는 최소 줌
 // 최대 줌은 캔버스 실제 크기까지만 (뷰포트 크기 대비)
 const maxZoom = Math.min(
   ACTUAL_CANVAS_WIDTH / INITIAL_VIEWPORT_WIDTH,
@@ -2390,12 +2394,21 @@ const handleWheel = (event: WheelEvent) => {
   
   event.preventDefault()
   
-  // 마우스 위치 (SVG 좌표계)
+  // SVG 요소와 현재 뷰포트 크기 가져오기
   const svg = event.currentTarget as SVGElement
-  const pt = svg.createSVGPoint()
-  pt.x = event.clientX
-  pt.y = event.clientY
-  const svgP = pt.matrixTransform(svg.getScreenCTM()!.inverse())
+  const rect = svg.getBoundingClientRect()
+  
+  // 마우스 위치를 뷰포트 비율로 계산 (0~1)
+  const mouseViewportX = (event.clientX - rect.left) / rect.width
+  const mouseViewportY = (event.clientY - rect.top) / rect.height
+  
+  // 현재 뷰포트 크기 계산
+  const currentViewportWidth = INITIAL_VIEWPORT_WIDTH / zoomLevel.value
+  const currentViewportHeight = INITIAL_VIEWPORT_HEIGHT / zoomLevel.value
+  
+  // 마우스 위치의 캔버스 좌표 계산
+  const mouseCanvasX = panOffset.value.x + mouseViewportX * currentViewportWidth
+  const mouseCanvasY = panOffset.value.y + mouseViewportY * currentViewportHeight
   
   // 줌 계산
   const delta = event.deltaY > 0 ? 0.9 : 1.1
@@ -2403,10 +2416,14 @@ const handleWheel = (event: WheelEvent) => {
   
   // 마우스 위치를 중심으로 줌
   if (newZoom !== zoomLevel.value) {
-    const scale = newZoom / zoomLevel.value
+    // 새로운 뷰포트 크기
+    const newViewportWidth = INITIAL_VIEWPORT_WIDTH / newZoom
+    const newViewportHeight = INITIAL_VIEWPORT_HEIGHT / newZoom
+    
+    // 마우스 위치가 동일한 화면 위치에 유지되도록 pan offset 계산
     const newOffset = {
-      x: svgP.x - (svgP.x - panOffset.value.x) * scale,
-      y: svgP.y - (svgP.y - panOffset.value.y) * scale
+      x: mouseCanvasX - mouseViewportX * newViewportWidth,
+      y: mouseCanvasY - mouseViewportY * newViewportHeight
     }
     
     // 팬 오프셋을 경계 내로 제한
