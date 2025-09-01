@@ -7471,16 +7471,17 @@ watch(() => currentViewMode.value, async (newViewMode, oldViewMode) => {
       
       if (lockersWithMissingCoords.length > 0) {
         console.log(`[ViewMode Change] Found ${lockersWithMissingCoords.length} lockers with missing front view coordinates`)
-        console.log('[ViewMode Change] Auto-calculating positions for lockers:', 
+        console.log('[ViewMode Change] Missing coordinates for lockers:', 
           lockersWithMissingCoords.map(l => l.number).join(', '))
+        console.log('[ViewMode Change] Recalculating positions for ALL lockers in zone using grouping logic')
         
-        // Calculate positions for lockers with missing coordinates
+        // Recalculate positions for ALL lockers in the zone using full grouping logic
         nextTick(() => {
           try {
             transformToFrontViewNew()
-            console.log('[ViewMode Change] Auto-calculation completed')
+            console.log('[ViewMode Change] Zone-wide recalculation completed')
           } catch (error) {
-            console.error('[ViewMode Change] Auto-calculation failed:', error)
+            console.error('[ViewMode Change] Zone-wide recalculation failed:', error)
           }
         })
       } else {
