@@ -2543,6 +2543,9 @@ const autoFitLockers = () => {
   const zoomForHeight = INITIAL_VIEWPORT_HEIGHT / totalHeight
   let newZoom = Math.min(zoomForWidth, zoomForHeight)
   
+  // 뷰 모드 전환 시 두 단계 더 줌아웃 (0.9 * 0.9 = 0.81)
+  newZoom = newZoom * 0.81
+  
   // 줌 범위 제한
   newZoom = Math.max(minZoom, Math.min(newZoom, maxZoom))
   
