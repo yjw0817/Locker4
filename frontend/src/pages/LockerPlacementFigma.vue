@@ -4824,17 +4824,28 @@ const transformToFrontViewNew = () => {
       // 이미 로컬 스토어는 업데이트했으므로 중복을 피하기 위해 직접 API 호출
       const locker = currentLockers.value.find(l => l.id === update.id)
       if (locker && locker.lockrCd) {
+        // DB 컬럼명은 대문자 snake_case 사용 (FRONT_VIEW_X, FRONT_VIEW_Y)
+        const dbUpdates: any = {}
+        if (update.updates.frontViewX !== undefined) {
+          dbUpdates.FRONT_VIEW_X = update.updates.frontViewX
+        }
+        if (update.updates.frontViewY !== undefined) {
+          dbUpdates.FRONT_VIEW_Y = update.updates.frontViewY
+        }
+        if (update.updates.frontViewRotation !== undefined) {
+          dbUpdates.FRONT_VIEW_ROTATION = update.updates.frontViewRotation
+        }
+        
         const response = await fetch(`${API_BASE_URL}/lockrs/${locker.lockrCd}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...update.updates,
-            lockrCd: locker.lockrCd
-          })
+          body: JSON.stringify(dbUpdates)
         })
         
         if (!response.ok) {
           console.error(`[DB Save] Failed to save locker ${locker.number}:`, await response.text())
+        } else {
+          console.log(`[DB Save] Saved locker ${locker.number} with FRONT_VIEW_X=${dbUpdates.FRONT_VIEW_X}, FRONT_VIEW_Y=${dbUpdates.FRONT_VIEW_Y}`)
         }
       }
     } catch (error) {
