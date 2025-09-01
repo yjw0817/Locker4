@@ -4825,6 +4825,7 @@ const transformToFrontViewNew = () => {
       const locker = currentLockers.value.find(l => l.id === update.id)
       if (locker && locker.lockrCd) {
         // DB 컬럼명은 대문자 snake_case 사용 (FRONT_VIEW_X, FRONT_VIEW_Y)
+        // FRONT_VIEW_ROTATION 컬럼은 DB에 없으므로 제외
         const dbUpdates: any = {}
         if (update.updates.frontViewX !== undefined) {
           dbUpdates.FRONT_VIEW_X = update.updates.frontViewX
@@ -4832,9 +4833,7 @@ const transformToFrontViewNew = () => {
         if (update.updates.frontViewY !== undefined) {
           dbUpdates.FRONT_VIEW_Y = update.updates.frontViewY
         }
-        if (update.updates.frontViewRotation !== undefined) {
-          dbUpdates.FRONT_VIEW_ROTATION = update.updates.frontViewRotation
-        }
+        // FRONT_VIEW_ROTATION은 DB에 컬럼이 없으므로 전송하지 않음
         
         const response = await fetch(`${API_BASE_URL}/lockrs/${locker.lockrCd}`, {
           method: 'PUT',
