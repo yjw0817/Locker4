@@ -1825,6 +1825,11 @@ const ALIGNMENT_THRESHOLD = 5 // 5px 이내면 정렬선 표시
 const selectZone = (zone) => {
   selectedZone.value = zone
   selectedLocker.value = null
+  
+  // 구역 변경 시 모든 락커가 화면에 보이도록 자동 조정
+  setTimeout(() => {
+    autoFitLockers()
+  }, 100)  // 약간의 지연으로 락커 데이터 로드 완료 후 실행
 }
 
 // Show zone context menu
@@ -1896,7 +1901,11 @@ const deleteZone = async (zone) => {
       
       // If deleted zone was selected, select another zone or clear selection
       if (selectedZone.value?.id === zone.id) {
-        selectedZone.value = zones.value.length > 0 ? zones.value[0] : null
+        if (zones.value.length > 0) {
+          selectZone(zones.value[0])
+        } else {
+          selectedZone.value = null
+        }
       }
       
       alert('구역이 성공적으로 삭제되었습니다.')
@@ -7032,7 +7041,7 @@ const handleZoneSave = async (zoneData) => {
     // Find the newly created zone
     const newZone = zones.value.find(z => z.LOCKR_KND_NM === zoneData.name)
     if (newZone) {
-      selectedZone.value = newZone
+      selectZone(newZone)
     }
     
     showZoneModal.value = false
