@@ -331,7 +331,6 @@
               @rotatestart="startRotateLocker"
               @rotate="handleRotateMove"
               @rotateend="handleRotateEnd"
-              @delete="handleLockerDelete"
             />
             
             <!-- 통합 외곽선 그리기 (드래그 중에는 숨김) -->
@@ -5192,11 +5191,6 @@ const hideContextMenu = () => {
 const deleteSelectedLockersFromMenu = () => {
   deleteSelectedLockers()
   hideContextMenu()
-}
-
-// Handle locker delete from X button
-const handleLockerDelete = () => {
-  deleteSelectedLockers()
 }
 
 // Show floor input dialog
