@@ -1600,25 +1600,14 @@ const displayLockers = computed(() => {
       // Front view: Use NEW algorithm positions if available, fallback to original
       const scale = getCurrentScale()
       
-      console.log(`[DisplayLockers] Processing ${locker.number} in front view:`, {
-        frontViewX: locker.frontViewX,
-        frontViewY: locker.frontViewY,
-        x: locker.x,
-        y: locker.y,
-        scale: scale
-      })
-      
       if (locker.frontViewX !== undefined && locker.frontViewX !== null && 
           locker.frontViewY !== undefined && locker.frontViewY !== null) {
         // 새로운 알고리즘 결과 사용
         displayX = locker.frontViewX * scale
         displayY = locker.frontViewY * scale
         displayHeight = lockerActualHeight * scale
-        console.log(`[DisplayLockers] ${locker.number} using front view coords: displayX=${displayX}, displayY=${displayY}`)
       } else {
         // FALLBACK: 정면뷰 좌표가 없을 때 평면 좌표를 임시로 사용
-        console.log(`[DisplayLockers] ${locker.number} missing front view coords, using fallback`)
-        
         // 평면배치 좌표를 임시로 사용하여 좌측 상단 몰림 방지
         if (locker.x !== undefined && locker.x !== null && 
             locker.y !== undefined && locker.y !== null) {
@@ -1628,15 +1617,11 @@ const displayLockers = computed(() => {
           displayX = tempX
           displayY = tempY
           displayHeight = lockerActualHeight * scale
-          
-          console.log(`[DisplayLockers] ${locker.number} using temporary position: displayX=${displayX}, displayY=${displayY}`)
         } else {
           // 좌표가 전혀 없는 경우 (매우 드묾)
           displayX = 100 + (index * 100) // 겹치지 않게 임시 배치
           displayY = 100
           displayHeight = lockerActualHeight * scale
-          
-          console.warn(`[DisplayLockers] ${locker.number} no coordinates at all, using fallback position`)
         }
       }
     }
@@ -1826,9 +1811,30 @@ const verticalGuides = ref<AlignmentGuide[]>([])
 const ALIGNMENT_THRESHOLD = 5 // 5px 이내면 정렬선 표시
 
 // 구역 선택
-const selectZone = (zone) => {
+const selectZone = async (zone) => {
   selectedZone.value = zone
   selectedLocker.value = null
+  
+  // 정면배치 모드일 때는 락커 데이터를 새로 로드하고 그루핑 수행
+  if (currentViewMode.value === 'front') {
+    console.log('[Zone Change] Loading lockers for zone in front view mode...')
+    await loadLockers() // 새 구역의 락커 데이터 로드
+    
+    nextTick(() => {
+      // front_view 좌표가 없는 락커가 있는지 확인
+      const hasNullCoords = currentLockers.value.some(locker => 
+        locker.frontViewX == null || locker.frontViewY == null
+      )
+      
+      if (hasNullCoords) {
+        console.log('[Zone Change] Found lockers without front view coordinates, recalculating...')
+        // 좌표가 없으면 그루핑하여 재계산
+        transformToFrontViewNew()
+      } else {
+        console.log('[Zone Change] All lockers have front view coordinates')
+      }
+    })
+  }
   
   // 구역 변경 시 모든 락커가 화면에 보이도록 자동 조정
   setTimeout(() => {
