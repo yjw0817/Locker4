@@ -575,20 +575,16 @@
         </div>
       </div>
       <div class="form-section">
-        <div class="form-labels-row">
-          <label class="section-label">추가옵션:</label>
-        </div>
-        <div class="form-options-row">
-          <div style="display: flex; align-items: center;">
-            <label style="display: flex; align-items: center; margin-right: 30px;">
-              <span style="margin-right: 8px;">역방향</span>
-              <input type="checkbox" v-model="reverseDirection">
-            </label>
-            <label style="display: flex; align-items: center;">
-              <span style="margin-right: 8px;">아래에서부터</span>
-              <input type="checkbox" v-model="fromTop">
-            </label>
-          </div>
+        <label class="section-label">추가옵션:</label>
+        <div style="display: flex; align-items: center; margin-top: 10px;">
+          <label style="display: flex; align-items: center; margin-right: 30px; white-space: nowrap;">
+            <span style="margin-right: 8px;">역방향</span>
+            <input type="checkbox" v-model="reverseDirection">
+          </label>
+          <label style="display: flex; align-items: center; white-space: nowrap;">
+            <span style="margin-right: 8px;">아래에서부터</span>
+            <input type="checkbox" v-model="fromTop">
+          </label>
         </div>
       </div>
       
