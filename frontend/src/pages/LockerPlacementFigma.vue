@@ -482,10 +482,6 @@
     @click.stop
   >
     <!-- 락커 삭제 - 모든 모드에서 표시 -->
-    <div class="context-menu-item" @click="deleteSelectedLockersFromMenu">
-      <i class="fas fa-trash"></i> 락커 삭제
-    </div>
-    
     <!-- 정면배치 모드에서만 표시되는 메뉴들 -->
     <template v-if="currentViewMode === 'front'">
       <div class="context-menu-item" @click="showFloorInputDialog">
@@ -498,6 +494,10 @@
         <i class="fas fa-eraser"></i> 번호 삭제
       </div>
     </template>
+    
+    <div class="context-menu-item" @click="deleteSelectedLockersFromMenu">
+      <i class="fas fa-trash"></i> 락커 삭제
+    </div>
   </div>
   
   <!-- Floor Input Dialog -->
