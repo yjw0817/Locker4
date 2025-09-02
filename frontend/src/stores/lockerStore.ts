@@ -14,6 +14,7 @@ export interface Locker {
   width: number  // 가로 (공통)
   height: number // 세로배치에서 Y축 (세로 높이)
   depth: number  // 평면배치에서 Y축 (깊이)
+  color?: string // Locker type color
   status: LockerStatus
   rotation: number  // Cumulative rotation value (not normalized)
   floor?: number

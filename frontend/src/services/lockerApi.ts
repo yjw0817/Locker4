@@ -32,7 +32,7 @@ export interface ApiLocker {
 }
 
 // Type dimensions (hardcoded for now, should come from DB)
-const TYPE_DIMENSIONS = {
+const TYPE_DIMENSIONS: Record<string, { width: number; height: number; depth: number }> = {
   '1': { width: 40, height: 40, depth: 40 }, // Small
   '2': { width: 50, height: 60, depth: 50 }, // Medium
   '3': { width: 60, height: 80, depth: 60 }  // Large
