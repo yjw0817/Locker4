@@ -363,19 +363,6 @@
               <!-- Apply position and rotation transforms (all in logical coordinates) -->
               <g :transform="`translate(${getSelectionUIPosition().x}, ${getSelectionUIPosition().y}) rotate(${selectedLocker.rotation || 0}, ${selectedLocker.width / 2}, ${selectedLocker.height / 2})`">
                 
-                <!-- Delete button (top right, outside locker bounds) -->
-                <g 
-                  :transform="`translate(${selectedLocker.width + 25}, -10)`"
-                  @click.stop="deleteSelectedLocker"
-                  style="cursor: pointer"
-                  class="selection-button delete-button"
-                >
-                  <circle r="12" fill="#ffffff" stroke="#e5e7eb" stroke-width="1.5"/>
-                  <circle r="12" fill="#ef4444" opacity="0" class="hover-fill"/>
-                  <!-- Simple X icon -->
-                  <path d="M-5,-5 L5,5 M5,-5 L-5,5" stroke="#ef4444" stroke-width="2" stroke-linecap="round"/>
-                </g>
-                
                 <!-- 회전 버튼 제거 - 드래그 기반 회전으로 대체됨 -->
                 
                 <!-- Multi-select badge removed as requested -->
@@ -4967,11 +4954,6 @@ const toggleVerticalMode = () => {
 }
 
 // 선택된 락커 삭제
-const deleteSelectedLocker = () => {
-  console.log('[UI] Button clicked: delete')
-  deleteSelectedLockers()
-}
-
 // 다중 선택된 락커 삭제
 const deleteSelectedLockers = () => {
   // 세로배치 모드에서만 제약 조건 적용
@@ -8250,10 +8232,6 @@ onUnmounted(() => {
 .selection-button:hover circle:first-of-type {
   fill: #f9fafb;
   stroke: #9ca3af;
-}
-
-.selection-button.delete-button:hover circle.hover-fill {
-  opacity: 0.1 !important;
 }
 
 .selection-button.rotate-cw-button:hover circle.hover-fill {
