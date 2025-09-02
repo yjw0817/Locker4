@@ -1600,32 +1600,43 @@ const displayLockers = computed(() => {
       // Front view: Use NEW algorithm positions if available, fallback to original
       const scale = getCurrentScale()
       
-      if (locker.frontViewX !== undefined && locker.frontViewY !== undefined) {
-        // 새로운 알고리즘 결과 사용 - debug removed
+      console.log(`[DisplayLockers] Processing ${locker.number} in front view:`, {
+        frontViewX: locker.frontViewX,
+        frontViewY: locker.frontViewY,
+        x: locker.x,
+        y: locker.y,
+        scale: scale
+      })
+      
+      if (locker.frontViewX !== undefined && locker.frontViewX !== null && 
+          locker.frontViewY !== undefined && locker.frontViewY !== null) {
+        // 새로운 알고리즘 결과 사용
         displayX = locker.frontViewX * scale
         displayY = locker.frontViewY * scale
         displayHeight = lockerActualHeight * scale
+        console.log(`[DisplayLockers] ${locker.number} using front view coords: displayX=${displayX}, displayY=${displayY}`)
       } else {
         // FALLBACK: 정면뷰 좌표가 없을 때 평면 좌표를 임시로 사용
-        // transformToFrontViewNew()가 곧 호출되어 올바른 좌표를 계산할 것임
-        const LOCKER_VISUAL_SCALE = 2.0
+        console.log(`[DisplayLockers] ${locker.number} missing front view coords, using fallback`)
         
         // 평면배치 좌표를 임시로 사용하여 좌측 상단 몰림 방지
-        if (locker.x !== undefined && locker.y !== undefined) {
-          // 평면 좌표를 화면에 맞게 스케일링
-          const tempPos = toDisplayCoords(locker.x, locker.y)
-          displayX = tempPos.x
-          displayY = tempPos.y
+        if (locker.x !== undefined && locker.x !== null && 
+            locker.y !== undefined && locker.y !== null) {
+          // 평면 좌표를 임시 위치로 사용 (화면 중앙 근처에 배치)
+          const tempX = 400 + (index * 80) // 화면 중앙부터 시작, 80px 간격
+          const tempY = 200 // 화면 위쪽 200px 위치
+          displayX = tempX
+          displayY = tempY
           displayHeight = lockerActualHeight * scale
           
-          console.log(`[Display] Using floor coordinates temporarily for ${locker.number}: x=${displayX}, y=${displayY}`)
+          console.log(`[DisplayLockers] ${locker.number} using temporary position: displayX=${displayX}, displayY=${displayY}`)
         } else {
           // 좌표가 전혀 없는 경우 (매우 드묾)
           displayX = 100 + (index * 100) // 겹치지 않게 임시 배치
           displayY = 100
           displayHeight = lockerActualHeight * scale
           
-          console.warn(`[Display] No coordinates available for ${locker.number}, using temporary position`)
+          console.warn(`[DisplayLockers] ${locker.number} no coordinates at all, using fallback position`)
         }
       }
     }
