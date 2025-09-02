@@ -331,6 +331,7 @@
               @rotatestart="startRotateLocker"
               @rotate="handleRotateMove"
               @rotateend="handleRotateEnd"
+              @delete="handleLockerDelete"
             />
             
             <!-- 통합 외곽선 그리기 (드래그 중에는 숨김) -->
@@ -482,9 +483,9 @@
     @save="handleLockerRegistration"
   />
 
-  <!-- Context Menu - Only visible in front view (세로배치모드) -->
+  <!-- Context Menu - Visible in both floor and front view modes -->
   <div 
-    v-if="contextMenuVisible && currentViewMode === 'front'" 
+    v-if="contextMenuVisible" 
     :style="{ 
       position: 'fixed', 
       left: contextMenuPosition.x + 'px', 
@@ -494,15 +495,23 @@
     class="context-menu"
     @click.stop
   >
-    <div class="context-menu-item" @click="showFloorInputDialog">
-      <i class="fas fa-layer-group"></i> 단수 입력
+    <!-- 락커 삭제 - 모든 모드에서 표시 -->
+    <div class="context-menu-item" @click="deleteSelectedLockersFromMenu">
+      <i class="fas fa-trash"></i> 락커 삭제
     </div>
-    <div class="context-menu-item" @click="showNumberAssignDialog">
-      <i class="fas fa-sort-numeric-up"></i> 번호 부여
-    </div>
-    <div class="context-menu-item" @click="deleteNumbers">
-      <i class="fas fa-eraser"></i> 번호 삭제
-    </div>
+    
+    <!-- 정면배치 모드에서만 표시되는 메뉴들 -->
+    <template v-if="currentViewMode === 'front'">
+      <div class="context-menu-item" @click="showFloorInputDialog">
+        <i class="fas fa-layer-group"></i> 단수 입력
+      </div>
+      <div class="context-menu-item" @click="showNumberAssignDialog">
+        <i class="fas fa-sort-numeric-up"></i> 번호 부여
+      </div>
+      <div class="context-menu-item" @click="deleteNumbers">
+        <i class="fas fa-eraser"></i> 번호 삭제
+      </div>
+    </template>
   </div>
   
   <!-- Floor Input Dialog -->
@@ -5165,11 +5174,9 @@ const findNumberGaps = () => {
 
 // Show context menu
 const showContextMenu = (event: MouseEvent) => {
-  // Only show in front view mode (세로배치모드)
-  if (currentViewMode.value !== 'front') return
-  
+  // Show in both floor and front view modes
   // Only show if lockers are selected
-  if (selectedLockerIds.value.size === 0) return
+  if (selectedLockerIds.value.size === 0 && !selectedLocker.value) return
   
   event.preventDefault()
   contextMenuVisible.value = true
@@ -5179,6 +5186,17 @@ const showContextMenu = (event: MouseEvent) => {
 // Hide context menu
 const hideContextMenu = () => {
   contextMenuVisible.value = false
+}
+
+// Delete selected lockers from context menu
+const deleteSelectedLockersFromMenu = () => {
+  deleteSelectedLockers()
+  hideContextMenu()
+}
+
+// Handle locker delete from X button
+const handleLockerDelete = () => {
+  deleteSelectedLockers()
 }
 
 // Show floor input dialog

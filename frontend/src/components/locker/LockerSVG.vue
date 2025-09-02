@@ -107,6 +107,29 @@
       {{ props.locker.lockrNo }}
     </text>
     
+    <!-- X 삭제 버튼 (선택 시만 표시) -->
+    <g v-if="isSelected && !isDragging" class="delete-button">
+      <circle
+        :cx="logicalDimensions.width - 10"
+        :cy="10"
+        r="10"
+        fill="#ef4444"
+        stroke="#ffffff"
+        stroke-width="1.5"
+        opacity="0.9"
+        style="cursor: pointer;"
+        @click.stop="handleDelete"
+        @mousedown.stop
+      />
+      <path
+        :d="`M ${logicalDimensions.width - 14} 6 L ${logicalDimensions.width - 6} 14 M ${logicalDimensions.width - 6} 6 L ${logicalDimensions.width - 14} 14`"
+        stroke="#ffffff"
+        stroke-width="2"
+        stroke-linecap="round"
+        style="pointer-events: none;"
+      />
+    </g>
+    
     <!-- 회전 핸들 (선택 시만 표시) -->
     <g v-if="isSelected && showRotateHandle" class="rotation-handle">
       <line
@@ -204,6 +227,7 @@ const emit = defineEmits<{
   rotatestart: [locker: Locker, event: MouseEvent]
   rotate: [id: string, angle: number]
   rotateend: [id: string]
+  delete: [id: string]
 }>()
 
 const isHovered = ref(false)
@@ -504,6 +528,11 @@ const handleClick = (e: MouseEvent) => {
   emit('click', props.locker, e)
   emit('select', props.locker.id)
   console.log('Locker clicked:', props.locker.id, 'Ctrl:', e.ctrlKey, 'Shift:', e.shiftKey)
+}
+
+const handleDelete = (e: MouseEvent) => {
+  e.stopPropagation()
+  emit('delete', props.locker.id)
 }
 
 const handleMouseDown = (e: MouseEvent) => {
