@@ -401,7 +401,7 @@
                 :key="`h-${guide.position}`"
                 :x1="0"
                 :y1="guide.position"
-                :x2="canvasWidth.value"
+                :x2="canvasWidth"
                 :y2="guide.position"
                 stroke="#00ff00"
                 stroke-width="1"
@@ -416,7 +416,7 @@
                 :x1="guide.position"
                 :y1="0"
                 :x2="guide.position"
-                :y2="canvasHeight.value"
+                :y2="canvasHeight"
                 stroke="#00ff00"
                 stroke-width="1"
                 stroke-dasharray="5,5"
@@ -756,7 +756,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { useLockerStore } from '@/stores/lockerStore'
+import { useLockerStore, type Locker, type LockerZone, type LockerType } from '@/stores/lockerStore'
 import LockerSVG from '@/components/locker/LockerSVG.vue'
 import ZoneModal from '@/components/modals/ZoneModal.vue'
 import LockerRegistrationModal from '@/components/modals/LockerRegistrationModal.vue'
@@ -765,9 +765,9 @@ import LockerRegistrationModal from '@/components/modals/LockerRegistrationModal
 const lockerStore = useLockerStore()
 
 // 상태
-const selectedZone = ref<any>(null)
-const selectedType = ref<any>(null)
-const selectedLocker = ref<any>(null)
+const selectedZone = ref<LockerZone | null>(null)
+const selectedType = ref<LockerType | null>(null)
+const selectedLocker = ref<Locker | null>(null)
 // Preview mode removed - direct addition now
 const isVerticalMode = ref(false)
 const canvasRef = ref<any>(null)

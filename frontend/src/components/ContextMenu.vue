@@ -34,7 +34,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+// No imports needed for this component
 
 export interface ContextMenuItem {
   id: string
@@ -46,7 +46,7 @@ export interface ContextMenuItem {
   action?: () => void
 }
 
-const props = defineProps<{
+defineProps<{
   visible: boolean
   position: { x: number; y: number }
   items: ContextMenuItem[]

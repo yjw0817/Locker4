@@ -1,5 +1,4 @@
 import type { Locker, LockerStatus } from '@/stores/lockerStore'
-import axios from 'axios'
 
 // Database schema interface matching the actual DB structure (lockrs table)
 export interface ApiLocker {
@@ -145,8 +144,8 @@ export class LockerApiService {
     
     return {
       LOCKR_LABEL: appLocker.lockrLabel || appLocker.number,
-      X: appLocker.x !== undefined ? Math.round(appLocker.x) : null,
-      Y: appLocker.y !== undefined ? Math.round(appLocker.y) : null,
+      X: appLocker.x !== undefined ? Math.round(appLocker.x) : 0,
+      Y: appLocker.y !== undefined ? Math.round(appLocker.y) : 0,
       FRONT_VIEW_X: appLocker.frontViewX ? Math.round(appLocker.frontViewX) : undefined,
       FRONT_VIEW_Y: appLocker.frontViewY ? Math.round(appLocker.frontViewY) : undefined,
       ROTATION: appLocker.rotation || 0,

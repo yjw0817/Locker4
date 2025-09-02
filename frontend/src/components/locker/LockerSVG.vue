@@ -413,15 +413,7 @@ const fontSize = computed(() => {
   return 10 * LOCKER_VISUAL_SCALE  // 기존 12px에서 10px로 축소
 })
 
-// 텍스트 정렬 기준선
-const textBaseline = computed(() => {
-  if (props.viewMode === 'front') {
-    // 세로배치 모드: 하단 정렬을 middle로 변경 (text-after-edge가 올바르게 작동하지 않음)
-    return 'middle'
-  }
-  // 평면배치 모드: 중앙 정렬
-  return 'middle'
-})
+// Text baseline removed - not used
 
 // 라벨 배경색 (세로배치 모드)
 const labelBackgroundColor = computed(() => {
