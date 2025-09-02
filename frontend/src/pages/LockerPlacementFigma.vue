@@ -3173,6 +3173,7 @@ const startRotateLocker = (locker, event) => {
 
 // 회전 중 각도 업데이트
 const handleRotateMove = (lockerId: string, newRotation: number) => {
+  // 회전 중에는 자유롭게 회전 (스냅 없음)
   // 다중 선택 체크
   if (selectedLockerIds.value.size > 1 && groupRotationState.value) {
     // 저장된 그룹 회전 상태 사용
@@ -3247,13 +3248,13 @@ const handleRotateMove = (lockerId: string, newRotation: number) => {
       locker.x = newCenterX - lockerState.width / 2
       locker.y = newCenterY - lockerState.height / 2
       
-      // 각 락커의 rotation 값도 함께 업데이트 (회전 중에는 누적값 유지)
+      // 각 락커의 rotation 값도 함께 업데이트 (회전 중에는 자유롭게)
       if (locker.id === state.leaderId) {
-        // 리더 락커는 newRotation 값 그대로 사용 (누적)
+        // 리더 락커는 newRotation 값 그대로 사용
         locker.rotation = newRotation
         console.log(`[ROTATION DIRECTION] Leader locker ${locker.id} rotation: ${locker.rotation}`)
       } else {
-        // 다른 락커들은 초기 회전값 + 전체 회전량 (누적)
+        // 다른 락커들은 초기 회전값 + 전체 회전량
         locker.rotation = lockerState.initialRotation + totalRotation
         console.log(`[ROTATION DIRECTION] Follower locker ${locker.id} rotation: ${locker.rotation}`)
       }
@@ -3265,8 +3266,8 @@ const handleRotateMove = (lockerId: string, newRotation: number) => {
     // 단일 락커 회전
     const locker = currentLockers.value.find(l => l.id === lockerId)
     if (locker) {
-      // 누적 회전 방식으로 360도 역회전 방지
-      locker.rotation = newRotation  // 누적값 그대로 사용
+      // 회전 중에는 자유롭게 회전
+      locker.rotation = newRotation
       console.log(`[ROTATION DIRECTION] Single locker ${locker.id} rotation: ${locker.rotation}`)
       
       // 디바운스된 저장
@@ -3275,9 +3276,34 @@ const handleRotateMove = (lockerId: string, newRotation: number) => {
   }
 }
 
-// 회전 종료
+// 회전 종료 - 45도 단위로 스냅
 const handleRotateEnd = (lockerId: string) => {
   // Rotation ended
+  
+  // 45도 단위로 스냅
+  const SNAP_ANGLE = 45
+  
+  // 다중 선택시 모든 락커를 45도 단위로 스냅
+  if (selectedLockerIds.value.size > 1) {
+    const selectedArray = Array.from(selectedLockerIds.value)
+    selectedArray.forEach(id => {
+      const locker = currentLockers.value.find(l => l.id === id)
+      if (locker) {
+        const snappedRotation = Math.round(locker.rotation / SNAP_ANGLE) * SNAP_ANGLE
+        locker.rotation = snappedRotation
+        console.log(`[ROTATION END] Snapped locker ${id} from ${locker.rotation} to ${snappedRotation}`)
+      }
+    })
+  } else {
+    // 단일 락커 스냅
+    const locker = currentLockers.value.find(l => l.id === lockerId)
+    if (locker) {
+      const originalRotation = locker.rotation
+      const snappedRotation = Math.round(originalRotation / SNAP_ANGLE) * SNAP_ANGLE
+      locker.rotation = snappedRotation
+      console.log(`[ROTATION END] Snapped locker ${lockerId} from ${originalRotation} to ${snappedRotation}`)
+    }
+  }
   
   // Set a flag to indicate rotation just ended
   rotationJustEnded.value = true
