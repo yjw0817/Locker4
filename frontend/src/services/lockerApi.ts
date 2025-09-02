@@ -38,6 +38,19 @@ const TYPE_DIMENSIONS = {
   '3': { width: 60, height: 80, depth: 60 }  // Large
 }
 
+// Type colors mapping (matching backend default colors)
+const TYPE_COLORS: Record<string, string> = {
+  '1': '#3b82f6',  // Small - Blue
+  '2': '#10b981',  // Medium - Green
+  '3': '#f59e0b',  // Large - Orange
+  // Additional types use variations
+  '4': '#8b5cf6',  // Purple
+  '5': '#ef4444',  // Red
+  '6': '#14b8a6',  // Teal
+  '7': '#f97316',  // Orange variant
+  '8': '#6366f1'   // Indigo
+}
+
 export class LockerApiService {
   private baseUrl: string
   private headers: HeadersInit
@@ -54,6 +67,7 @@ export class LockerApiService {
     // Handle both numeric and string type codes, with fallback defaults
     const typeCode = String(dbLocker.LOCKR_TYPE_CD || '1')
     const dimensions = TYPE_DIMENSIONS[typeCode] || TYPE_DIMENSIONS['1'] || { width: 40, height: 40, depth: 40 }
+    const color = TYPE_COLORS[typeCode] || TYPE_COLORS['1'] || '#3b82f6'
     
     return {
       id: `locker-${dbLocker.LOCKR_CD}`,
@@ -63,6 +77,7 @@ export class LockerApiService {
       width: dimensions.width || 40,
       height: dimensions.height || 40,
       depth: dimensions.depth || 40,
+      color: color,  // Add color based on type
       status: this.mapDbStatusToApp(dbLocker.LOCKR_STAT),
       rotation: dbLocker.ROTATION || 0,
       zoneId: dbLocker.LOCKR_KND,
