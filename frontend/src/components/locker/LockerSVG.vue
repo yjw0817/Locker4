@@ -1,7 +1,7 @@
 <template>
   <g
     :data-locker-id="locker.id"
-    :transform="`translate(${locker.x}, ${locker.y}) rotate(${locker.rotation || 0}, ${logicalDimensions.width/2}, ${logicalDimensions.height/2})`"
+    :transform="`translate(${displayX}, ${displayY}) rotate(${locker.rotation || 0}, ${logicalDimensions.width/2}, ${logicalDimensions.height/2})`"
     @click.stop="handleClick"
     @mousedown.prevent="handleMouseDown"
     @mouseenter="isHovered = true"
@@ -196,6 +196,21 @@ const props = defineProps<{
   adjacentSides?: string[]  // 인접한 면 정보 ['top', 'bottom', 'left', 'right']
   zoomLevel?: number  // 현재 줌 레벨
 }>()
+
+// 뷰 모드에 따라 적절한 좌표 사용
+const displayX = computed(() => {
+  if (props.viewMode === 'front' && props.locker.frontViewX !== undefined) {
+    return props.locker.frontViewX
+  }
+  return props.locker.x
+})
+
+const displayY = computed(() => {
+  if (props.viewMode === 'front' && props.locker.frontViewY !== undefined) {
+    return props.locker.frontViewY
+  }
+  return props.locker.y
+})
 
 const emit = defineEmits<{
   click: [locker: Locker, event: MouseEvent]
