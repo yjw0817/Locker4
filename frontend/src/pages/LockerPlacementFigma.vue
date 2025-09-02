@@ -579,14 +579,14 @@
           <label class="section-label">추가옵션:</label>
         </div>
         <div class="form-options-row">
-          <div class="checkbox-group-horizontal">
-            <label class="checkbox-label">
+          <div style="display: flex; align-items: center;">
+            <label style="display: flex; align-items: center; margin-right: 30px;">
+              <span style="margin-right: 8px;">역방향</span>
               <input type="checkbox" v-model="reverseDirection">
-              <span>역방향</span>
             </label>
-            <label class="checkbox-label" style="margin-left: 20px;">
+            <label style="display: flex; align-items: center;">
+              <span style="margin-right: 8px;">아래에서부터</span>
               <input type="checkbox" v-model="fromTop">
-              <span>아래에서부터</span>
             </label>
           </div>
         </div>
