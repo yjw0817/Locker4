@@ -3345,7 +3345,9 @@ const saveLockerRotation = async (lockerId: string, rotation: number) => {
       } else if (normalizedRotation < -180) {
         normalizedRotation += 360
       }
-      await lockerStore.updateLocker(lockerId, { rotation: normalizedRotation })
+      // 회전 중일 때는 로컬만 업데이트, 종료 시에만 DB 업데이트
+      const skipDB = isRotating.value
+      await lockerStore.updateLocker(lockerId, { rotation: normalizedRotation }, skipDB)
       // Locker rotation saved
     }
   } catch (error) {
