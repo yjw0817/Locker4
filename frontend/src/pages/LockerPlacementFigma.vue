@@ -528,18 +528,38 @@
     <div class="modal-content number-assign-modal" @click.stop>
       <h3>번호 부여</h3>
       <div class="form-group">
-        <label>시작 번호:</label>
-        <input 
-          v-model.number="startNumber" 
-          type="number" 
-          :min="1" 
-          placeholder="시작 번호"
-          class="form-control number-input"
-        >
+        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+          <label>시작번호:</label>
+          <label style="margin-right: 100px;">번호생성옵션:</label>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <input 
+            v-model.number="startNumber" 
+            type="number" 
+            :min="1" 
+            placeholder="시작 번호"
+            class="form-control number-input"
+            style="width: 120px;"
+          >
+          <div class="radio-group-horizontal" style="flex: 1; margin-left: 20px;">
+            <label class="radio-label">
+              <input type="radio" v-model="numberGenerationType" value="all">
+              <span>전체</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" v-model="numberGenerationType" value="odd">
+              <span>홀수</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" v-model="numberGenerationType" value="even">
+              <span>짝수</span>
+            </label>
+          </div>
+        </div>
       </div>
       <div class="form-section">
         <div class="form-labels-row">
-          <label class="section-label">정렬 방향:</label>
+          <label class="section-label">생성방향:</label>
         </div>
         <div class="form-options-row">
           <div class="radio-group-horizontal">
@@ -556,15 +576,18 @@
       </div>
       <div class="form-section">
         <div class="form-labels-row">
-          <label class="section-label">역방향:</label>
-          <label class="section-label" style="margin-left: -40px;">아래에서부터:</label>
+          <label class="section-label">추가옵션:</label>
         </div>
         <div class="form-options-row">
-          <div class="checkbox-container" style="margin-left: 10px;">
-            <input type="checkbox" v-model="reverseDirection">
-          </div>
-          <div class="checkbox-container" style="margin-left: 20px;">
-            <input type="checkbox" v-model="fromTop">
+          <div class="checkbox-group-horizontal">
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="reverseDirection">
+              <span>역방향</span>
+            </label>
+            <label class="checkbox-label" style="margin-left: 20px;">
+              <input type="checkbox" v-model="fromTop">
+              <span>아래에서부터</span>
+            </label>
           </div>
         </div>
       </div>
@@ -791,6 +814,7 @@ const floorCount = ref(1)
 const debugPopupVisible = ref(false)
 const numberAssignVisible = ref(false)
 const startNumber = ref(1)
+const numberGenerationType = ref<'all' | 'odd' | 'even'>('all')  // 번호생성옵션 추가
 const numberDirection = ref<'horizontal' | 'vertical'>('horizontal')
 const reverseDirection = ref(false)
 const fromTop = ref(false)
@@ -5835,7 +5859,16 @@ const assignNumbers = async () => {
     const batchUpdates = []
     const assignments = []
     
-    console.log(`[Number Assignment] Step 3 - 시작번호: ${start}, 할당할 락커 수: ${sortedLockers.length}`)
+    // 홀수/짝수 옵션에 따른 시작번호 조정
+    if (numberGenerationType.value === 'odd' && currentNum % 2 === 0) {
+      currentNum++  // 짝수면 홀수로 조정
+      console.log(`[Number Assignment] 홀수 모드: 시작번호를 ${start}에서 ${currentNum}로 조정`)
+    } else if (numberGenerationType.value === 'even' && currentNum % 2 === 1) {
+      currentNum++  // 홀수면 짝수로 조정
+      console.log(`[Number Assignment] 짝수 모드: 시작번호를 ${start}에서 ${currentNum}로 조정`)
+    }
+    
+    console.log(`[Number Assignment] Step 3 - 시작번호: ${currentNum}, 할당할 락커 수: ${sortedLockers.length}, 모드: ${numberGenerationType.value}`)
     
     assignmentProgress.value = `락커 번호를 할당중입니다... (0/${sortedLockers.length})`
     
@@ -5844,7 +5877,11 @@ const assignNumbers = async () => {
       // 사용 가능한 다음 번호 찾기
       while (existingNumbers.has(currentNum)) {
         console.log(`  - ${currentNum}번은 이미 사용중, 다음 번호 확인`)
-        currentNum++
+        if (numberGenerationType.value === 'all') {
+          currentNum++
+        } else {
+          currentNum += 2  // 홀수/짝수 모드에서는 2씩 증가
+        }
       }
       
       console.log(`  - ${locker.id.slice(-4)} 락커에 ${currentNum}번 할당`)
@@ -5864,7 +5901,13 @@ const assignNumbers = async () => {
       
       // 현재 배치에서 중복 방지를 위해 Set에 추가
       existingNumbers.add(currentNum)
-      currentNum++
+      
+      // 다음 번호로 증가
+      if (numberGenerationType.value === 'all') {
+        currentNum++
+      } else {
+        currentNum += 2  // 홀수/짝수 모드에서는 2씩 증가
+      }
       processedCount++
       
       // 진행 상황 업데이트
