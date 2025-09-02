@@ -3448,7 +3448,8 @@ const handleDragMove = (event) => {
       // Round positions to avoid floating point precision issues
       const roundedX = Math.round(pos.x * 100) / 100
       const roundedY = Math.round(pos.y * 100) / 100
-      lockerStore.updateLocker(pos.id, { x: roundedX, y: roundedY })
+      // Skip DB update during drag - only update local store
+      lockerStore.updateLocker(pos.id, { x: roundedX, y: roundedY }, true)
       
       // Update selectedLocker if it's being dragged
       if (selectedLocker.value?.id === pos.id) {
@@ -3507,7 +3508,8 @@ const handleDragMove = (event) => {
     if (maxOverlap < 1.0) {
       console.log('[SNAP] Accepting snapped position with micro-overlap:', maxOverlap.toFixed(2), 'px')
       proposedPositions.forEach(pos => {
-        lockerStore.updateLocker(pos.id, { x: pos.x, y: pos.y })
+        // Skip DB update during drag - only update local store
+        lockerStore.updateLocker(pos.id, { x: pos.x, y: pos.y }, true)
         if (selectedLocker.value?.id === pos.id) {
           selectedLocker.value = { ...selectedLocker.value, x: pos.x, y: pos.y }
         }
@@ -3611,7 +3613,8 @@ const handleDragMove = (event) => {
           newX = Math.max(0, Math.min(newX, maxX))
           newY = Math.max(0, Math.min(newY, maxY))
           
-          lockerStore.updateLocker(locker.id, { x: newX, y: newY })
+          // Skip DB update during drag - only update local store
+          lockerStore.updateLocker(locker.id, { x: newX, y: newY }, true)
           if (selectedLocker.value?.id === locker.id) {
             selectedLocker.value = { ...selectedLocker.value, x: newX, y: newY }
           }

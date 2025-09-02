@@ -192,7 +192,7 @@ export const useLockerStore = defineStore('locker', () => {
     return newLocker
   }
 
-  const updateLocker = async (id: string, updates: Partial<Locker>) => {
+  const updateLocker = async (id: string, updates: Partial<Locker>, skipDBUpdate = false) => {
     const index = lockers.value.findIndex(l => l.id === id)
     if (index !== -1) {
       saveHistory()
@@ -207,8 +207,8 @@ export const useLockerStore = defineStore('locker', () => {
       // 선택된 락커가 업데이트되면 selectedLocker computed도 자동 갱신됨
       // Update logged
       
-      // If online mode, sync to database
-      if (isOnlineMode.value && !id.includes('temp')) {
+      // If online mode, sync to database (unless explicitly skipped during drag)
+      if (isOnlineMode.value && !id.includes('temp') && !skipDBUpdate) {
         isSyncing.value = true
         try {
           const savedLocker = await lockerApi.saveLocker(lockers.value[index])
