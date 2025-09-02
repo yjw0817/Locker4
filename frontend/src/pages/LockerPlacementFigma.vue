@@ -1291,19 +1291,22 @@ const saveMultipleLockerPositions = async (positions: Array<{ id: string, x: num
     const savePromises = positions.map(pos => {
       // Find the locker to get its database ID
       const locker = currentLockers.value.find(l => l.id === pos.id)
+      // Round positions to avoid floating point precision issues
+      const roundedX = Math.round(pos.x * 100) / 100
+      const roundedY = Math.round(pos.y * 100) / 100
       if (locker && locker.lockrCd) {
         // If locker has a database ID, update its position
         return updateLockerPlacement(locker.lockrCd, { 
-          X: pos.x, 
-          Y: pos.y 
+          X: roundedX, 
+          Y: roundedY 
         })
       } else if (locker) {
         // If locker doesn't have a database ID yet, save it first
         const saveData = {
           LOCKR_KND: selectedZone.value?.id,
           LOCKR_TYPE_CD: locker.type || '1',
-          X: pos.x,
-          Y: pos.y,
+          X: roundedX,
+          Y: roundedY,
           LOCKR_LABEL: locker.number,
           ROTATION: locker.rotation || 0,
           LOCKR_STAT: '00'
@@ -2416,9 +2419,10 @@ const getMousePosition = (event: MouseEvent) => {
   
   // SVG coordinates are already in logical space (not display space)
   // because viewBox defines the logical coordinate system
+  // Round to avoid floating point precision issues
   return {
-    x: svgP.x,
-    y: svgP.y
+    x: Math.round(svgP.x * 100) / 100,
+    y: Math.round(svgP.y * 100) / 100
   }
 }
 
@@ -3066,12 +3070,17 @@ const startDragLocker = (locker, event) => {
   // Store initial positions and relative offsets for all selected lockers
   draggedLockers.value = Array.from(selectedLockerIds.value).map(id => {
     const l = currentLockers.value.find(loc => loc.id === id)
-    const relativeX = l.x - leaderLocker.x  // Relative position to leader
-    const relativeY = l.y - leaderLocker.y  // Relative position to leader
+    // Round positions to avoid floating point precision issues
+    const roundedX = Math.round(l.x * 100) / 100
+    const roundedY = Math.round(l.y * 100) / 100
+    const leaderX = Math.round(leaderLocker.x * 100) / 100
+    const leaderY = Math.round(leaderLocker.y * 100) / 100
+    const relativeX = roundedX - leaderX  // Relative position to leader
+    const relativeY = roundedY - leaderY  // Relative position to leader
     return {
       id: l.id,
-      initialX: l.x,
-      initialY: l.y,
+      initialX: roundedX,
+      initialY: roundedY,
       relativeX: relativeX,  // Store relative position to leader
       relativeY: relativeY,  // Store relative position to leader
       isLeader: l.id === leaderLocker.id
@@ -3079,9 +3088,12 @@ const startDragLocker = (locker, event) => {
   })
   
   // Calculate offset between mouse and leader locker position
+  // Use rounded leader position for consistency
+  const leaderX = Math.round(leaderLocker.x * 100) / 100
+  const leaderY = Math.round(leaderLocker.y * 100) / 100
   dragOffset.value = {
-    x: mousePos.x - leaderLocker.x,
-    y: mousePos.y - leaderLocker.y
+    x: mousePos.x - leaderX,
+    y: mousePos.y - leaderY
   }
   
   const selectedCount = selectedLockerIds.value.size
@@ -3433,11 +3445,14 @@ const handleDragMove = (event) => {
   if (!hasCollision) {
     // No collision, update all positions immediately
     proposedPositions.forEach(pos => {
-      lockerStore.updateLocker(pos.id, { x: pos.x, y: pos.y })
+      // Round positions to avoid floating point precision issues
+      const roundedX = Math.round(pos.x * 100) / 100
+      const roundedY = Math.round(pos.y * 100) / 100
+      lockerStore.updateLocker(pos.id, { x: roundedX, y: roundedY })
       
       // Update selectedLocker if it's being dragged
       if (selectedLocker.value?.id === pos.id) {
-        selectedLocker.value = { ...selectedLocker.value, x: pos.x, y: pos.y }
+        selectedLocker.value = { ...selectedLocker.value, x: roundedX, y: roundedY }
       }
     })
     
