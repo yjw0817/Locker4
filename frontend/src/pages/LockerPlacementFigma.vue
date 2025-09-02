@@ -1606,35 +1606,27 @@ const displayLockers = computed(() => {
         displayY = locker.frontViewY * scale
         displayHeight = lockerActualHeight * scale
       } else {
-        // FALLBACK: Original algorithm for compatibility
+        // FALLBACK: 정면뷰 좌표가 없을 때 평면 좌표를 임시로 사용
+        // transformToFrontViewNew()가 곧 호출되어 올바른 좌표를 계산할 것임
         const LOCKER_VISUAL_SCALE = 2.0
         
-        // Find locker position in the front view sequence
-        const sequenceIndex = frontViewSequence.value.findIndex(l => l.id === locker.id)
-        
-        if (sequenceIndex >= 0) {
-          // Calculate position based on sequence (ORIGINAL DYNAMIC CALCULATION)
-          const totalLockersWidth = frontViewSequence.value.reduce((total, l) => {
-            return total + (l.width || 40) * LOCKER_VISUAL_SCALE
-          }, 0)
+        // 평면배치 좌표를 임시로 사용하여 좌측 상단 몰림 방지
+        if (locker.x !== undefined && locker.y !== undefined) {
+          // 평면 좌표를 화면에 맞게 스케일링
+          const tempPos = toDisplayCoords(locker.x, locker.y)
+          displayX = tempPos.x
+          displayY = tempPos.y
+          displayHeight = lockerActualHeight * scale
           
-          const startX = (canvasWidth.value - totalLockersWidth) / 2
-          let currentX = startX
-          
-          // Calculate X position by summing widths of previous lockers
-          for (let i = 0; i < sequenceIndex; i++) {
-            currentX += (frontViewSequence.value[i].width || 40) * LOCKER_VISUAL_SCALE
-          }
-          
-          displayX = currentX * scale
-          displayY = (FLOOR_Y - lockerActualHeight * LOCKER_VISUAL_SCALE) * scale
+          console.log(`[Display] Using floor coordinates temporarily for ${locker.number}: x=${displayX}, y=${displayY}`)
         } else {
-          // Fallback if not in sequence
-          displayX = 0
-          displayY = (FLOOR_Y - lockerActualHeight * LOCKER_VISUAL_SCALE) * scale
+          // 좌표가 전혀 없는 경우 (매우 드묾)
+          displayX = 100 + (index * 100) // 겹치지 않게 임시 배치
+          displayY = 100
+          displayHeight = lockerActualHeight * scale
+          
+          console.warn(`[Display] No coordinates available for ${locker.number}, using temporary position`)
         }
-        
-        displayHeight = lockerActualHeight * scale
       }
     }
     
@@ -4730,22 +4722,26 @@ const transformToFrontViewNew = () => {
   const lockersToDelete = []
   const canvasTopY = 0  // 캔버스 상단 Y 좌표
   
-  // 모든 락커(부모 + 자식)를 검사 - Y축 경계 체크
-  currentLockers.value.forEach(locker => {
-    const height = (locker.actualHeight || locker.height || 0) * 2.0  // LOCKER_VISUAL_SCALE 적용
-    const lockerTopEdge = (locker.frontViewY || 0)  // 락커의 상단 Y 좌표
+  // renderData를 기준으로 경계 체크 (계산된 좌표를 사용)
+  renderData.forEach(renderItem => {
+    const height = (renderItem.actualHeight || renderItem.height || 0) * 2.0  // LOCKER_VISUAL_SCALE 적용
+    const lockerTopEdge = renderItem.frontViewY  // renderData에서 계산된 Y 좌표
     
     // 락커의 상단이 0보다 작으면 (화면 위로 넘어가면)
     if (lockerTopEdge < canvasTopY) {
-      console.warn(`[Boundary Check] 락커 ${locker.number}이(가) 화면 위쪽 경계를 넘어갑니다:`, {
-        lockerId: locker.id,
-        number: locker.number,
+      console.warn(`[Boundary Check] 락커 ${renderItem.number}이(가) 화면 위쪽 경계를 넘어갑니다:`, {
+        lockerId: renderItem.id,
+        number: renderItem.number,
         topEdge: lockerTopEdge,
         height: height,
         canvasTop: canvasTopY,
         isOverflowing: lockerTopEdge < canvasTopY
       })
-      lockersToDelete.push(locker)
+      // currentLockers에서 해당 락커 찾기
+      const locker = currentLockers.value.find(l => l.id === renderItem.id)
+      if (locker) {
+        lockersToDelete.push(locker)
+      }
     }
   })
   
