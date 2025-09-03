@@ -29,7 +29,7 @@ export default defineConfig({
   server: {
     port: 5174,  // Frontend server port - fixed to avoid conflicts
     strictPort: true,  // Use exact port 5174
-    host: 'localhost',  // Listen on localhost only
+    host: true,  // Listen on all network interfaces
     proxy: {
       '/api': {
         target: 'http://localhost:3333',

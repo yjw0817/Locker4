@@ -1,4 +1,12 @@
 import type { Locker, LockerStatus } from '@/stores/lockerStore'
+import { 
+  isCodeIgniterEnvironment, 
+  getApiBaseUrl, 
+  getCsrfToken, 
+  getCsrfHeader,
+  getCompanyCodes,
+  isDebugMode 
+} from '@/config/codeigniter'
 
 // Database schema interface matching the actual DB structure (lockrs table)
 export interface ApiLocker {
@@ -53,11 +61,41 @@ const TYPE_COLORS: Record<string, string> = {
 export class LockerApiService {
   private baseUrl: string
   private headers: HeadersInit
+  private useCodeIgniter: boolean
   
   constructor() {
-    this.baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
-    this.headers = {
-      'Content-Type': 'application/json'
+    this.useCodeIgniter = isCodeIgniterEnvironment()
+    
+    if (this.useCodeIgniter) {
+      // Use CodeIgniter API
+      this.baseUrl = getApiBaseUrl()
+      const csrfToken = getCsrfToken()
+      const csrfHeader = getCsrfHeader()
+      
+      this.headers = {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+      
+      // Add CSRF token if available
+      if (csrfToken && csrfHeader) {
+        (this.headers as any)[csrfHeader] = csrfToken
+      }
+      
+      if (isDebugMode()) {
+        console.log('[LockerApi] Using CodeIgniter API:', this.baseUrl)
+        console.log('[LockerApi] CSRF Token:', csrfToken ? 'Present' : 'Missing')
+      }
+    } else {
+      // Use Node.js development API
+      this.baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+      this.headers = {
+        'Content-Type': 'application/json'
+      }
+      
+      if (isDebugMode()) {
+        console.log('[LockerApi] Using Node.js API:', this.baseUrl)
+      }
     }
   }
   
@@ -195,24 +233,58 @@ export class LockerApiService {
     return statusMap[appStatus] || '00'
   }
   
+  // Handle API response and check for authentication
+  private async handleResponse(response: Response): Promise<any> {
+    // Check for authentication errors
+    if (response.status === 401) {
+      if (this.useCodeIgniter) {
+        // Redirect to login page for CodeIgniter
+        window.location.href = '/login'
+        throw new Error('Authentication required')
+      }
+    }
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    
+    return response.json()
+  }
+  
   // API methods
   async getLockers(compCd?: string, bcoffCd?: string): Promise<Locker[]> {
     try {
+      // Use company codes from config if not provided
+      if (this.useCodeIgniter) {
+        const codes = getCompanyCodes()
+        compCd = compCd || codes.companyCode
+        bcoffCd = bcoffCd || codes.officeCode
+      }
+      
       const params = new URLSearchParams()
       if (compCd) params.append('COMP_CD', compCd)
       if (bcoffCd) params.append('BCOFF_CD', bcoffCd)
       
-      const response = await fetch(`${this.baseUrl}/lockrs?${params}`, {
+      // Different URL patterns for CI vs Node.js
+      const url = this.useCodeIgniter 
+        ? `${this.baseUrl}?${params}` 
+        : `${this.baseUrl}/lockrs?${params}`
+      
+      const response = await fetch(url, {
         method: 'GET',
-        headers: this.headers
+        headers: this.headers,
+        credentials: this.useCodeIgniter ? 'same-origin' : 'omit'
       })
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
+      const data = await this.handleResponse(response)
       
-      const data = await response.json()
-      const dbLockers: ApiLocker[] = data.lockers || data
+      // Handle different response formats
+      let dbLockers: ApiLocker[]
+      if (this.useCodeIgniter && data.status === 'success') {
+        dbLockers = data.data?.lockers || []
+      } else {
+        dbLockers = data.lockers || data
+      }
       
       // Received lockers from backend
       
@@ -253,21 +325,43 @@ export class LockerApiService {
       const dbLocker = this.appToDbFormat(locker)
       const isNew = locker.id.includes('temp') || locker.id.includes('new')
       
-      const url = isNew 
-        ? `${this.baseUrl}/lockrs`
-        : `${this.baseUrl}/lockrs/${this.extractDbId(locker.id)}`
+      // Add company codes for CodeIgniter
+      if (this.useCodeIgniter) {
+        const codes = getCompanyCodes()
+        dbLocker.COMP_CD = dbLocker.COMP_CD || codes.companyCode
+        dbLocker.BCOFF_CD = dbLocker.BCOFF_CD || codes.officeCode
+      }
+      
+      // Different URL patterns
+      const url = this.useCodeIgniter
+        ? isNew 
+          ? this.baseUrl
+          : `${this.baseUrl}/${this.extractDbId(locker.id)}`
+        : isNew 
+          ? `${this.baseUrl}/lockrs`
+          : `${this.baseUrl}/lockrs/${this.extractDbId(locker.id)}`
         
       const response = await fetch(url, {
         method: isNew ? 'POST' : 'PUT',
         headers: this.headers,
-        body: JSON.stringify(dbLocker)
+        body: JSON.stringify(dbLocker),
+        credentials: this.useCodeIgniter ? 'same-origin' : 'omit'
       })
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       
-      const savedDbLocker: ApiLocker = await response.json()
+      const result = await response.json()
+      
+      // Handle different response formats
+      let savedDbLocker: ApiLocker
+      if (this.useCodeIgniter && result.status === 'success') {
+        savedDbLocker = result.data
+      } else {
+        savedDbLocker = result
+      }
+      
       return this.dbToAppFormat(savedDbLocker)
     } catch (error) {
       console.error('[API] Failed to save locker:', error)
@@ -278,10 +372,22 @@ export class LockerApiService {
   async deleteLocker(lockerId: string): Promise<boolean> {
     try {
       const dbId = this.extractDbId(lockerId)
-      const response = await fetch(`${this.baseUrl}/lockrs/${dbId}`, {
+      
+      // Different URL patterns
+      const url = this.useCodeIgniter
+        ? `${this.baseUrl}/${dbId}`
+        : `${this.baseUrl}/lockrs/${dbId}`
+      
+      const response = await fetch(url, {
         method: 'DELETE',
-        headers: this.headers
+        headers: this.headers,
+        credentials: this.useCodeIgniter ? 'same-origin' : 'omit'
       })
+      
+      if (this.useCodeIgniter) {
+        const result = await response.json()
+        return result.status === 'success'
+      }
       
       return response.ok
     } catch (error) {
