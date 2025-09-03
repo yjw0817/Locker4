@@ -4332,8 +4332,8 @@ const findClockwiseStart = (minorGroups: any[][]): any => {
     
     // If no counter-clockwise connection, this could be our start
     if (!hasCounterClockwiseConnection) {
-      // Prefer top-right groups (higher score for up and right)
-      const score = -groupCenter.y + groupCenter.x  // negative y because up is smaller y
+      // Prefer left-most groups (9 o'clock position for clockwise start)
+      const score = -groupCenter.x  // 가장 왼쪽 그룹 선호 (9시 방향)
       if (score > bestScore) {
         bestScore = score
         startGroup = group
@@ -4342,11 +4342,11 @@ const findClockwiseStart = (minorGroups: any[][]): any => {
   }
   
   // If no group found without counter-clockwise connections (circular structure),
-  // start from the top-right most group
+  // start from the left-most group (9 o'clock position)
   if (!startGroup) {
     for (const group of minorGroups) {
       const groupCenter = getGroupCenter(group)
-      const score = -groupCenter.y + groupCenter.x
+      const score = -groupCenter.x  // 가장 왼쪽 그룹 선호 (9시 방향)
       if (score > bestScore) {
         bestScore = score
         startGroup = group
