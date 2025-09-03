@@ -3298,9 +3298,11 @@ const handleRotateEnd = (lockerId: string) => {
   // Set a flag to indicate rotation just ended
   rotationJustEnded.value = true
   
-  // Clear both flags after a short delay
+  // 먼저 회전 중 플래그를 false로 설정하여 DB 저장이 가능하도록 함
+  isRotating.value = false
+  
+  // Clear rotation ended flag after a short delay
   setTimeout(() => {
-    isRotating.value = false
     rotationJustEnded.value = false
   }, 200)
   
