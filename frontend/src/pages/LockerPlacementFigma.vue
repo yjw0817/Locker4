@@ -4283,79 +4283,80 @@ const findMinorGroups = (majorGroup: any[]): any[][] => {
   return minorGroups
 }
 
-// Find the bottom-most or earliest position in clockwise direction
+// Find the clockwise starting point based on structure type
 const findClockwiseStart = (minorGroups: any[][]): any => {
-  // Find the group that has no connections in the counter-clockwise direction
-  // (i.e., no connections to the left or above)
+  if (minorGroups.length <= 1) return minorGroups[0] ? minorGroups[0][0] : null
   
-  let startGroup: any[] | null = null
-  let bestScore = -Infinity
+  // 1. Calculate connection count for each minor group
+  const connectionMap = new Map()
   
   for (const group of minorGroups) {
-    const groupCenter = getGroupCenter(group)
-    let hasCounterClockwiseConnection = false
+    let connectionCount = 0
     
-    // Check if this group has any connections in counter-clockwise direction
     for (const otherGroup of minorGroups) {
       if (group === otherGroup) continue
       
-      // Check if groups are connected
-      let groupsConnected = false
+      // Check if two groups are connected
+      let connected = false
       for (const locker1 of group) {
         for (const locker2 of otherGroup) {
           if (isConnected(locker1, locker2)) {
-            groupsConnected = true
+            connected = true
             break
           }
         }
-        if (groupsConnected) break
+        if (connected) break
       }
       
-      if (groupsConnected) {
-        const otherCenter = getGroupCenter(otherGroup)
-        const dx = otherCenter.x - groupCenter.x
-        const dy = otherCenter.y - groupCenter.y
-        let angle = Math.atan2(dy, dx) * 180 / Math.PI
-        
-        // Convert to 0-360 range
-        if (angle < 0) angle += 360
-        
-        // Check if in counter-clockwise range (roughly 180° to 360°, i.e., left and up)
-        // For U-shape, we want to start from the top-right or top-left endpoint
-        if (angle > 90 && angle < 270) {
-          // Connection is to the left (counter-clockwise)
-          hasCounterClockwiseConnection = true
-          break
+      if (connected) connectionCount++
+    }
+    
+    connectionMap.set(group, connectionCount)
+  }
+  
+  // 2. Find endpoints (groups with only 1 connection)
+  const endpoints = minorGroups.filter(g => connectionMap.get(g) === 1)
+  
+  // 3. Determine start point based on structure
+  if (endpoints.length === 0) {
+    // Complete loop (ㅁ shape): start from leftmost group (9 o'clock)
+    console.log('[Clockwise Start] Complete loop detected, finding leftmost group')
+    let leftmostGroup = minorGroups[0]
+    for (const group of minorGroups) {
+      const center = getGroupCenter(group)
+      const leftmostCenter = getGroupCenter(leftmostGroup)
+      if (center.x < leftmostCenter.x) {
+        leftmostGroup = group
+      }
+    }
+    console.log('[Clockwise Start] Selected leftmost group:', leftmostGroup.map(l => l.number || l.id).join(','))
+    return leftmostGroup[0]
+  }
+  
+  if (endpoints.length >= 2) {
+    // Broken chain: select bottom-first, then left-first endpoint
+    console.log('[Clockwise Start] Broken chain detected with', endpoints.length, 'endpoints')
+    let bestEndpoint = endpoints[0]
+    for (const endpoint of endpoints) {
+      const center = getGroupCenter(endpoint)
+      const bestCenter = getGroupCenter(bestEndpoint)
+      
+      // Prefer bottom (larger y), then left (smaller x)
+      if (center.y > bestCenter.y) {
+        bestEndpoint = endpoint
+      } else if (Math.abs(center.y - bestCenter.y) < 10) { // Consider y values equal within 10px
+        if (center.x < bestCenter.x) {
+          bestEndpoint = endpoint
         }
       }
     }
-    
-    // If no counter-clockwise connection, this could be our start
-    if (!hasCounterClockwiseConnection) {
-      // Prefer left-most groups (9 o'clock position for clockwise start)
-      const score = -groupCenter.x  // 가장 왼쪽 그룹 선호 (9시 방향)
-      if (score > bestScore) {
-        bestScore = score
-        startGroup = group
-      }
-    }
+    console.log('[Clockwise Start] Selected endpoint:', bestEndpoint.map(l => l.number || l.id).join(','))
+    return bestEndpoint[0]
   }
   
-  // If no group found without counter-clockwise connections (circular structure),
-  // start from the left-most group (9 o'clock position)
-  if (!startGroup) {
-    for (const group of minorGroups) {
-      const groupCenter = getGroupCenter(group)
-      const score = -groupCenter.x  // 가장 왼쪽 그룹 선호 (9시 방향)
-      if (score > bestScore) {
-        bestScore = score
-        startGroup = group
-      }
-    }
-  }
-  
-  // Return the first locker of the start group
-  return startGroup ? startGroup[0] : null
+  // Fallback: return first group's first locker
+  console.log('[Clockwise Start] Fallback to first group')
+  return minorGroups[0][0]
 }
 
 // Get the minor group containing a specific locker
