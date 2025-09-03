@@ -11,7 +11,7 @@ export default defineConfig({
   },
   base: '/assets/locker4/', // CodeIgniter asset path
   build: {
-    outDir: '../../../html/SpoqPlus_Color_Admin_Except_Mobile_claude2/public/assets/locker4',
+    outDir: '../../html/SpoqPlus_Color_Admin_Except_Mobile_claude2/public/assets/locker4',
     emptyOutDir: true,
     rollupOptions: {
       output: {
