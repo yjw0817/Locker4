@@ -10,17 +10,7 @@
     
     <!-- Main content - only show when data is ready -->
     <div v-else class="main-content">
-      <!-- 간단한 헤더 -->
-      <header class="header">
-      <h1 class="title">락커 배치</h1>
-      <div class="breadcrumb">
-        <span>관리자</span>
-        <span class="divider">/</span>
-        <span>락커 배치</span>
-      </div>
-    </header>
-
-    <div class="container">
+      <div class="container">
       <!-- 좌측 사이드바 - 평면배치모드에서만 표시 -->
       <aside class="sidebar">
         <h2 class="sidebar-title">락커 선택창</h2>
