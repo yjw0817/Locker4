@@ -7825,7 +7825,8 @@ onUnmounted(() => {
 
 .locker-placement {
   width: 100%;
-  height: 100vh;
+  height: 100%; /* Changed from 100vh to 100% to fit within panel */
+  min-height: 600px;
   display: flex;
   flex-direction: column;
   background-color: var(--background-main);
