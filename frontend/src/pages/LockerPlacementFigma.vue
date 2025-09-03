@@ -4424,16 +4424,20 @@ const findNextConnectedGroup = (currentGroup: any[], visitedGroups: Set<any[]>, 
 
 // 소그룹 시계방향 순회 정렬
 const sortMinorGroups = (minorGroups: any[][]): any[][] => {
+  console.log('[sortMinorGroups] Starting with', minorGroups.length, 'groups')
   if (minorGroups.length <= 1) return minorGroups
   
   const sortedGroups: any[][] = []
   const visitedGroups = new Set<any[]>()
   
   // Find starting point (bottom-most locker)
+  console.log('[sortMinorGroups] Finding clockwise start...')
   const startLocker = findClockwiseStart(minorGroups)
+  console.log('[sortMinorGroups] Start locker:', startLocker?.number || startLocker?.id)
   const startGroup = getMinorGroupContaining(startLocker, minorGroups)
   
   if (!startGroup) {
+    console.log('[sortMinorGroups] No start group found, using fallback sorting')
     // Fallback to original sorting if no valid start
     return minorGroups.sort((a, b) => {
       const aTopLeft = getTopLeftLocker(a)
@@ -4446,9 +4450,12 @@ const sortMinorGroups = (minorGroups: any[][]): any[][] => {
     })
   }
   
+  console.log('[sortMinorGroups] Start group:', startGroup.map(l => l.number || l.id).join(','))
+  
   // Start clockwise traversal
   let currentGroup: any[] | null = startGroup
   while (currentGroup && !visitedGroups.has(currentGroup)) {
+    console.log('[sortMinorGroups] Adding group:', currentGroup.map(l => l.number || l.id).join(','))
     sortedGroups.push(currentGroup)
     visitedGroups.add(currentGroup)
     
