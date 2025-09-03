@@ -66,35 +66,24 @@ export class LockerApiService {
   constructor() {
     this.useCodeIgniter = isCodeIgniterEnvironment()
     
+    // Always use Node.js API for now, even when in CodeIgniter environment
+    // Because CodeIgniter API is not implemented yet
+    this.baseUrl = 'http://localhost:3333/api'
+    this.headers = {
+      'Content-Type': 'application/json'
+    }
+    
+    console.log('[LockerApi] Using Node.js API:', this.baseUrl)
+    console.log('[LockerApi] CodeIgniter environment:', this.useCodeIgniter)
+    
+    // Keep CodeIgniter detection for future use
     if (this.useCodeIgniter) {
-      // Use CodeIgniter API
-      this.baseUrl = getApiBaseUrl()
       const csrfToken = getCsrfToken()
       const csrfHeader = getCsrfHeader()
       
-      this.headers = {
-        'Content-Type': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
-      }
-      
-      // Add CSRF token if available
+      // Add CSRF token if available (for future CodeIgniter API)
       if (csrfToken && csrfHeader) {
         (this.headers as any)[csrfHeader] = csrfToken
-      }
-      
-      if (isDebugMode()) {
-        console.log('[LockerApi] Using CodeIgniter API:', this.baseUrl)
-        console.log('[LockerApi] CSRF Token:', csrfToken ? 'Present' : 'Missing')
-      }
-    } else {
-      // Use Node.js development API
-      this.baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
-      this.headers = {
-        'Content-Type': 'application/json'
-      }
-      
-      if (isDebugMode()) {
-        console.log('[LockerApi] Using Node.js API:', this.baseUrl)
       }
     }
   }
@@ -254,7 +243,7 @@ export class LockerApiService {
   // API methods
   async getLockers(compCd?: string, bcoffCd?: string): Promise<Locker[]> {
     try {
-      // Use company codes from config if not provided
+      // Use company codes from config if in CodeIgniter environment
       if (this.useCodeIgniter) {
         const codes = getCompanyCodes()
         compCd = compCd || codes.companyCode
@@ -265,33 +254,26 @@ export class LockerApiService {
       if (compCd) params.append('COMP_CD', compCd)
       if (bcoffCd) params.append('BCOFF_CD', bcoffCd)
       
-      // Different URL patterns for CI vs Node.js
-      const url = this.useCodeIgniter 
-        ? `${this.baseUrl}?${params}` 
-        : `${this.baseUrl}/lockrs?${params}`
+      // Always use Node.js API URL pattern for now
+      const url = `${this.baseUrl}/lockrs?${params}`
+      
+      console.log('[LockerApi] Fetching lockers from:', url)
       
       const response = await fetch(url, {
         method: 'GET',
         headers: this.headers,
-        credentials: this.useCodeIgniter ? 'same-origin' : 'omit'
+        credentials: 'omit' // No credentials needed for Node.js API
       })
       
       const data = await this.handleResponse(response)
       
-      // Handle different response formats
-      let dbLockers: ApiLocker[]
-      if (this.useCodeIgniter && data.status === 'success') {
-        dbLockers = data.data?.lockers || []
-      } else {
-        dbLockers = data.lockers || data
-      }
+      // Handle Node.js API response format
+      const dbLockers: ApiLocker[] = data.lockers || data
       
-      // Received lockers from backend
+      console.log('[LockerApi] Received', dbLockers.length, 'lockers from backend')
       
       // Convert all lockers
-      // Starting transformation of lockers
       const appLockers = dbLockers.map((dbLocker, index) => {
-        // Transforming locker
         return this.dbToAppFormat(dbLocker)
       })
       
@@ -325,27 +307,23 @@ export class LockerApiService {
       const dbLocker = this.appToDbFormat(locker)
       const isNew = locker.id.includes('temp') || locker.id.includes('new')
       
-      // Add company codes for CodeIgniter
+      // Add company codes if in CodeIgniter environment
       if (this.useCodeIgniter) {
         const codes = getCompanyCodes()
         dbLocker.COMP_CD = dbLocker.COMP_CD || codes.companyCode
         dbLocker.BCOFF_CD = dbLocker.BCOFF_CD || codes.officeCode
       }
       
-      // Different URL patterns
-      const url = this.useCodeIgniter
-        ? isNew 
-          ? this.baseUrl
-          : `${this.baseUrl}/${this.extractDbId(locker.id)}`
-        : isNew 
-          ? `${this.baseUrl}/lockrs`
-          : `${this.baseUrl}/lockrs/${this.extractDbId(locker.id)}`
+      // Always use Node.js API URL pattern
+      const url = isNew 
+        ? `${this.baseUrl}/lockrs`
+        : `${this.baseUrl}/lockrs/${this.extractDbId(locker.id)}`
         
       const response = await fetch(url, {
         method: isNew ? 'POST' : 'PUT',
         headers: this.headers,
         body: JSON.stringify(dbLocker),
-        credentials: this.useCodeIgniter ? 'same-origin' : 'omit'
+        credentials: 'omit'
       })
       
       if (!response.ok) {
@@ -353,14 +331,7 @@ export class LockerApiService {
       }
       
       const result = await response.json()
-      
-      // Handle different response formats
-      let savedDbLocker: ApiLocker
-      if (this.useCodeIgniter && result.status === 'success') {
-        savedDbLocker = result.data
-      } else {
-        savedDbLocker = result
-      }
+      const savedDbLocker: ApiLocker = result
       
       return this.dbToAppFormat(savedDbLocker)
     } catch (error) {
@@ -373,21 +344,14 @@ export class LockerApiService {
     try {
       const dbId = this.extractDbId(lockerId)
       
-      // Different URL patterns
-      const url = this.useCodeIgniter
-        ? `${this.baseUrl}/${dbId}`
-        : `${this.baseUrl}/lockrs/${dbId}`
+      // Always use Node.js API URL pattern
+      const url = `${this.baseUrl}/lockrs/${dbId}`
       
       const response = await fetch(url, {
         method: 'DELETE',
         headers: this.headers,
-        credentials: this.useCodeIgniter ? 'same-origin' : 'omit'
+        credentials: 'omit'
       })
-      
-      if (this.useCodeIgniter) {
-        const result = await response.json()
-        return result.status === 'success'
-      }
       
       return response.ok
     } catch (error) {
