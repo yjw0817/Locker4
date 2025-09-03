@@ -8247,8 +8247,8 @@ onUnmounted(() => {
   position: relative; /* SVG 포지셔닝용 */
   border-radius: 4px;
   display: block;
-  padding: 0;
-  margin: 16px; /* 좌우 여백 */
+  padding: 0 !important;
+  margin: 0; /* 마진도 제거 */
   box-sizing: border-box;
   flex-shrink: 0; /* 캔버스 크기 고정 */
 }
