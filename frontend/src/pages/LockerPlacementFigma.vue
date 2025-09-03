@@ -7811,6 +7811,8 @@ onUnmounted(() => {
   height: 100%;
   opacity: 1;
   transition: opacity 0.3s ease-in-out;
+  margin-left: 0 !important;
+  padding-left: 0 !important;
 }
 
 .locker-placement {
@@ -7852,6 +7854,8 @@ onUnmounted(() => {
   display: flex;
   overflow: visible; /* 윈도우 레벨 스크롤 허용 */
   min-width: 1890px; /* 컨테이너도 최소 너비 보장 */
+  margin-left: 0 !important;
+  padding-left: 0 !important;
 }
 
 /* 사이드바 */
