@@ -7855,7 +7855,9 @@ onUnmounted(() => {
   overflow: visible; /* 윈도우 레벨 스크롤 허용 */
   min-width: 1890px; /* 컨테이너도 최소 너비 보장 */
   margin-left: -10px !important;
+  margin-top: 0 !important;
   padding-left: 0 !important;
+  padding-top: 0 !important;
 }
 
 /* 사이드바 */
