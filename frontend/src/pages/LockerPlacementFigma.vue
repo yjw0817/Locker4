@@ -4366,15 +4366,16 @@ const findClockwiseStart = (minorGroups: any[][]): any => {
   }
   
   if (endpoints.length >= 2) {
-    // Broken chain: select bottom-first, then left-first endpoint
+    // Broken chain: For ㄱ shape, select top-left endpoint for clockwise traversal
     console.log('[Clockwise Start] Broken chain detected with', endpoints.length, 'endpoints')
     let bestEndpoint = endpoints[0]
     for (const endpoint of endpoints) {
       const center = getGroupCenter(endpoint)
       const bestCenter = getGroupCenter(bestEndpoint)
       
-      // Prefer bottom (larger y), then left (smaller x)
-      if (center.y > bestCenter.y) {
+      // For ㄱ shape (L4-L8 horizontal, L9-L11 vertical):
+      // Prefer top (smaller y), then left (smaller x) to start from L4
+      if (center.y < bestCenter.y) {
         bestEndpoint = endpoint
       } else if (Math.abs(center.y - bestCenter.y) < 10) { // Consider y values equal within 10px
         if (center.x < bestCenter.x) {
