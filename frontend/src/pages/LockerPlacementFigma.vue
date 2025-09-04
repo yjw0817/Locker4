@@ -4906,58 +4906,9 @@ const transformToFrontViewNew = () => {
     })
   })
   
-  // 8.5.1 자식 락커 처리 - 부모 락커와 함께 위치 업데이트
-  console.log('[Child Lockers] Processing child locker positions...')
-  const childLockers = currentLockers.value.filter(locker => 
-    locker.parentLockrCd || locker.parentLockerId
-  )
-  
-  childLockers.forEach((child) => {
-    // 자식 락커가 이미 FRONT_VIEW 좌표를 가지고 있으면 유지
-    // DB에서 로드된 좌표가 있으면 그대로 사용
-    if (child.frontViewX !== null && child.frontViewX !== undefined && 
-        child.frontViewY !== null && child.frontViewY !== undefined) {
-      console.log(`[Child Lockers] Preserving existing position for child ${child.number}: (${child.frontViewX}, ${child.frontViewY})`)
-      batchUpdates.push({
-        id: child.id,
-        updates: {
-          frontViewX: child.frontViewX,
-          frontViewY: child.frontViewY,
-          frontViewRotation: 0
-        }
-      })
-    } else {
-      // FRONT_VIEW 좌표가 없는 경우에만 부모 기준으로 계산
-      const parentId = child.parentLockerId || child.parentLockrCd
-      const parent = currentLockers.value.find(l => 
-        l.id === parentId || l.lockrCd === parentId
-      )
-      
-      if (parent) {
-        // 부모의 새로운 위치 찾기 (renderData에서)
-        const parentRenderData = renderData.find(item => item.id === parent.id)
-        if (parentRenderData) {
-          // 자식 락커를 부모 위에 배치 (tier level에 따라)
-          const tierOffset = (child.tierLevel || 1) * 60 // 60px per tier
-          const childX = parentRenderData.frontViewX
-          const childY = parentRenderData.frontViewY - tierOffset
-          
-          console.log(`[Child Lockers] Calculating position for child ${child.number}: parent at (${parentRenderData.frontViewX}, ${parentRenderData.frontViewY}), child at (${childX}, ${childY})`)
-          
-          batchUpdates.push({
-            id: child.id,
-            updates: {
-              frontViewX: childX,
-              frontViewY: childY,
-              frontViewRotation: 0
-            }
-          })
-        }
-      }
-    }
-  })
-  
-  console.log(`[Child Lockers] Processed ${childLockers.length} child lockers`)
+  // 8.5.1 자식 락커는 처리하지 않음 - 이미 DB에 정확한 FRONT_VIEW 좌표를 가지고 있음
+  // 번호부여가 정상 작동하는 이유: 자식 락커 위치를 전혀 건드리지 않기 때문
+  console.log('[Transform] Child lockers excluded - preserving their existing FRONT_VIEW coordinates from DB')
   
   // 배치 업데이트 함수를 사용하여 모든 락커를 한 번에 업데이트
   // 이렇게 하면 Vue의 반응성 시스템이 한 번만 트리거되어
