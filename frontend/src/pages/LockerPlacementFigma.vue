@@ -2518,8 +2518,14 @@ const resetZoom = () => {
 
 // 자동 줌 조정 함수 - 모든 락커가 화면에 보이도록
 const autoFitLockers = () => {
+  console.log('[AutoFit] Starting autoFitLockers...', {
+    lockersCount: currentLockers.value.length,
+    viewMode: currentViewMode.value
+  })
+  
   // 배치된 락커가 없으면 기본 줌으로
   if (currentLockers.value.length === 0) {
+    console.log('[AutoFit] No lockers found, using default zoom')
     zoomLevel.value = 1
     panOffset.value = { x: 0, y: 0 }
     return
@@ -2532,9 +2538,11 @@ const autoFitLockers = () => {
   // Visual scale for display
   const LOCKER_VISUAL_SCALE = 2.0
   
+  let processedCount = 0
   currentLockers.value.forEach(locker => {
     // 부모 락커만 계산 (tier 락커 제외)
     if (locker.parentLockerId) return
+    processedCount++
     
     let left, top, right, bottom
     
@@ -4448,20 +4456,16 @@ const findNextConnectedGroup = (currentGroup: any[], visitedGroups: Set<any[]>, 
 
 // 소그룹 시계방향 순회 정렬
 const sortMinorGroups = (minorGroups: any[][]): any[][] => {
-  console.log('[sortMinorGroups] Starting with', minorGroups.length, 'groups')
   if (minorGroups.length <= 1) return minorGroups
   
   const sortedGroups: any[][] = []
   const visitedGroups = new Set<any[]>()
   
   // Find starting point (bottom-most locker)
-  console.log('[sortMinorGroups] Finding clockwise start...')
   const startLocker = findClockwiseStart(minorGroups)
-  console.log('[sortMinorGroups] Start locker:', startLocker?.number || startLocker?.id)
   const startGroup = getMinorGroupContaining(startLocker, minorGroups)
   
   if (!startGroup) {
-    console.log('[sortMinorGroups] No start group found, using fallback sorting')
     // Fallback to original sorting if no valid start
     return minorGroups.sort((a, b) => {
       const aTopLeft = getTopLeftLocker(a)
@@ -4474,12 +4478,9 @@ const sortMinorGroups = (minorGroups: any[][]): any[][] => {
     })
   }
   
-  console.log('[sortMinorGroups] Start group:', startGroup.map(l => l.number || l.id).join(','))
-  
   // Start clockwise traversal
   let currentGroup: any[] | null = startGroup
   while (currentGroup && !visitedGroups.has(currentGroup)) {
-    console.log('[sortMinorGroups] Adding group:', currentGroup.map(l => l.number || l.id).join(','))
     sortedGroups.push(currentGroup)
     visitedGroups.add(currentGroup)
     
@@ -6111,11 +6112,15 @@ const detectAndFixOverlaps = () => {
         newX = Math.max(0, Math.min(newX, canvasWidth.value - dims.width))
         newY = Math.max(0, Math.min(newY, canvasHeight.value - dims.height))
         
+        // 이동 전 위치 저장
+        const oldX = locker2.x
+        const oldY = locker2.y
+        
         // 업데이트
         lockerStore.updateLocker(locker2.id, { x: newX, y: newY })
         fixedCount++
         
-        console.log(`[Overlap Fix] Moved ${locker2.id} from (${locker2.x}, ${locker2.y}) to (${newX}, ${newY})`)
+        console.log(`[Overlap Fix] Moved ${locker2.id} from (${oldX}, ${oldY}) to (${newX}, ${newY})`)
       }
     }
   }
@@ -7699,13 +7704,14 @@ onMounted(async () => {
     }
     
     // Check and fix any overlapping lockers
-    await nextTick()
-    setTimeout(() => {
-      const overlaps = detectAndFixOverlaps()
-      if (overlaps > 0) {
-        console.log(`[Init] Fixed ${overlaps} overlapping lockers on load`)
-      }
-    }, 100)
+    // 주석 처리: 초기 로드 시 자동으로 락커 위치를 변경하지 않도록 함
+    // await nextTick()
+    // setTimeout(() => {
+    //   const overlaps = detectAndFixOverlaps()
+    //   if (overlaps > 0) {
+    //     console.log(`[Init] Fixed ${overlaps} overlapping lockers on load`)
+    //   }
+    // }, 100)
     
     // Select first zone if available
     if (zones.value.length > 0 && !selectedZone.value) {
