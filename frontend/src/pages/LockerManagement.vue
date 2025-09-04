@@ -8282,8 +8282,8 @@ onUnmounted(() => {
 
 /* 캔버스 */
 .canvas-wrapper {
-  width: 1550px; /* 뷰포트 너비 (실제 캔버스는 3100px) */
-  height: 720px; /* 뷰포트 높이 (실제 캔버스는 1440px) */
+  width: 100%; /* window 전체 너비 사용 */
+  height: calc(100vh - 200px); /* window 높이에서 헤더/탭 영역 제외 */
   background: white;
   overflow: hidden; /* 캔버스 내부 스크롤 비활성화 - 줌/팬으로 탐색 */
   border: none; /* 경계 제거로 12px 차이 해소 */
