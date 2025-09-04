@@ -4656,19 +4656,6 @@ const transformToFrontViewNew = () => {
     const isParent = !locker.parentLockrCd && 
                      !locker.parentLockerId && 
                      (!locker.tierLevel || locker.tierLevel === 0)
-    
-    // DEBUG: Log filtering details for lockers with numbers
-    if (locker.lockrNo && locker.lockrNo > 0) {
-      console.log(`[Transform Debug] 번호가 있는 락커: ${locker.lockrLabel || locker.id.slice(-4)}`, {
-        id: locker.id.slice(-4),
-        lockrNo: locker.lockrNo,
-        parentLockrCd: locker.parentLockrCd,
-        parentLockerId: locker.parentLockerId, 
-        tierLevel: locker.tierLevel,
-        isParent: isParent
-      })
-    }
-    
     return isParent
   })
   console.log(`[Transform] Processing ${lockers.length} parent lockers (${currentLockers.value.length - lockers.length} child lockers excluded from grouping)`)
