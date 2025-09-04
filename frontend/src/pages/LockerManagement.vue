@@ -231,7 +231,7 @@
             height="100%"
             :viewBox="computedViewBox"
             :style="{ cursor: getCursorStyle, margin: 0, padding: 0 }"
-            preserveAspectRatio="none"
+            preserveAspectRatio="xMidYMid meet"
             @wheel.prevent="handleWheel"
             @mousedown="handleCanvasMouseDown"
             @mousemove="handleCanvasMouseMove"
