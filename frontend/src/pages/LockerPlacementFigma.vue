@@ -491,7 +491,7 @@
   </div>
   
   <!-- Floor Input Dialog -->
-  <div v-if="floorInputVisible" class="modal-overlay" @click="handleFloorModalOverlayClick">
+  <div v-if="floorInputVisible" class="modal-overlay">
     <div class="modal-content" @click.stop>
       <h3>단수 입력</h3>
       <div class="form-group">
@@ -514,7 +514,7 @@
   </div>
   
   <!-- Number Assignment Dialog -->
-  <div v-if="numberAssignVisible" class="modal-overlay" @click="handleNumberModalOverlayClick">
+  <div v-if="numberAssignVisible" class="modal-overlay">
     <div class="modal-content number-assign-modal" @click.stop>
       <h3>번호 부여</h3>
       <div class="form-group">
