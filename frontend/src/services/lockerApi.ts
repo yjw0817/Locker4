@@ -5,7 +5,8 @@ import {
   getCsrfToken, 
   getCsrfHeader,
   getCompanyCodes,
-  isDebugMode 
+  isDebugMode,
+  getLockerConfig 
 } from '@/config/codeigniter'
 
 // Database schema interface matching the actual DB structure (lockrs table)
