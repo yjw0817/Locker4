@@ -16,6 +16,11 @@ const routes: Array<RouteRecordRaw> = [
     path: '/locker-assignment',
     name: 'LockerAssignment',
     component: () => import('@/pages/LockerAssignment.vue')
+  },
+  {
+    path: '/locker-management',
+    name: 'LockerManagement',
+    component: () => import('@/pages/LockerManagement.vue')
   }
 ]
 
