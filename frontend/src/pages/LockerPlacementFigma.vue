@@ -746,7 +746,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { useLockerStore, type Locker, type LockerZone, type LockerType } from '@/stores/lockerStore'
+import { useLockerStore, type Locker, type LockerZone } from '@/stores/lockerStore'
 import LockerSVG from '@/components/locker/LockerSVG.vue'
 import ZoneModal from '@/components/modals/ZoneModal.vue'
 import LockerRegistrationModal from '@/components/modals/LockerRegistrationModal.vue'
@@ -757,7 +757,7 @@ const lockerStore = useLockerStore()
 
 // 상태
 const selectedZone = ref<LockerZone | null>(null)
-const selectedType = ref<LockerType | null>(null)
+const selectedType = ref<LockerTypeItem | null>(null)
 const selectedLocker = ref<Locker | null>(null)
 // Preview mode removed - direct addition now
 const isVerticalMode = ref(false)
@@ -770,6 +770,13 @@ const currentViewMode = ref<'floor' | 'front'>('floor') // View mode state
 const showSelectionUI = ref(true) // Control selection UI visibility during drag
 const isCopyMode = ref(false) // Track if Ctrl/Cmd is pressed for copy mode
 const frontViewSequence = ref<any[]>([]) // Store front view locker sequence
+const selectionBox = ref({
+  isSelecting: false,
+  startX: 0,
+  startY: 0,
+  endX: 0,
+  endY: 0
+})
 
 // Grouping analysis popup state
 const showGroupingPopup = ref(false)
@@ -907,7 +914,16 @@ const zones = computed(() => lockerStore.zones)
 
 // 락커 타입 목록 (depth 속성 포함)
 // Locker types will be loaded from database
-const lockerTypes = ref([])
+interface LockerTypeItem {
+  id: string
+  name: string
+  width: number
+  height: number
+  depth: number
+  color?: string
+  type?: string
+}
+const lockerTypes = ref<LockerTypeItem[]>([])
 
 // Loading states
 const isLoading = ref(false)
