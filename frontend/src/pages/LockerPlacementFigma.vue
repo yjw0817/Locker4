@@ -750,6 +750,7 @@ import { useLockerStore, type Locker, type LockerZone, type LockerType } from '@
 import LockerSVG from '@/components/locker/LockerSVG.vue'
 import ZoneModal from '@/components/modals/ZoneModal.vue'
 import LockerRegistrationModal from '@/components/modals/LockerRegistrationModal.vue'
+import { getLockerConfig, isCodeIgniterEnvironment } from '@/config/codeigniter'
 // import * as lockerApi from '@/api/lockers' // TODO: Add this when API module is created
 
 const lockerStore = useLockerStore()
@@ -916,8 +917,15 @@ const hasLoadedTypes = ref(false)
 const saveError = ref<string | null>(null)
 const loadError = ref<string | null>(null)
 
-// API Base URL
-const API_BASE_URL = 'http://localhost:3333/api'
+// API Base URL - Use CodeIgniter config when available
+const getApiBaseUrl = () => {
+  if (isCodeIgniterEnvironment()) {
+    const config = getLockerConfig()
+    return config ? `${config.baseUrl}/api` : '/api'
+  }
+  return 'http://localhost:3333/api'
+}
+const API_BASE_URL = getApiBaseUrl()
 
 // Data Loading Functions
 const loadZones = async () => {
