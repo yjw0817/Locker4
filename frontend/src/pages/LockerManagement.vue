@@ -4651,9 +4651,13 @@ const transformToFrontViewNew = () => {
   console.trace('Called from:')
   
   // Filter out child lockers - only parent lockers should participate in grouping
-  const lockers = currentLockers.value.filter(locker => 
-    !locker.parentLockrCd && !locker.parentLockerId
-  )
+  const lockers = currentLockers.value.filter(locker => {
+    // A locker is a parent if it has no parent references AND tierLevel is 0 or undefined
+    const isParent = !locker.parentLockrCd && 
+                     !locker.parentLockerId && 
+                     (!locker.tierLevel || locker.tierLevel === 0)
+    return isParent
+  })
   console.log(`[Transform] Processing ${lockers.length} parent lockers (${currentLockers.value.length - lockers.length} child lockers excluded from grouping)`)
   
   if (lockers.length === 0) {
