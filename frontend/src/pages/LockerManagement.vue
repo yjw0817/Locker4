@@ -7857,8 +7857,6 @@ onUnmounted(() => {
   height: 100%;
   opacity: 1;
   transition: opacity 0.3s ease-in-out;
-  margin-left: -10px !important;
-  padding-left: 0 !important;
 }
 
 .locker-placement {
