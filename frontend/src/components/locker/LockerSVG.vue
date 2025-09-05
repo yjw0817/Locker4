@@ -100,11 +100,12 @@
         v-for="(child, index) in props.childLockers"
         :key="`label-${child.id}`"
         :x="8"
-        :y="getSectionCenterY(index) + 4"
+        :y="getSectionCenterY(index)"
         font-size="8"
         fill="#374151"
         font-weight="600"
         text-anchor="start"
+        dominant-baseline="middle"
       >
         {{ getChildDisplayNumber(child) }}
       </text>
@@ -112,11 +113,12 @@
       <!-- 부모 락커 번호 (마지막 섹션) -->
       <text
         :x="8"
-        :y="getSectionCenterY(props.childLockers.length) + 4"
+        :y="getSectionCenterY(props.childLockers.length)"
         font-size="8"
         fill="#374151"
         font-weight="600"
         text-anchor="start"
+        dominant-baseline="middle"
       >
         {{ getDisplayNumber() }}
       </text>
