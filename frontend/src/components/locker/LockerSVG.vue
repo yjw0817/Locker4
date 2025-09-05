@@ -622,27 +622,27 @@ const getLockrLabel = () => {
   return props.locker.lockrLabel || props.locker.frontViewNumber || props.locker.number || ''
 }
 
-// Get the appropriate label to display based on view mode (for bottom center display)
-const getDisplayNumber = () => {
-  // ✅ Defensive programming: Handle undefined props.locker
-  if (!props.locker) return ''
+// LockerManagement 페이지용 번호 반환
+const getManagementPageNumber = () => {
+  if (!props.locker || props.locker.parentLockerId) return ''
   
   if (props.viewMode === 'floor') {
-    // In floor view, show different numbers based on page
-    if (!props.locker.parentLockerId) {
-      if (props.isManagementPage) {
-        // LockerManagement: show actual number (LOCKR_NO)
-        return getLockrNo()
-      } else {
-        // LockerPlacement: show label (LOCKR_LABEL - L1, L2, etc.)
-        return getLockrLabel()
-      }
-    }
-    return ''
+    return getLockrNo()  // 실제 번호 (LOCKR_NO)
   } else {
-    // In front view, show the label (lockrLabel) which contains L1, L2, etc.
-    return getLockrLabel()
+    return getLockrLabel()  // L1, L2 등 (LOCKR_LABEL)
   }
+}
+
+// LockerPlacement 페이지용 번호 반환  
+const getPlacementPageNumber = () => {
+  if (!props.locker || props.locker.parentLockerId) return ''
+  
+  return getLockrLabel()  // 모든 뷰모드에서 L1, L2 등 (LOCKR_LABEL)
+}
+
+// 메인 디스플레이 번호 라우터 함수
+const getDisplayNumber = () => {
+  return props.isManagementPage ? getManagementPageNumber() : getPlacementPageNumber()
 }
 
 const handleClick = (e: MouseEvent) => {
