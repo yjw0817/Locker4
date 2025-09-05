@@ -311,7 +311,7 @@
               :adjacent-sides="getAdjacentSides(locker.id)"
               :view-mode="currentViewMode"
               :is-transitioning-to-floor="isTransitioningToFloor"
-              :show-number="true"
+              :show-number="currentViewMode === 'front'"
               :show-rotate-handle="selectedLocker?.id === locker.id"
               :zoom-level="zoomLevel"
               @click="(locker, event) => selectLocker(locker, event)"
