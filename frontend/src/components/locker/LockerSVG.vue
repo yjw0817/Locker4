@@ -184,7 +184,7 @@
       
       <!-- 툴팁 화살표 (삼각형) -->
       <polygon
-        :points="`${tooltipPosition.x - 6},${tooltipPosition.y + tooltipSize.height / 2 - 4} ${tooltipPosition.x},${tooltipPosition.y + tooltipSize.height / 2} ${tooltipPosition.x - 6},${tooltipPosition.y + tooltipSize.height / 2 + 4}`"
+        :points="`${tooltipPosition.x - 6},${tooltipPosition.y + tooltipSize.height / 2 - 4} ${tooltipPosition.x - 12},${tooltipPosition.y + tooltipSize.height / 2} ${tooltipPosition.x - 6},${tooltipPosition.y + tooltipSize.height / 2 + 4}`"
         fill="rgba(0, 0, 0, 0.85)"
       />
       
