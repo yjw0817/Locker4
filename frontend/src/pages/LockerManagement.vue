@@ -233,11 +233,6 @@
             :style="{ cursor: getCursorStyle, margin: 0, padding: 0 }"
             preserveAspectRatio="xMidYMid meet"
             @wheel.prevent="handleWheel"
-            @mousedown="handleCanvasMouseDown"
-            @mousemove="handleCanvasMouseMove"
-            @mouseup="handleCanvasMouseUp"
-            @mouseleave="handleCanvasMouseUp"
-            @click="handleCanvasClick"
           >
             <!-- 그리드 (옵션) -->
             <defs>
@@ -304,23 +299,16 @@
               v-for="locker in sortedLockers"
               :key="locker.id"
               :locker="locker"
-              :is-selected="selectedLocker?.id === locker.id"
-              :is-multi-selected="selectedLockerIds.has(locker.id)"
-              :should-hide-individual-outline="lockersNeedingUnifiedOutline.has(locker.id) && !isDragging"
-              :is-dragging="isDragging && selectedLockerIds.has(locker.id)"
+              :is-selected="false"
+              :is-multi-selected="false"
+              :should-hide-individual-outline="lockersNeedingUnifiedOutline.has(locker.id)"
+              :is-dragging="false"
               :adjacent-sides="getAdjacentSides(locker.id)"
               :view-mode="currentViewMode"
               :is-transitioning-to-floor="isTransitioningToFloor"
               :show-number="currentViewMode === 'front'"
-              :show-rotate-handle="selectedLocker?.id === locker.id"
+              :show-rotate-handle="false"
               :zoom-level="zoomLevel"
-              @click="(locker, event) => selectLocker(locker, event)"
-              @contextmenu.prevent="showContextMenu"
-              @select="(id) => selectedLocker = currentLockers.find(l => l.id === id)"
-              @dragstart="startDragLocker"
-              @rotatestart="startRotateLocker"
-              @rotate="handleRotateMove"
-              @rotateend="handleRotateEnd"
             />
             
             <!-- 통합 외곽선 그리기 (드래그 중에는 숨김) -->
