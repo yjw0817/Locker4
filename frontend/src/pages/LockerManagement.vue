@@ -2678,17 +2678,18 @@ const handleCanvasMouseDown = (event) => {
   
   // console.log('[MouseDown] Target:', target.tagName, 'Classes:', target.className, 'IsEmpty:', isEmptySpace, 'IsLocker:', isLockerElement)
   
+  // Drag selection disabled for LockerManagement
   // Only start drag selection on truly empty space
-  if (isEmptySpace && !isDragging.value) {
-    // console.log('[Rectangle Select] Starting at', x, y)
-    isDragSelecting.value = true
-    dragSelectStart.value = { x, y }
-    dragSelectEnd.value = { x, y }
-    selectedLockerIds.value.clear() // Clear previous selection
-    selectedLocker.value = null
-    event.preventDefault()
-    event.stopPropagation() // Prevent bubble to locker handlers
-  }
+  // if (isEmptySpace && !isDragging.value) {
+  //   // console.log('[Rectangle Select] Starting at', x, y)
+  //   isDragSelecting.value = true
+  //   dragSelectStart.value = { x, y }
+  //   dragSelectEnd.value = { x, y }
+  //   selectedLockerIds.value.clear() // Clear previous selection
+  //   selectedLocker.value = null
+  //   event.preventDefault()
+  //   event.stopPropagation() // Prevent bubble to locker handlers
+  // }
 }
 
 // 캔버스 마우스 이동 처리
