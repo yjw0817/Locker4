@@ -310,7 +310,7 @@
               :adjacent-sides="getAdjacentSides(locker.id)"
               :view-mode="currentViewMode"
               :is-transitioning-to-floor="isTransitioningToFloor"
-              :show-number="currentViewMode === 'front'"
+              :show-number="true"
               :show-rotate-handle="false"
               :zoom-level="zoomLevel"
               :is-management-page="true"
