@@ -624,12 +624,14 @@ const getLockrLabel = () => {
 
 // LockerManagement 페이지용 번호 반환
 const getManagementPageNumber = () => {
-  if (!props.locker || props.locker.parentLockerId) return ''
+  if (!props.locker) return ''
   
   if (props.viewMode === 'floor') {
-    return getLockrNo()  // 실제 번호 (LOCKR_NO)
+    // 평면배치에서는 부모 락커만 실제 번호 표시
+    return props.locker.parentLockerId ? '' : getLockrNo()
   } else {
-    return getLockrLabel()  // L1, L2 등 (LOCKR_LABEL)
+    // 정면배치에서는 모든 락커 레이블 표시 (부모, 자식 모두)
+    return getLockrLabel()
   }
 }
 
