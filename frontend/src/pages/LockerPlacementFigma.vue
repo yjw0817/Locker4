@@ -4654,7 +4654,6 @@ const transformToFrontViewNew = () => {
   const lockers = currentLockers.value.filter(locker => {
     // A locker is a parent if it has no parent references AND tierLevel is 0 or undefined
     const isParent = !locker.parentLockrCd && 
-                     !locker.parentLockerId && 
                      (!locker.tierLevel || locker.tierLevel === 0)
     return isParent
   })
@@ -6938,15 +6937,7 @@ const groupNearbyLockers = () => {
   
   // === Front view transformation start ===
   
-  
-  
-  
-  // Debug: Log all locker positions
-  
-  currentLockers.value.forEach(locker => {
-    console.log(`  ${locker.number || locker.id}: x=${locker.x}, y=${locker.y}, width=${locker.width}, height=${locker.height || locker.depth}, rotation=${locker.rotation || 0}°`)
-  })
-  
+
   currentLockers.value.forEach(locker => {
     if (visited.has(locker.id)) return
     
