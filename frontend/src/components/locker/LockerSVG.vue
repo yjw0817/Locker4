@@ -561,6 +561,12 @@ const getSectionCenterY = (index: number) => {
   return sectionHeight * index + sectionHeight / 2
 }
 
+// 디버깅: 자식 락커 정보 확인
+if (props.isManagementPage && props.viewMode === 'floor' && props.childLockers) {
+  console.log(`Locker ${props.locker.lockrCd} - childLockers:`, props.childLockers)
+  console.log(`isManagementPage: ${props.isManagementPage}, viewMode: ${props.viewMode}`)
+}
+
 // Get the appropriate label to display based on view mode (for bottom center display)
 const getDisplayNumber = () => {
   // ✅ Defensive programming: Handle undefined props.locker

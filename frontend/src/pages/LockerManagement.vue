@@ -1604,12 +1604,12 @@ const currentLockers = computed(() => {
 
 // 평면배치모드에서 각 부모 락커의 자식 정보를 수집
 const lockersWithChildren = computed(() => {
-  if (currentViewMode.value !== 'floor') {
-    return {}
-  }
-  
   const childrenMap = {}
   const allLockers = lockerStore.lockers.filter(l => l.zoneId === selectedZone.value?.id)
+  
+  // 디버깅용 로그
+  console.log('Computing lockersWithChildren, viewMode:', currentViewMode.value)
+  console.log('All lockers in zone:', allLockers)
   
   // 각 부모 락커에 대해 자식 락커들을 수집
   currentLockers.value.forEach(parentLocker => {
@@ -1619,10 +1619,15 @@ const lockersWithChildren = computed(() => {
         l.parentLockerId === parentLocker.id
       ).sort((a, b) => (b.tierLevel || 0) - (a.tierLevel || 0)) // tierLevel 높은 순으로 정렬
       
+      if (children.length > 0) {
+        console.log(`Parent locker ${parentLocker.lockrCd} has ${children.length} children:`, children)
+      }
+      
       childrenMap[parentLocker.id] = children
     }
   })
   
+  console.log('Final childrenMap:', childrenMap)
   return childrenMap
 })
 
