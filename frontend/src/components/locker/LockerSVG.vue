@@ -595,8 +595,14 @@ const getDisplayNumber = () => {
   if (!props.locker) return ''
   
   if (props.viewMode === 'floor') {
-    // In floor view, show the zone management number (only for parent lockers)
-    return !props.locker.parentLockerId ? (props.locker.number || '') : ''
+    // In floor view, show the actual locker number (LOCKR_NO) for parent lockers
+    if (!props.locker.parentLockerId) {
+      // Show LOCKR_NO with proper null checking (same logic as top-left in front view)
+      return props.locker.lockrNo !== undefined && props.locker.lockrNo !== null 
+        ? props.locker.lockrNo 
+        : (props.locker.lockrLabel || props.locker.number || '')
+    }
+    return ''
   } else {
     // In front view, show the label (lockrLabel) which contains L1, L2, etc.
     // Fall back to other number fields if label is not set
