@@ -53,7 +53,7 @@
       :style="{ transition: 'opacity 0.2s ease' }"
     />
     
-    <!-- 문 방향 표시 (하단 경계선 강조) -->
+    <!-- 문 방향 표시 (하단 경계선 점선) -->
     <line
       :x1="1"
       :x2="logicalDimensions.width - 1"
@@ -61,6 +61,7 @@
       :y2="logicalDimensions.height - 1"
       :stroke="lockerStroke"
       stroke-width="1.5"
+      stroke-dasharray="3,3"
       shape-rendering="crispEdges"
     />
     
