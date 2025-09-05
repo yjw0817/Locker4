@@ -145,7 +145,7 @@
       class="locker-number-top"
       style="user-select: none; pointer-events: none;"
     >
-      {{ props.locker.lockrNo }}
+      {{ props.locker.lockrNo !== undefined && props.locker.lockrNo !== null ? props.locker.lockrNo : (props.locker.lockrLabel || props.locker.number) }}
     </text>
     
     <!-- 회전 핸들 (선택 시만 표시) -->
