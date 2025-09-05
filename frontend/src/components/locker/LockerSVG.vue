@@ -55,44 +55,87 @@
     
     <!-- LockerManagement 평면배치모드에서 자식 락커 분할 표시 -->
     <g v-if="props.isManagementPage && viewMode === 'floor' && props.childLockers && props.childLockers.length > 0">
-      <!-- 분할선들 (마지막 자식 락커는 제외 - 락커 하단 경계와 겹침) -->
-      <line
-        v-for="(child, index) in props.childLockers.slice(0, -1)"
-        :key="`divider-${child.id}`"
-        :x1="0"
-        :x2="logicalDimensions.width"
-        :y1="getDividerY(index)"
-        :y2="getDividerY(index)"
-        stroke="#6b7280"
-        stroke-width="0.5"
-        opacity="0.8"
-      />
+      <!-- 세로 락커의 가로 분할선 -->
+      <template v-if="!isHorizontalLocker">
+        <line
+          v-for="(child, index) in props.childLockers"
+          :key="`divider-${child.id}`"
+          :x1="1"
+          :x2="logicalDimensions.width - 1"
+          :y1="getDividerY(index)"
+          :y2="getDividerY(index)"
+          stroke="#6b7280"
+          stroke-width="0.5"
+          opacity="0.8"
+        />
+        
+        <!-- 각 섹션의 락커 번호 표시 (좌측) -->
+        <text
+          v-for="(child, index) in props.childLockers"
+          :key="`label-${child.id}`"
+          :x="8"
+          :y="getSectionCenterY(index) + 4"
+          font-size="10"
+          fill="#374151"
+          font-weight="600"
+          text-anchor="start"
+        >
+          {{ child.number || child.lockrLabel }}
+        </text>
+        
+        <!-- 부모 락커 번호 (마지막 섹션) -->
+        <text
+          :x="8"
+          :y="getSectionCenterY(props.childLockers.length) + 4"
+          font-size="10"
+          fill="#374151"
+          font-weight="600"
+          text-anchor="start"
+        >
+          {{ locker.number }}
+        </text>
+      </template>
       
-      <!-- 각 섹션의 락커 번호 표시 (좌측) -->
-      <text
-        v-for="(child, index) in props.childLockers"
-        :key="`label-${child.id}`"
-        :x="8"
-        :y="getSectionCenterY(index) + 4"
-        font-size="10"
-        fill="#374151"
-        font-weight="600"
-        text-anchor="start"
-      >
-        {{ child.number || child.lockrLabel }}
-      </text>
-      
-      <!-- 부모 락커 번호 (마지막 섹션) -->
-      <text
-        :x="8"
-        :y="getSectionCenterY(props.childLockers.length) + 4"
-        font-size="10"
-        fill="#374151"
-        font-weight="600"
-        text-anchor="start"
-      >
-        {{ locker.number }}
-      </text>
+      <!-- 가로 락커의 세로 분할선 -->
+      <template v-else>
+        <line
+          v-for="(child, index) in props.childLockers"
+          :key="`divider-${child.id}`"
+          :x1="getDividerX(index)"
+          :x2="getDividerX(index)"
+          :y1="1"
+          :y2="logicalDimensions.height - 1"
+          stroke="#6b7280"
+          stroke-width="0.5"
+          opacity="0.8"
+        />
+        
+        <!-- 각 섹션의 락커 번호 표시 (상단) -->
+        <text
+          v-for="(child, index) in props.childLockers"
+          :key="`label-${child.id}`"
+          :x="getSectionCenterX(index)"
+          :y="12"
+          font-size="10"
+          fill="#374151"
+          font-weight="600"
+          text-anchor="middle"
+        >
+          {{ child.number || child.lockrLabel }}
+        </text>
+        
+        <!-- 부모 락커 번호 (마지막 섹션) -->
+        <text
+          :x="getSectionCenterX(props.childLockers.length)"
+          :y="12"
+          font-size="10"
+          fill="#374151"
+          font-weight="600"
+          text-anchor="middle"
+        >
+          {{ locker.number }}
+        </text>
+      </template>
     </g>
     
     <!-- 전면 표시선 (하단) - 피그마 디자인 준수 - floor view에서만 표시 -->
@@ -545,20 +588,43 @@ const shouldFadeOutChildLocker = computed(() => {
          props.locker.tierLevel > 0
 })
 
-// 평면배치모드에서 분할선 Y 위치 계산
+// 락커가 가로로 놓여있는지 확인 (90도 또는 270도 회전)
+const isHorizontalLocker = computed(() => {
+  const rotation = props.locker.rotation || 0
+  const normalizedRotation = ((rotation % 360) + 360) % 360
+  return normalizedRotation === 90 || normalizedRotation === 270
+})
+
+// 평면배치모드에서 분할선 Y 위치 계산 (세로 락커용)
 const getDividerY = (index: number) => {
   if (!props.childLockers) return 0
   const totalSections = props.childLockers.length + 1 // 자식 + 부모
-  const sectionHeight = logicalDimensions.value.height / totalSections
-  return sectionHeight * (index + 1)
+  const sectionHeight = (logicalDimensions.value.height - 2) / totalSections
+  return 1 + sectionHeight * (index + 1)
 }
 
-// 각 섹션의 중앙 Y 위치 계산
+// 평면배치모드에서 분할선 X 위치 계산 (가로 락커용)
+const getDividerX = (index: number) => {
+  if (!props.childLockers) return 0
+  const totalSections = props.childLockers.length + 1 // 자식 + 부모
+  const sectionWidth = (logicalDimensions.value.width - 2) / totalSections
+  return 1 + sectionWidth * (index + 1)
+}
+
+// 각 섹션의 중앙 Y 위치 계산 (세로 락커용)
 const getSectionCenterY = (index: number) => {
   if (!props.childLockers) return 0
   const totalSections = props.childLockers.length + 1
-  const sectionHeight = logicalDimensions.value.height / totalSections
-  return sectionHeight * index + sectionHeight / 2
+  const sectionHeight = (logicalDimensions.value.height - 2) / totalSections
+  return 1 + sectionHeight * index + sectionHeight / 2
+}
+
+// 각 섹션의 중앙 X 위치 계산 (가로 락커용)
+const getSectionCenterX = (index: number) => {
+  if (!props.childLockers) return 0
+  const totalSections = props.childLockers.length + 1
+  const sectionWidth = (logicalDimensions.value.width - 2) / totalSections
+  return 1 + sectionWidth * index + sectionWidth / 2
 }
 
 // 디버깅: 자식 락커 정보 확인
