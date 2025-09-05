@@ -53,6 +53,17 @@
       :style="{ transition: 'opacity 0.2s ease' }"
     />
     
+    <!-- 문 방향 표시 (하단 경계선 강조) -->
+    <line
+      :x1="1"
+      :x2="logicalDimensions.width - 1"
+      :y1="logicalDimensions.height - 1"
+      :y2="logicalDimensions.height - 1"
+      :stroke="lockerStroke"
+      stroke-width="1.5"
+      shape-rendering="crispEdges"
+    />
+    
     <!-- LockerManagement 평면배치모드에서 자식 락커 분할 표시 -->
     <g v-if="props.isManagementPage && viewMode === 'floor' && props.childLockers && props.childLockers.length > 0">
       <!-- 모든 락커에 가로 분할선 표시 (회전 상태와 무관하게) -->
