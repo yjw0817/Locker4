@@ -54,29 +54,16 @@
     />
     
     <!-- 문 방향 표시 (바닥선) -->
-    <g>
-      <line
-        :x1="1"
-        :x2="logicalDimensions.width - 1"
-        :y1="logicalDimensions.height + 3"
-        :y2="logicalDimensions.height + 3"
-        :stroke="lockerStroke"
-        stroke-width="1.5"
-        stroke-dasharray="3,3"
-        shape-rendering="crispEdges"
-      />
-      <!-- 바닥선 텍스트 -->
-      <text
-        :x="logicalDimensions.width / 2"
-        :y="logicalDimensions.height + 10"
-        font-size="6"
-        fill="#6b7280"
-        text-anchor="middle"
-        opacity="0.6"
-      >
-        바닥선
-      </text>
-    </g>
+    <line
+      :x1="1"
+      :x2="logicalDimensions.width - 1"
+      :y1="logicalDimensions.height + 3"
+      :y2="logicalDimensions.height + 3"
+      :stroke="lockerStroke"
+      stroke-width="1.5"
+      stroke-dasharray="3,3"
+      shape-rendering="crispEdges"
+    />
     
     <!-- LockerManagement 평면배치모드에서 자식 락커 분할 표시 -->
     <g v-if="props.isManagementPage && viewMode === 'floor' && props.childLockers && props.childLockers.length > 0">
