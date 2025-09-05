@@ -158,23 +158,48 @@
     
     <!-- 툴팁 (hover 시 표시) -->
     <g v-if="showTooltip && tooltipData" class="tooltip">
+      <!-- 툴팁 그림자 -->
+      <rect
+        :x="tooltipPosition.x + 2"
+        :y="tooltipPosition.y + 2"
+        :width="tooltipSize.width"
+        :height="tooltipSize.height"
+        fill="rgba(0, 0, 0, 0.1)"
+        rx="6"
+        ry="6"
+      />
+      
+      <!-- 툴팁 배경 -->
       <rect
         :x="tooltipPosition.x"
         :y="tooltipPosition.y"
         :width="tooltipSize.width"
         :height="tooltipSize.height"
-        fill="rgba(0, 0, 0, 0.9)"
-        rx="4"
-        ry="4"
+        fill="rgba(0, 0, 0, 0.85)"
+        stroke="rgba(255, 255, 255, 0.2)"
+        stroke-width="0.5"
+        rx="6"
+        ry="6"
       />
+      
+      <!-- 툴팁 화살표 (삼각형) -->
+      <polygon
+        :points="`${tooltipPosition.x - 6},${tooltipPosition.y + tooltipSize.height / 2 - 4} ${tooltipPosition.x},${tooltipPosition.y + tooltipSize.height / 2} ${tooltipPosition.x - 6},${tooltipPosition.y + tooltipSize.height / 2 + 4}`"
+        fill="rgba(0, 0, 0, 0.85)"
+      />
+      
+      <!-- 툴팁 텍스트 -->
       <text
-        :x="tooltipPosition.x + 8"
-        :y="tooltipPosition.y + 16"
-        font-size="10"
+        :x="tooltipPosition.x + tooltipSize.width / 2"
+        :y="tooltipPosition.y + tooltipSize.height / 2 + 2"
+        font-size="11"
         fill="white"
-        font-weight="600"
+        font-weight="500"
+        text-anchor="middle"
+        dominant-baseline="middle"
+        font-family="system-ui, -apple-system, sans-serif"
       >
-        락커번호: {{ tooltipData.displayNumber }}
+        {{ tooltipData.displayNumber }}
       </text>
     </g>
     
@@ -350,7 +375,7 @@ const tooltipTimer = ref<NodeJS.Timeout | null>(null)
 
 // 툴팁 위치 및 크기
 const tooltipPosition = ref({ x: 0, y: 0 })
-const tooltipSize = ref({ width: 120, height: 24 })
+const tooltipSize = ref({ width: 80, height: 28 })
 
 // Visual scale for lockers only (canvas stays original, lockers get bigger)
 const LOCKER_VISUAL_SCALE = 2.0
@@ -689,12 +714,15 @@ const startTooltipTimer = (sectionId: string, lockerData: any) => {
       displayNumber: sectionId === 'parent' ? getDisplayNumber() : getChildDisplayNumber(lockerData)
     }
     
-    // 툴팁 위치 설정 (락커 우측에 표시)
+    // 툴팁 위치 설정 (락커 우측 상단에 표시)
+    const sectionIndex = sectionId === 'parent' ? props.childLockers!.length : parseInt(sectionId.split('-')[1])
+    const sectionTop = getSectionY(sectionIndex)
+    
     tooltipPosition.value = {
-      x: logicalDimensions.value.width + 10,
-      y: getSectionY(sectionId === 'parent' ? props.childLockers!.length : parseInt(sectionId.split('-')[1])) + getSectionHeight() / 2 - 12
+      x: logicalDimensions.value.width + 16, // 락커에서 조금 더 떨어뜨림
+      y: sectionTop - 8 // 섹션 위쪽으로 약간 올림
     }
-  }, 500) // 0.5초 후 툴팁 표시
+  }, 400) // 0.4초로 약간 빠르게
 }
 
 // 툴팁 타이머 클리어
@@ -1042,9 +1070,26 @@ const handleRotateStart = (e: MouseEvent) => {
 .tooltip {
   pointer-events: none;
   z-index: 1000;
+  animation: tooltipFadeIn 0.2s ease-out;
+  transform-origin: left center;
 }
 
 .tooltip rect {
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15));
+}
+
+.tooltip polygon {
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1));
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-8px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
 }
 </style>
