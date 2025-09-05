@@ -249,7 +249,7 @@ export class LockerApiService {
   }
   
   // API methods
-  async getLockers(compCd?: string, bcoffCd?: string): Promise<Locker[]> {
+  async getLockers(compCd?: string, bcoffCd?: string, includeChildren: boolean = false): Promise<Locker[]> {
     try {
       // Use company codes from config if in CodeIgniter environment
       if (this.useCodeIgniter) {
@@ -261,6 +261,10 @@ export class LockerApiService {
       const params = new URLSearchParams()
       if (compCd) params.append('COMP_CD', compCd)
       if (bcoffCd) params.append('BCOFF_CD', bcoffCd)
+      // LockerManagement needs all lockers including children
+      if (!includeChildren) {
+        params.append('parentOnly', 'true')
+      }
       
       // Always use Node.js API URL pattern for now
       const url = `${this.baseUrl}/lockrs?${params}`
@@ -306,8 +310,8 @@ export class LockerApiService {
   }
   
   // Legacy method for compatibility
-  async getAllLockers(): Promise<Locker[]> {
-    return this.getLockers()
+  async getAllLockers(includeChildren: boolean = false): Promise<Locker[]> {
+    return this.getLockers(undefined, undefined, includeChildren)
   }
   
   async saveLocker(locker: Locker): Promise<Locker | null> {

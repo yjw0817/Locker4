@@ -466,17 +466,18 @@ export const useLockerStore = defineStore('locker', () => {
   }
 
   // Database integration methods
-  const loadLockersFromDatabase = async () => {
+  const loadLockersFromDatabase = async (includeChildren: boolean = false) => {
     console.log(`[STORE] 🔥 loadLockersFromDatabase() called!`)
     console.log(`[STORE] isOnlineMode: ${isOnlineMode.value}`)
+    console.log(`[STORE] includeChildren: ${includeChildren}`)
     console.log(`[STORE] Stack trace:`, new Error().stack)
     
     if (!isOnlineMode.value) return
     
     isSyncing.value = true
     try {
-      console.log(`[STORE] Calling lockerApi.getAllLockers()`)
-      const dbLockers = await lockerApi.getAllLockers()
+      console.log(`[STORE] Calling lockerApi.getAllLockers(${includeChildren})`)
+      const dbLockers = await lockerApi.getAllLockers(includeChildren)
       console.log(`[STORE] Got ${dbLockers.length} lockers from API`)
       
       if (dbLockers.length > 0) {

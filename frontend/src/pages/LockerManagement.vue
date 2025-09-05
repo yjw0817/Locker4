@@ -981,10 +981,11 @@ const loadZones = async () => {
 const loadLockers = async () => {
   try {
     // Build API URL based on view mode
+    // LockerManagement에서는 평면배치모드에서도 자식 락커 정보가 필요함
     const isFloorView = currentViewMode.value === 'floor'
     const apiUrl = isFloorView 
-      ? `${API_BASE_URL}/lockrs?parentOnly=true` 
-      : `${API_BASE_URL}/lockrs`
+      ? `${API_BASE_URL}/lockrs?parentOnly=false`  // 평면배치모드: 모든 락커 (부모+자식)
+      : `${API_BASE_URL}/lockrs?parentOnly=true`   // 정면배치모드: 부모 락커만
     
     
     
