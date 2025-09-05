@@ -107,6 +107,7 @@
         class="section-hover"
         :class="{ 'section-hovered': hoveredSection === `child-${index}` }"
         @mouseenter="(e) => { hoveredSection = `child-${index}`; startTooltipTimer(`child-${index}`, child, e) }"
+        @mousemove="(e) => { updateMousePosition(e); updateTooltipPosition() }"
         @mouseleave="hoveredSection = null; clearTooltipTimer()"
         style="cursor: pointer;"
       />
@@ -121,6 +122,7 @@
         class="section-hover"
         :class="{ 'section-hovered': hoveredSection === 'parent' }"
         @mouseenter="(e) => { hoveredSection = 'parent'; startTooltipTimer('parent', props.locker, e) }"
+        @mousemove="(e) => { updateMousePosition(e); updateTooltipPosition() }"
         @mouseleave="hoveredSection = null; clearTooltipTimer()"
         style="cursor: pointer;"
       />
@@ -376,6 +378,9 @@ const tooltipTimer = ref<NodeJS.Timeout | null>(null)
 // 툴팁 위치 및 크기
 const tooltipPosition = ref({ x: 0, y: 0 })
 const tooltipSize = ref({ width: 80, height: 28 })
+
+// 현재 마우스 위치 추적
+const currentMousePosition = ref({ x: 0, y: 0 })
 
 // 툴팁 변환 (락커 회전 상태에 관계없이 항상 수평 표시)
 const tooltipTransform = computed(() => {
@@ -718,9 +723,37 @@ const getSectionHeight = () => {
   return (logicalDimensions.value.height - 2) / totalSections
 }
 
+// 마우스 위치 업데이트 함수
+const updateMousePosition = (event: MouseEvent) => {
+  const svgElement = event.currentTarget as SVGElement
+  const svgRect = svgElement.ownerSVGElement?.getBoundingClientRect()
+  
+  if (svgRect) {
+    // 마우스의 클라이언트 좌표를 SVG 로컬 좌표로 변환
+    currentMousePosition.value = {
+      x: event.clientX - svgRect.left,
+      y: event.clientY - svgRect.top
+    }
+  }
+}
+
+// 툴팁 위치 업데이트 함수
+const updateTooltipPosition = () => {
+  if (showTooltip.value && currentMousePosition.value) {
+    // 툴팁을 현재 마우스 위치의 위쪽에 표시 (중앙 정렬)
+    tooltipPosition.value = { 
+      x: currentMousePosition.value.x - tooltipSize.value.width / 2, 
+      y: currentMousePosition.value.y - tooltipSize.value.height - 10  // 10px 간격 추가
+    }
+  }
+}
+
 // 툴팁 타이머 시작
 const startTooltipTimer = (sectionId: string, lockerData: any, event: MouseEvent) => {
   clearTooltipTimer()
+  
+  // 초기 마우스 위치 설정
+  updateMousePosition(event)
   
   tooltipTimer.value = setTimeout(() => {
     showTooltip.value = true
@@ -728,28 +761,8 @@ const startTooltipTimer = (sectionId: string, lockerData: any, event: MouseEvent
       displayNumber: sectionId === 'parent' ? getDisplayNumber() : getChildDisplayNumber(lockerData)
     }
     
-    // 마우스 위치 기준으로 툴팁 표시 (마우스 위쪽에 표시)
-    // SVG 요소의 bounding rect를 이용해 로컬 좌표 계산
-    const svgElement = event.currentTarget as SVGElement
-    const svgRect = svgElement.ownerSVGElement?.getBoundingClientRect()
-    
-    if (svgRect) {
-      // 마우스의 클라이언트 좌표를 SVG 로컬 좌표로 변환
-      const localX = event.clientX - svgRect.left
-      const localY = event.clientY - svgRect.top
-      
-      // 툴팁을 마우스 위쪽에 표시 (중앙 정렬)
-      tooltipPosition.value = { 
-        x: localX - tooltipSize.value.width / 2, 
-        y: localY - tooltipSize.value.height - 10  // 10px 간격 추가
-      }
-    } else {
-      // 백업: SVG rect를 못 구한 경우 기본 위치
-      tooltipPosition.value = { 
-        x: logicalDimensions.value.width / 2 - tooltipSize.value.width / 2, 
-        y: logicalDimensions.value.height / 2 - tooltipSize.value.height - 10
-      }
-    }
+    // 초기 툴팁 위치 설정
+    updateTooltipPosition()
   }, 400) // 0.4초로 약간 빠르게
 }
 
