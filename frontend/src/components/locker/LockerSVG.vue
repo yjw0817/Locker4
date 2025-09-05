@@ -60,7 +60,7 @@
       :y1="logicalDimensions.height - 4"
       :x2="logicalDimensions.width - 10"
       :y2="logicalDimensions.height - 4"
-      :stroke="locker.color || '#1e40af'"
+      :stroke="props.isManagementPage ? '#000000' : (locker.color || '#1e40af')"
       stroke-width="4"
       opacity="0.9"
       stroke-linecap="square"
@@ -195,6 +195,7 @@ const props = defineProps<{
   shouldHideIndividualOutline?: boolean  // 개별 외곽선 숨김 여부
   adjacentSides?: string[]  // 인접한 면 정보 ['top', 'bottom', 'left', 'right']
   zoomLevel?: number  // 현재 줌 레벨
+  isManagementPage?: boolean  // LockerManagement 페이지 여부
 }>()
 
 // 뷰 모드에 따라 적절한 좌표 사용
@@ -314,6 +315,11 @@ const lockerFill = computed(() => {
   // 에러가 있는 락커는 빨간색 배경
   if (props.hasError || props.locker.hasError) return '#fee2e2'
   
+  // LockerManagement 페이지에서는 색상 사용하지 않음 - 투명하게 설정
+  if (props.isManagementPage) {
+    return 'transparent'
+  }
+  
   // Get base color based on locker type or status
   let baseColor = '#FFFFFF'
   
@@ -356,6 +362,11 @@ const lockerFill = computed(() => {
 const lockerStroke = computed(() => {
   // 에러가 있는 락커는 빨간색 테두리
   if (props.hasError || props.locker.hasError) return '#ef4444'
+  
+  // LockerManagement 페이지에서는 색상 사용하지 않음 - 회색 테두리
+  if (props.isManagementPage) {
+    return '#9ca3af'  // gray-400 (정면배치모드와 동일한 회색)
+  }
   
   // 세로모드에서는 더 진한 회색 테두리
   if (props.viewMode === 'front') {

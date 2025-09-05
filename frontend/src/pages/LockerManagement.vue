@@ -313,6 +313,7 @@
               :show-number="currentViewMode === 'front'"
               :show-rotate-handle="false"
               :zoom-level="zoomLevel"
+              :is-management-page="true"
             />
             
             <!-- 통합 외곽선 그리기 (드래그 중에는 숨김) -->
