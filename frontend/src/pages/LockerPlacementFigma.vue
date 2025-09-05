@@ -4206,7 +4206,8 @@ const getMinDistance = (locker1: any, locker2: any): number => {
 // 대그룹 탐지 (10px 이내 연결 - requirement: minimum distance < 10px for group connection)
 const findMajorGroups = (lockers: any[]): any[][] => {
   // Use the updated groupNearbyLockers function which implements Adjacent/Connected logic
-  return groupNearbyLockers()
+  // Pass the filtered lockers to use them instead of currentLockers
+  return groupNearbyLockers(lockers)
 }
 
 // 그룹의 가장 위-왼쪽 락커 찾기
@@ -6931,14 +6932,16 @@ const isConnected = (locker1: any, locker2: any): boolean => {
 // ⚠️ CRITICAL FUNCTION - MAJOR GROUP DETECTION
 // DO NOT MODIFY - Verified working BFS algorithm
 // Creates major groups using Adjacent OR Connected relationships
-const groupNearbyLockers = () => {
+const groupNearbyLockers = (lockersToGroup?: any[]) => {
   const groups: any[][] = []
   const visited = new Set<string>()
   
   // === Front view transformation start ===
   
+  // Use provided lockers or fallback to currentLockers.value
+  const targetLockers = lockersToGroup || currentLockers.value
 
-  currentLockers.value.forEach(locker => {
+  targetLockers.forEach(locker => {
     if (visited.has(locker.id)) return
     
     // Starting new major group
@@ -6951,7 +6954,7 @@ const groupNearbyLockers = () => {
       const current = queue.shift()!
       // Processing locker from queue
       
-      currentLockers.value.forEach(other => {
+      targetLockers.forEach(other => {
         if (visited.has(other.id)) return
         
         // Check if adjacent OR connected
