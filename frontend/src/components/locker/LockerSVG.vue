@@ -53,15 +53,15 @@
       :style="{ transition: 'opacity 0.2s ease' }"
     />
     
-    <!-- LockerPlacement 평면배치 - 락커 안 문 방향 표시선 (선택창 스타일) -->
+    <!-- LockerPlacement 평면배치 - 락커 안 문 방향 표시선 -->
     <line
       v-if="viewMode === 'floor' && !isManagementPage"
-      :x1="5"
-      :x2="logicalDimensions.width - 5"
-      :y1="logicalDimensions.height - 3"
-      :y2="logicalDimensions.height - 3"
-      :stroke="lockerStroke"
-      stroke-width="2"
+      :x1="10"
+      :x2="logicalDimensions.width - 10"
+      :y1="logicalDimensions.height - 4"
+      :y2="logicalDimensions.height - 4"
+      :stroke="locker.color || '#1e40af'"
+      stroke-width="4"
       opacity="0.9"
       stroke-linecap="square"
       shape-rendering="crispEdges"
