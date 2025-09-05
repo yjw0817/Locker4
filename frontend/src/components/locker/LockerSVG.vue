@@ -745,12 +745,12 @@ const getSectionHeight = () => {
 
 // 마우스 위치 업데이트 함수 (SVG CTM 기반)
 const updateMousePosition = (event: MouseEvent) => {
-  const svgElement = event.currentTarget as SVGElement
-  const rootSVG = svgElement.ownerSVGElement
+  const svgElement = event.currentTarget as SVGGraphicsElement
+  const rootSVG = svgElement.ownerSVGElement as SVGSVGElement
   
   console.log('updateMousePosition - svgElement:', svgElement, 'rootSVG:', rootSVG)
   
-  if (rootSVG) {
+  if (rootSVG && svgElement) {
     try {
       // SVG 좌표 변환 매트릭스 사용 (CTM)
       const ctm = svgElement.getScreenCTM()
