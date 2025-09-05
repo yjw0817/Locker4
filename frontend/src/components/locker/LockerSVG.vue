@@ -106,7 +106,7 @@
         font-weight="600"
         text-anchor="start"
       >
-        {{ child.number || child.lockrLabel }}
+        {{ getChildDisplayNumber(child) }}
       </text>
       
       <!-- 부모 락커 번호 (마지막 섹션) -->
@@ -118,7 +118,7 @@
         font-weight="600"
         text-anchor="start"
       >
-        {{ locker.number }}
+        {{ getDisplayNumber() }}
       </text>
     </g>
     
@@ -627,8 +627,8 @@ const getManagementPageNumber = () => {
   if (!props.locker) return ''
   
   if (props.viewMode === 'floor') {
-    // 평면배치에서는 부모 락커만 실제 번호 표시
-    return props.locker.parentLockerId ? '' : getLockrNo()
+    // 평면배치에서는 모든 락커 실제 번호 표시 (부모, 자식 모두)
+    return getLockrNo()
   } else {
     // 정면배치에서는 모든 락커 레이블 표시 (부모, 자식 모두)
     return getLockrLabel()
@@ -640,10 +640,10 @@ const getPlacementPageNumber = () => {
   if (!props.locker) return ''
   
   if (props.viewMode === 'floor') {
-    // 평면배치에서는 부모 락커만 표시
-    return props.locker.parentLockerId ? '' : getLockrLabel()
+    // 평면배치에서는 모든 락커 레이블 표시 (부모, 자식 모두)
+    return getLockrLabel()
   } else {
-    // 정면배치에서는 모든 락커 표시 (부모, 자식 모두)
+    // 정면배치에서는 모든 락커 레이블 표시 (부모, 자식 모두)
     return getLockrLabel()
   }
 }
@@ -651,6 +651,21 @@ const getPlacementPageNumber = () => {
 // 메인 디스플레이 번호 라우터 함수
 const getDisplayNumber = () => {
   return props.isManagementPage ? getManagementPageNumber() : getPlacementPageNumber()
+}
+
+// 자식 락커 번호 표시용 함수
+const getChildDisplayNumber = (childLocker: any) => {
+  if (!childLocker) return ''
+  
+  if (props.isManagementPage) {
+    // LockerManagement: 자식 락커도 실제 번호(lockrNo) 표시
+    return childLocker.lockrNo !== undefined && childLocker.lockrNo !== null 
+      ? String(childLocker.lockrNo)
+      : (childLocker.lockrLabel || childLocker.number || '')
+  } else {
+    // LockerPlacement: 자식 락커도 레이블(lockrLabel) 표시
+    return childLocker.lockrLabel || childLocker.number || ''
+  }
 }
 
 const handleClick = (e: MouseEvent) => {
