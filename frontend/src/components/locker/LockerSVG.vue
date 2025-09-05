@@ -95,6 +95,36 @@
         opacity="0.8"
       />
       
+      <!-- 자식 락커 섹션 hover 영역 -->
+      <rect
+        v-for="(child, index) in props.childLockers"
+        :key="`section-${child.id}`"
+        :x="1"
+        :y="getSectionY(index)"
+        :width="logicalDimensions.width - 2"
+        :height="getSectionHeight()"
+        fill="transparent"
+        class="section-hover"
+        :class="{ 'section-hovered': hoveredSection === `child-${index}` }"
+        @mouseenter="hoveredSection = `child-${index}`; startTooltipTimer(`child-${index}`, child)"
+        @mouseleave="hoveredSection = null; clearTooltipTimer()"
+        style="cursor: pointer;"
+      />
+      
+      <!-- 부모 락커 섹션 hover 영역 -->
+      <rect
+        :x="1"
+        :y="getSectionY(props.childLockers.length)"
+        :width="logicalDimensions.width - 2"
+        :height="getSectionHeight()"
+        fill="transparent"
+        class="section-hover"
+        :class="{ 'section-hovered': hoveredSection === 'parent' }"
+        @mouseenter="hoveredSection = 'parent'; startTooltipTimer('parent', props.locker)"
+        @mouseleave="hoveredSection = null; clearTooltipTimer()"
+        style="cursor: pointer;"
+      />
+      
       <!-- 각 섹션의 락커 번호 표시 (좌측) -->
       <text
         v-for="(child, index) in props.childLockers"
@@ -106,6 +136,7 @@
         font-weight="600"
         text-anchor="start"
         dominant-baseline="middle"
+        style="pointer-events: none;"
       >
         {{ getChildDisplayNumber(child) }}
       </text>
@@ -119,8 +150,31 @@
         font-weight="600"
         text-anchor="start"
         dominant-baseline="middle"
+        style="pointer-events: none;"
       >
         {{ getDisplayNumber() }}
+      </text>
+    </g>
+    
+    <!-- 툴팁 (hover 시 표시) -->
+    <g v-if="showTooltip && tooltipData" class="tooltip">
+      <rect
+        :x="tooltipPosition.x"
+        :y="tooltipPosition.y"
+        :width="tooltipSize.width"
+        :height="tooltipSize.height"
+        fill="rgba(0, 0, 0, 0.9)"
+        rx="4"
+        ry="4"
+      />
+      <text
+        :x="tooltipPosition.x + 8"
+        :y="tooltipPosition.y + 16"
+        font-size="10"
+        fill="white"
+        font-weight="600"
+      >
+        락커번호: {{ tooltipData.displayNumber }}
       </text>
     </g>
     
@@ -287,6 +341,16 @@ const rotationStartAngle = ref(0)
 const rotationStartMouseAngle = ref(0)
 const isSnapped = ref(false)
 const cumulativeRotation = ref(0) // 누적 회전 추적
+
+// 섹션 hover 상태 관리
+const hoveredSection = ref<string | null>(null)
+const showTooltip = ref(false)
+const tooltipData = ref<any>(null)
+const tooltipTimer = ref<NodeJS.Timeout | null>(null)
+
+// 툴팁 위치 및 크기
+const tooltipPosition = ref({ x: 0, y: 0 })
+const tooltipSize = ref({ width: 120, height: 24 })
 
 // Visual scale for lockers only (canvas stays original, lockers get bigger)
 const LOCKER_VISUAL_SCALE = 2.0
@@ -598,6 +662,49 @@ const getSectionCenterX = (index: number) => {
   const totalSections = props.childLockers.length + 1
   const sectionWidth = (logicalDimensions.value.width - 2) / totalSections
   return 1 + sectionWidth * index + sectionWidth / 2
+}
+
+// 각 섹션의 시작 Y 위치 계산
+const getSectionY = (index: number) => {
+  if (!props.childLockers) return 1
+  const totalSections = props.childLockers.length + 1
+  const sectionHeight = (logicalDimensions.value.height - 2) / totalSections
+  return 1 + sectionHeight * index
+}
+
+// 각 섹션의 높이 계산
+const getSectionHeight = () => {
+  if (!props.childLockers) return logicalDimensions.value.height - 2
+  const totalSections = props.childLockers.length + 1
+  return (logicalDimensions.value.height - 2) / totalSections
+}
+
+// 툴팁 타이머 시작
+const startTooltipTimer = (sectionId: string, lockerData: any) => {
+  clearTooltipTimer()
+  
+  tooltipTimer.value = setTimeout(() => {
+    showTooltip.value = true
+    tooltipData.value = {
+      displayNumber: sectionId === 'parent' ? getDisplayNumber() : getChildDisplayNumber(lockerData)
+    }
+    
+    // 툴팁 위치 설정 (락커 우측에 표시)
+    tooltipPosition.value = {
+      x: logicalDimensions.value.width + 10,
+      y: getSectionY(sectionId === 'parent' ? props.childLockers!.length : parseInt(sectionId.split('-')[1])) + getSectionHeight() / 2 - 12
+    }
+  }, 500) // 0.5초 후 툴팁 표시
+}
+
+// 툴팁 타이머 클리어
+const clearTooltipTimer = () => {
+  if (tooltipTimer.value) {
+    clearTimeout(tooltipTimer.value)
+    tooltipTimer.value = null
+  }
+  showTooltip.value = false
+  tooltipData.value = null
 }
 
 // 디버깅: 자식 락커 정보 확인
@@ -918,5 +1025,26 @@ const handleRotateStart = (e: MouseEvent) => {
     opacity: 0;
     transform: translateY(20px);
   }
+}
+
+/* 섹션 hover 효과 */
+.section-hover {
+  transition: all 0.2s ease;
+}
+
+.section-hovered {
+  fill: rgba(59, 130, 246, 0.1) !important;
+  stroke: #3b82f6;
+  stroke-width: 1;
+}
+
+/* 툴팁 스타일 */
+.tooltip {
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.tooltip rect {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 </style>
