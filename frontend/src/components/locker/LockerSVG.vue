@@ -156,8 +156,8 @@
       </text>
     </g>
     
-    <!-- 툴팁 (hover 시 표시) -->
-    <g v-if="showTooltip && tooltipData" class="tooltip">
+    <!-- 툴팁 (hover 시 표시) - 회전 상태와 무관하게 항상 수평 표시 -->
+    <g v-if="showTooltip && tooltipData" class="tooltip" :transform="tooltipTransform">
       <!-- 툴팁 그림자 -->
       <rect
         :x="tooltipPosition.x + 2"
@@ -376,6 +376,20 @@ const tooltipTimer = ref<NodeJS.Timeout | null>(null)
 // 툴팁 위치 및 크기
 const tooltipPosition = ref({ x: 0, y: 0 })
 const tooltipSize = ref({ width: 80, height: 28 })
+
+// 툴팁 변환 (락커 회전 상태에 관계없이 항상 수평 표시)
+const tooltipTransform = computed(() => {
+  if (!showTooltip.value || !props.locker.rotation) {
+    return ''
+  }
+  
+  // 락커 회전각의 반대로 툴팁을 회전시켜서 항상 수평 유지
+  const rotation = props.locker.rotation || 0
+  const centerX = logicalDimensions.value.width / 2
+  const centerY = logicalDimensions.value.height / 2
+  
+  return `rotate(${-rotation}, ${centerX}, ${centerY})`
+})
 
 // Visual scale for lockers only (canvas stays original, lockers get bigger)
 const LOCKER_VISUAL_SCALE = 2.0
@@ -714,14 +728,30 @@ const startTooltipTimer = (sectionId: string, lockerData: any) => {
       displayNumber: sectionId === 'parent' ? getDisplayNumber() : getChildDisplayNumber(lockerData)
     }
     
-    // 툴팁 위치 설정 (락커 우측 상단에 표시)
+    // 툴팁 위치 설정 (락커 회전 상태에 따라 적절한 위치 계산)
     const sectionIndex = sectionId === 'parent' ? props.childLockers!.length : parseInt(sectionId.split('-')[1])
-    const sectionTop = getSectionY(sectionIndex)
+    const rotation = props.locker.rotation || 0
+    const normalizedRotation = ((rotation % 360) + 360) % 360
     
-    tooltipPosition.value = {
-      x: logicalDimensions.value.width + 16, // 락커에서 조금 더 떨어뜨림
-      y: sectionTop - 8 // 섹션 위쪽으로 약간 올림
+    let baseX = logicalDimensions.value.width + 16
+    let baseY = getSectionY(sectionIndex) - 8
+    
+    // 회전각에 따라 툴팁 위치 조정
+    if (normalizedRotation >= 45 && normalizedRotation < 135) {
+      // 90도 근처 (세로로 누운 상태)
+      baseX = logicalDimensions.value.width / 2 + 40
+      baseY = -20
+    } else if (normalizedRotation >= 135 && normalizedRotation < 225) {
+      // 180도 근처 (거꾸로 된 상태)
+      baseX = -96
+      baseY = getSectionY(sectionIndex) - 8
+    } else if (normalizedRotation >= 225 && normalizedRotation < 315) {
+      // 270도 근처 (반대로 누운 상태)
+      baseX = logicalDimensions.value.width / 2 - 40
+      baseY = logicalDimensions.value.height + 20
     }
+    
+    tooltipPosition.value = { x: baseX, y: baseY }
   }, 400) // 0.4초로 약간 빠르게
 }
 
