@@ -80,82 +80,102 @@
       shape-rendering="crispEdges"
     />
     
-    <!-- LockerManagement 평면배치모드에서 자식 락커 분할 표시 -->
-    <g v-if="props.isManagementPage && viewMode === 'floor' && props.childLockers && props.childLockers.length > 0">
-      <!-- 모든 락커에 가로 분할선 표시 (회전 상태와 무관하게) -->
-      <line
-        v-for="(child, index) in props.childLockers"
-        :key="`divider-${child.id}`"
-        :x1="1"
-        :x2="logicalDimensions.width - 1"
-        :y1="getDividerY(index)"
-        :y2="getDividerY(index)"
-        stroke="#6b7280"
-        stroke-width="0.5"
-        opacity="0.8"
-      />
+    <!-- LockerManagement 평면배치모드에서 툴팁 기능 -->
+    <g v-if="props.isManagementPage && viewMode === 'floor'">
+      <!-- 자식 락커가 있는 경우 - 분할된 섹션 표시 -->
+      <template v-if="props.childLockers && props.childLockers.length > 0">
+        <!-- 모든 락커에 가로 분할선 표시 (회전 상태와 무관하게) -->
+        <line
+          v-for="(child, index) in props.childLockers"
+          :key="`divider-${child.id}`"
+          :x1="1"
+          :x2="logicalDimensions.width - 1"
+          :y1="getDividerY(index)"
+          :y2="getDividerY(index)"
+          stroke="#6b7280"
+          stroke-width="0.5"
+          opacity="0.8"
+        />
+        
+        <!-- 자식 락커 섹션 hover 영역 -->
+        <rect
+          v-for="(child, index) in props.childLockers"
+          :key="`section-${child.id}`"
+          :x="1"
+          :y="getSectionY(index)"
+          :width="logicalDimensions.width - 2"
+          :height="getSectionHeight()"
+          fill="transparent"
+          class="section-hover"
+          :class="{ 'section-hovered': hoveredSection === `child-${index}` }"
+          @mouseenter="(e) => { hoveredSection = `child-${index}`; startTooltipTimer(`child-${index}`, child, e) }"
+          @mousemove="(e) => { updateMousePosition(e); updateTooltipPosition() }"
+          @mouseleave="hoveredSection = null; clearTooltipTimer()"
+          style="cursor: pointer;"
+        />
+        
+        <!-- 부모 락커 섹션 hover 영역 -->
+        <rect
+          :x="1"
+          :y="getSectionY(props.childLockers.length)"
+          :width="logicalDimensions.width - 2"
+          :height="getSectionHeight()"
+          fill="transparent"
+          class="section-hover"
+          :class="{ 'section-hovered': hoveredSection === 'parent' }"
+          @mouseenter="(e) => { hoveredSection = 'parent'; startTooltipTimer('parent', props.locker, e) }"
+          @mousemove="(e) => { updateMousePosition(e); updateTooltipPosition() }"
+          @mouseleave="hoveredSection = null; clearTooltipTimer()"
+          style="cursor: pointer;"
+        />
+        
+        <!-- 각 섹션의 락커 번호 표시 (좌측) -->
+        <text
+          v-for="(child, index) in props.childLockers"
+          :key="`label-${child.id}`"
+          :x="8"
+          :y="getSectionCenterY(index) + 1"
+          font-size="7"
+          fill="#374151"
+          font-weight="600"
+          text-anchor="start"
+          dominant-baseline="middle"
+          style="pointer-events: none;"
+        >
+          {{ getChildDisplayNumber(child) }}
+        </text>
+        
+        <!-- 부모 락커 번호 (마지막 섹션) -->
+        <text
+          :x="8"
+          :y="getSectionCenterY(props.childLockers.length) + 1"
+          font-size="7"
+          fill="#374151"
+          font-weight="600"
+          text-anchor="start"
+          dominant-baseline="middle"
+          style="pointer-events: none;"
+        >
+          {{ getDisplayNumber() }}
+        </text>
+      </template>
       
-      <!-- 자식 락커 섹션 hover 영역 -->
-      <rect
-        v-for="(child, index) in props.childLockers"
-        :key="`section-${child.id}`"
-        :x="1"
-        :y="getSectionY(index)"
-        :width="logicalDimensions.width - 2"
-        :height="getSectionHeight()"
-        fill="transparent"
-        class="section-hover"
-        :class="{ 'section-hovered': hoveredSection === `child-${index}` }"
-        @mouseenter="(e) => { hoveredSection = `child-${index}`; startTooltipTimer(`child-${index}`, child, e) }"
-        @mousemove="(e) => { updateMousePosition(e); updateTooltipPosition() }"
-        @mouseleave="hoveredSection = null; clearTooltipTimer()"
-        style="cursor: pointer;"
-      />
-      
-      <!-- 부모 락커 섹션 hover 영역 -->
-      <rect
-        :x="1"
-        :y="getSectionY(props.childLockers.length)"
-        :width="logicalDimensions.width - 2"
-        :height="getSectionHeight()"
-        fill="transparent"
-        class="section-hover"
-        :class="{ 'section-hovered': hoveredSection === 'parent' }"
-        @mouseenter="(e) => { hoveredSection = 'parent'; startTooltipTimer('parent', props.locker, e) }"
-        @mousemove="(e) => { updateMousePosition(e); updateTooltipPosition() }"
-        @mouseleave="hoveredSection = null; clearTooltipTimer()"
-        style="cursor: pointer;"
-      />
-      
-      <!-- 각 섹션의 락커 번호 표시 (좌측) -->
-      <text
-        v-for="(child, index) in props.childLockers"
-        :key="`label-${child.id}`"
-        :x="8"
-        :y="getSectionCenterY(index) + 1"
-        font-size="7"
-        fill="#374151"
-        font-weight="600"
-        text-anchor="start"
-        dominant-baseline="middle"
-        style="pointer-events: none;"
-      >
-        {{ getChildDisplayNumber(child) }}
-      </text>
-      
-      <!-- 부모 락커 번호 (마지막 섹션) -->
-      <text
-        :x="8"
-        :y="getSectionCenterY(props.childLockers.length) + 1"
-        font-size="7"
-        fill="#374151"
-        font-weight="600"
-        text-anchor="start"
-        dominant-baseline="middle"
-        style="pointer-events: none;"
-      >
-        {{ getDisplayNumber() }}
-      </text>
+      <!-- 자식 락커가 없는 경우 - 단일 hover 영역 -->
+      <template v-else>
+        <rect
+          :x="1"
+          :y="1"
+          :width="logicalDimensions.width - 2"
+          :height="logicalDimensions.height - 2"
+          fill="transparent"
+          class="section-hover"
+          :class="{ 'section-hovered': hoveredSection === 'single' }"
+          @mouseenter="(e) => { hoveredSection = 'single'; startTooltipTimer('single', props.locker, e) }"
+          @mousemove="(e) => { updateMousePosition(e); updateTooltipPosition() }"
+          @mouseleave="hoveredSection = null; clearTooltipTimer()"
+          style="cursor: pointer;"
+        />
+      </template>
     </g>
     
     <!-- 툴팁 (hover 시 표시) - 회전 상태와 무관하게 항상 수평 표시 -->
@@ -728,24 +748,52 @@ const updateMousePosition = (event: MouseEvent) => {
   const svgElement = event.currentTarget as SVGElement
   const svgRect = svgElement.ownerSVGElement?.getBoundingClientRect()
   
+  console.log('updateMousePosition - svgElement:', svgElement, 'svgRect:', svgRect)
+  
   if (svgRect) {
     // 마우스의 클라이언트 좌표를 SVG 로컬 좌표로 변환
-    currentMousePosition.value = {
+    const newPosition = {
       x: event.clientX - svgRect.left,
       y: event.clientY - svgRect.top
     }
+    
+    console.log('Client position:', { clientX: event.clientX, clientY: event.clientY })
+    console.log('SVG position:', newPosition)
+    
+    currentMousePosition.value = newPosition
+  } else {
+    console.error('SVG rect not available for mouse position calculation')
   }
 }
 
 // 툴팁 위치 업데이트 함수
 const updateTooltipPosition = () => {
-  if (showTooltip.value && currentMousePosition.value) {
-    // 툴팁을 현재 마우스 위치의 위쪽에 표시 (중앙 정렬)
-    tooltipPosition.value = { 
-      x: currentMousePosition.value.x - tooltipSize.value.width / 2, 
-      y: currentMousePosition.value.y - tooltipSize.value.height - 10  // 10px 간격 추가
-    }
+  if (!currentMousePosition.value) {
+    console.warn('No mouse position available for tooltip')
+    return
   }
+  
+  console.log('Updating tooltip position, mouse:', currentMousePosition.value)
+  
+  // 기본 위치 계산 (마우스 위쪽에 중앙 정렬)
+  let x = currentMousePosition.value.x - tooltipSize.value.width / 2
+  let y = currentMousePosition.value.y - tooltipSize.value.height - 10  // 10px 간격
+  
+  // 화면 경계를 벗어나지 않도록 조정
+  if (y < 0) {
+    // 위쪽으로 벗어나면 마우스 아래쪽에 표시
+    y = currentMousePosition.value.y + 10
+  }
+  
+  if (x < 0) {
+    x = 0
+  } else if (x + tooltipSize.value.width > logicalDimensions.value.width) {
+    x = logicalDimensions.value.width - tooltipSize.value.width
+  }
+  
+  tooltipPosition.value = { x, y }
+  
+  console.log('Final tooltip position:', tooltipPosition.value)
 }
 
 // 툴팁 타이머 시작
@@ -755,14 +803,20 @@ const startTooltipTimer = (sectionId: string, lockerData: any, event: MouseEvent
   // 초기 마우스 위치 설정
   updateMousePosition(event)
   
+  console.log('Starting tooltip timer for section:', sectionId, 'mouse position:', currentMousePosition.value)
+  
   tooltipTimer.value = setTimeout(() => {
     showTooltip.value = true
     tooltipData.value = {
-      displayNumber: sectionId === 'parent' ? getDisplayNumber() : getChildDisplayNumber(lockerData)
+      displayNumber: sectionId === 'parent' || sectionId === 'single' ? getDisplayNumber() : getChildDisplayNumber(lockerData)
     }
+    
+    console.log('Tooltip activated. Data:', tooltipData.value, 'showTooltip:', showTooltip.value)
     
     // 초기 툴팁 위치 설정
     updateTooltipPosition()
+    
+    console.log('Tooltip position set to:', tooltipPosition.value)
   }, 400) // 0.4초로 약간 빠르게
 }
 
@@ -775,6 +829,15 @@ const clearTooltipTimer = () => {
   showTooltip.value = false
   tooltipData.value = null
 }
+
+// 디버깅: 툴팁 렌더링 조건 확인
+console.log('=== Tooltip Rendering Conditions ===')
+console.log('isManagementPage:', props.isManagementPage)
+console.log('viewMode:', props.viewMode)
+console.log('childLockers:', props.childLockers)
+console.log('childLockers length:', props.childLockers?.length)
+console.log('All conditions met:', props.isManagementPage && props.viewMode === 'floor' && props.childLockers && props.childLockers.length > 0)
+console.log('=====================================')
 
 // 디버깅: 자식 락커 정보 확인
 if (props.isManagementPage && props.viewMode === 'floor' && props.childLockers) {
