@@ -608,9 +608,9 @@ if (props.isManagementPage && props.viewMode === 'floor' && props.childLockers) 
 const getLockrNo = () => {
   if (!props.locker) return ''
   
-  // Return LOCKR_NO with proper null checking
+  // Return LOCKR_NO with proper null checking (0 is a valid number)
   return props.locker.lockrNo !== undefined && props.locker.lockrNo !== null 
-    ? props.locker.lockrNo 
+    ? String(props.locker.lockrNo)
     : ''
 }
 
