@@ -53,6 +53,48 @@
       :style="{ transition: 'opacity 0.2s ease' }"
     />
     
+    <!-- LockerManagement 평면배치모드에서 자식 락커 분할 표시 -->
+    <g v-if="props.isManagementPage && viewMode === 'floor' && props.childLockers && props.childLockers.length > 0">
+      <!-- 분할선들 -->
+      <line
+        v-for="(child, index) in props.childLockers"
+        :key="`divider-${child.id}`"
+        :x1="2"
+        :x2="logicalDimensions.width - 2"
+        :y1="getDividerY(index)"
+        :y2="getDividerY(index)"
+        stroke="#6b7280"
+        stroke-width="1"
+        opacity="0.8"
+      />
+      
+      <!-- 각 섹션의 락커 번호 표시 (좌측) -->
+      <text
+        v-for="(child, index) in props.childLockers"
+        :key="`label-${child.id}`"
+        :x="8"
+        :y="getSectionCenterY(index) + 4"
+        font-size="10"
+        fill="#374151"
+        font-weight="600"
+        text-anchor="start"
+      >
+        {{ child.number || child.lockrLabel }}
+      </text>
+      
+      <!-- 부모 락커 번호 (마지막 섹션) -->
+      <text
+        :x="8"
+        :y="getSectionCenterY(props.childLockers.length) + 4"
+        font-size="10"
+        fill="#374151"
+        font-weight="600"
+        text-anchor="start"
+      >
+        {{ locker.number }}
+      </text>
+    </g>
+    
     <!-- 전면 표시선 (하단) - 피그마 디자인 준수 - floor view에서만 표시 -->
     <line
       v-if="viewMode === 'floor'"
@@ -196,6 +238,7 @@ const props = defineProps<{
   adjacentSides?: string[]  // 인접한 면 정보 ['top', 'bottom', 'left', 'right']
   zoomLevel?: number  // 현재 줌 레벨
   isManagementPage?: boolean  // LockerManagement 페이지 여부
+  childLockers?: Locker[]  // 자식 락커들 (평면배치모드에서 분할 표시용)
 }>()
 
 // 뷰 모드에 따라 적절한 좌표 사용
@@ -501,6 +544,22 @@ const shouldFadeOutChildLocker = computed(() => {
          props.locker.tierLevel && 
          props.locker.tierLevel > 0
 })
+
+// 평면배치모드에서 분할선 Y 위치 계산
+const getDividerY = (index: number) => {
+  if (!props.childLockers) return 0
+  const totalSections = props.childLockers.length + 1 // 자식 + 부모
+  const sectionHeight = logicalDimensions.value.height / totalSections
+  return sectionHeight * (index + 1)
+}
+
+// 각 섹션의 중앙 Y 위치 계산
+const getSectionCenterY = (index: number) => {
+  if (!props.childLockers) return 0
+  const totalSections = props.childLockers.length + 1
+  const sectionHeight = logicalDimensions.value.height / totalSections
+  return sectionHeight * index + sectionHeight / 2
+}
 
 // Get the appropriate label to display based on view mode (for bottom center display)
 const getDisplayNumber = () => {

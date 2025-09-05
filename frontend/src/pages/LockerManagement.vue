@@ -314,6 +314,7 @@
               :show-rotate-handle="false"
               :zoom-level="zoomLevel"
               :is-management-page="true"
+              :child-lockers="lockersWithChildren[locker.id] || []"
             />
             
             <!-- 통합 외곽선 그리기 (드래그 중에는 숨김) -->
@@ -1584,9 +1585,10 @@ const currentLockers = computed(() => {
   let filtered = lockerStore.lockers.filter(l => l.zoneId === selectedZone.value.id)
   
   // 평면뷰(floor)일 때는 부모 락커만 표시
+  // 단, LockerManagement에서는 자식 정보도 필요하므로 나중에 처리
   if (currentViewMode.value === 'floor') {
+    // LockerManagement에서는 자식 정보를 포함하여 전달할 예정
     filtered = filtered.filter(l => !l.parentLockrCd)
-    
   }
   
   // DETAILED DEBUG: 필터링 결과 분석
@@ -1598,6 +1600,30 @@ const currentLockers = computed(() => {
   })
   
   return filtered
+})
+
+// 평면배치모드에서 각 부모 락커의 자식 정보를 수집
+const lockersWithChildren = computed(() => {
+  if (currentViewMode.value !== 'floor') {
+    return {}
+  }
+  
+  const childrenMap = {}
+  const allLockers = lockerStore.lockers.filter(l => l.zoneId === selectedZone.value?.id)
+  
+  // 각 부모 락커에 대해 자식 락커들을 수집
+  currentLockers.value.forEach(parentLocker => {
+    if (!parentLocker.parentLockrCd) { // 부모 락커인 경우
+      const children = allLockers.filter(l => 
+        l.parentLockrCd === parentLocker.lockrCd || 
+        l.parentLockerId === parentLocker.id
+      ).sort((a, b) => (b.tierLevel || 0) - (a.tierLevel || 0)) // tierLevel 높은 순으로 정렬
+      
+      childrenMap[parentLocker.id] = children
+    }
+  })
+  
+  return childrenMap
 })
 
 // Compute display versions of lockers with scaled dimensions
