@@ -743,26 +743,54 @@ const getSectionHeight = () => {
   return (logicalDimensions.value.height - 2) / totalSections
 }
 
-// 마우스 위치 업데이트 함수
+// 마우스 위치 업데이트 함수 (SVG CTM 기반)
 const updateMousePosition = (event: MouseEvent) => {
   const svgElement = event.currentTarget as SVGElement
-  const svgRect = svgElement.ownerSVGElement?.getBoundingClientRect()
+  const rootSVG = svgElement.ownerSVGElement
   
-  console.log('updateMousePosition - svgElement:', svgElement, 'svgRect:', svgRect)
+  console.log('updateMousePosition - svgElement:', svgElement, 'rootSVG:', rootSVG)
   
-  if (svgRect) {
-    // 마우스의 클라이언트 좌표를 SVG 로컬 좌표로 변환
-    const newPosition = {
-      x: event.clientX - svgRect.left,
-      y: event.clientY - svgRect.top
+  if (rootSVG) {
+    try {
+      // SVG 좌표 변환 매트릭스 사용 (CTM)
+      const ctm = svgElement.getScreenCTM()
+      if (ctm) {
+        // 역변환 매트릭스를 사용하여 화면 좌표를 로컬 SVG 좌표로 변환
+        const inverse = ctm.inverse()
+        const screenPoint = rootSVG.createSVGPoint()
+        screenPoint.x = event.clientX
+        screenPoint.y = event.clientY
+        
+        // 변환된 로컬 좌표 계산
+        const localPoint = screenPoint.matrixTransform(inverse)
+        
+        console.log('Client position:', { clientX: event.clientX, clientY: event.clientY })
+        console.log('CTM transformed position:', { x: localPoint.x, y: localPoint.y })
+        
+        currentMousePosition.value = {
+          x: localPoint.x,
+          y: localPoint.y
+        }
+      } else {
+        console.warn('CTM not available, falling back to bounding rect method')
+        // Fallback: 기존 방식 사용
+        const svgRect = rootSVG.getBoundingClientRect()
+        currentMousePosition.value = {
+          x: event.clientX - svgRect.left,
+          y: event.clientY - svgRect.top
+        }
+      }
+    } catch (error) {
+      console.error('Error in CTM transformation:', error)
+      // Fallback: 기존 방식 사용
+      const svgRect = rootSVG.getBoundingClientRect()
+      currentMousePosition.value = {
+        x: event.clientX - svgRect.left,
+        y: event.clientY - svgRect.top
+      }
     }
-    
-    console.log('Client position:', { clientX: event.clientX, clientY: event.clientY })
-    console.log('SVG position:', newPosition)
-    
-    currentMousePosition.value = newPosition
   } else {
-    console.error('SVG rect not available for mouse position calculation')
+    console.error('Root SVG not available for mouse position calculation')
   }
 }
 
