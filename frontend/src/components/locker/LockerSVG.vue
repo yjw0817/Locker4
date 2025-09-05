@@ -1101,7 +1101,6 @@ const handleRotateStart = (e: MouseEvent) => {
   pointer-events: none;
   z-index: 1000;
   animation: tooltipFadeIn 0.2s ease-out;
-  transform-origin: left center;
 }
 
 .tooltip rect {
@@ -1115,11 +1114,9 @@ const handleRotateStart = (e: MouseEvent) => {
 @keyframes tooltipFadeIn {
   from {
     opacity: 0;
-    transform: translateX(-8px) scale(0.95);
   }
   to {
     opacity: 1;
-    transform: translateX(0) scale(1);
   }
 }
 </style>
