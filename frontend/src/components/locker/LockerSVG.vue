@@ -53,8 +53,21 @@
       :style="{ transition: 'opacity 0.2s ease' }"
     />
     
-    <!-- 문 방향 표시 (바닥선) -->
+    <!-- LockerPlacement 평면배치 - 락커 안 문 방향 표시선 -->
     <line
+      v-if="viewMode === 'floor' && !isManagementPage"
+      :x1="0"
+      :x2="logicalDimensions.width"
+      :y1="logicalDimensions.height - 1"
+      :y2="logicalDimensions.height - 1"
+      :stroke="lockerStroke"
+      stroke-width="1"
+      shape-rendering="crispEdges"
+    />
+    
+    <!-- LockerManagement 평면배치 - 바닥선 점선 -->
+    <line
+      v-if="viewMode === 'floor' && isManagementPage"
       :x1="1"
       :x2="logicalDimensions.width - 1"
       :y1="logicalDimensions.height + 3"
@@ -589,6 +602,24 @@ if (props.isManagementPage && props.viewMode === 'floor' && props.childLockers) 
   console.log(`isManagementPage: ${props.isManagementPage}, viewMode: ${props.viewMode}`)
 }
 
+// Get locker number (LOCKR_NO)
+const getLockrNo = () => {
+  if (!props.locker) return ''
+  
+  // Return LOCKR_NO with proper null checking
+  return props.locker.lockrNo !== undefined && props.locker.lockrNo !== null 
+    ? props.locker.lockrNo 
+    : ''
+}
+
+// Get locker label (LOCKR_LABEL)
+const getLockrLabel = () => {
+  if (!props.locker) return ''
+  
+  // Return LOCKR_LABEL or fallback values
+  return props.locker.lockrLabel || props.locker.frontViewNumber || props.locker.number || ''
+}
+
 // Get the appropriate label to display based on view mode (for bottom center display)
 const getDisplayNumber = () => {
   // ✅ Defensive programming: Handle undefined props.locker
@@ -597,16 +628,12 @@ const getDisplayNumber = () => {
   if (props.viewMode === 'floor') {
     // In floor view, show the actual locker number (LOCKR_NO) for parent lockers
     if (!props.locker.parentLockerId) {
-      // Show LOCKR_NO with proper null checking (same logic as top-left in front view)
-      return props.locker.lockrNo !== undefined && props.locker.lockrNo !== null 
-        ? props.locker.lockrNo 
-        : (props.locker.lockrLabel || props.locker.number || '')
+      return getLockrNo()
     }
     return ''
   } else {
     // In front view, show the label (lockrLabel) which contains L1, L2, etc.
-    // Fall back to other number fields if label is not set
-    return props.locker.lockrLabel || props.locker.frontViewNumber || props.locker.number || ''
+    return getLockrLabel()
   }
 }
 
