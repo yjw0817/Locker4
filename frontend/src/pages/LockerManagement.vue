@@ -7857,7 +7857,8 @@ onUnmounted(() => {
   height: 100%;
   opacity: 1;
   transition: opacity 0.3s ease-in-out;
-  margin-left: 20px;
+  margin-left: 0;
+  padding: 0;
 }
 
 .locker-placement {
@@ -8216,10 +8217,11 @@ onUnmounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 16px;
-  padding-left: 0; /* 좌측 패딩 제거 */
-  min-height: 792px; /* 740px + padding + 여백 */
-  overflow: visible; /* 스크롤 제거 - 윈도우 레벨 스크롤만 사용 */
+  padding: 0;
+  margin: 0;
+  min-height: 792px;
+  overflow: visible;
+  width: 100%;
 }
 
 /* 구역 탭 */
@@ -8287,16 +8289,16 @@ onUnmounted(() => {
 
 /* 캔버스 */
 .canvas-wrapper {
-  width: 100%; /* window 전체 너비 사용 */
-  height: calc(100vh - 200px); /* window 높이에서 헤더/탭 영역 제외 */
+  width: 100%;
+  height: calc(100vh - 150px);
   background: white;
-  overflow: hidden; /* 캔버스 내부 스크롤 비활성화 - 줌/팬으로 탐색 */
-  border: none; /* 경계 제거로 12px 차이 해소 */
-  position: relative; /* SVG 포지셔닝용 */
-  border-radius: 4px;
+  overflow: hidden;
+  border: none;
+  position: relative;
+  border-radius: 0;
   display: block;
   padding: 0 !important;
-  margin: 0; /* 마진도 제거 */
+  margin: 0;
   box-sizing: border-box;
   flex-shrink: 0; /* 캔버스 크기 고정 */
 }
