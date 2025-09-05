@@ -133,7 +133,7 @@
     
     <!-- 락커 레이블 (하단 중앙) -->
     <text
-      v-if="showNumber !== false && getDisplayNumber()"
+      v-if="showNumber !== false && getDisplayNumber() && !(isManagementPage && viewMode === 'floor')"
       :x="logicalDimensions.width / 2"
       :y="viewMode === 'front' ? (logicalDimensions.height - (3 * LOCKER_VISUAL_SCALE)) : (logicalDimensions.height / 2)"
       text-anchor="middle"
