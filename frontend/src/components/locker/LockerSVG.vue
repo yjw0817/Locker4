@@ -628,9 +628,15 @@ const getDisplayNumber = () => {
   if (!props.locker) return ''
   
   if (props.viewMode === 'floor') {
-    // In floor view, show the actual locker number (LOCKR_NO) for parent lockers
+    // In floor view, show different numbers based on page
     if (!props.locker.parentLockerId) {
-      return getLockrNo()
+      if (props.isManagementPage) {
+        // LockerManagement: show actual number (LOCKR_NO)
+        return getLockrNo()
+      } else {
+        // LockerPlacement: show label (LOCKR_LABEL - L1, L2, etc.)
+        return getLockrLabel()
+      }
     }
     return ''
   } else {
