@@ -182,9 +182,9 @@
         ry="6"
       />
       
-      <!-- 툴팁 화살표 (삼각형) -->
+      <!-- 툴팁 화살표 (삼각형) - 중앙에서 아래로 뾰족하게 -->
       <polygon
-        :points="`${tooltipPosition.x - 6},${tooltipPosition.y + tooltipSize.height / 2 - 4} ${tooltipPosition.x},${tooltipPosition.y + tooltipSize.height / 2} ${tooltipPosition.x - 6},${tooltipPosition.y + tooltipSize.height / 2 + 4}`"
+        :points="`${tooltipPosition.x + tooltipSize.width / 2 - 6},${tooltipPosition.y + tooltipSize.height} ${tooltipPosition.x + tooltipSize.width / 2},${tooltipPosition.y + tooltipSize.height + 6} ${tooltipPosition.x + tooltipSize.width / 2 + 6},${tooltipPosition.y + tooltipSize.height}`"
         fill="rgba(0, 0, 0, 0.85)"
       />
       
@@ -728,7 +728,7 @@ const startTooltipTimer = (sectionId: string, lockerData: any, event: MouseEvent
       displayNumber: sectionId === 'parent' ? getDisplayNumber() : getChildDisplayNumber(lockerData)
     }
     
-    // 마우스 위치 기준으로 툴팁 표시 (마우스 우측에 약간 떨어뜨려서)
+    // 마우스 위치 기준으로 툴팁 표시 (마우스 위쪽에 표시)
     // SVG 요소의 bounding rect를 이용해 로컬 좌표 계산
     const svgElement = event.currentTarget as SVGElement
     const svgRect = svgElement.ownerSVGElement?.getBoundingClientRect()
@@ -738,16 +738,16 @@ const startTooltipTimer = (sectionId: string, lockerData: any, event: MouseEvent
       const localX = event.clientX - svgRect.left
       const localY = event.clientY - svgRect.top
       
-      // 툴팁을 마우스 우측에 약간 떨어뜨려서 표시
+      // 툴팁을 마우스 위쪽에 표시 (중앙 정렬)
       tooltipPosition.value = { 
-        x: localX + 16, 
-        y: localY - tooltipSize.value.height / 2 
+        x: localX - tooltipSize.value.width / 2, 
+        y: localY - tooltipSize.value.height - 10  // 10px 간격 추가
       }
     } else {
       // 백업: SVG rect를 못 구한 경우 기본 위치
       tooltipPosition.value = { 
-        x: logicalDimensions.value.width + 16, 
-        y: logicalDimensions.value.height / 2 
+        x: logicalDimensions.value.width / 2 - tooltipSize.value.width / 2, 
+        y: logicalDimensions.value.height / 2 - tooltipSize.value.height - 10
       }
     }
   }, 400) // 0.4초로 약간 빠르게
