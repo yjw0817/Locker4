@@ -807,10 +807,10 @@ const updateTooltipPosition = () => {
   let x = currentMousePosition.value.x - tooltipSize.value.width / 2
   let y = currentMousePosition.value.y - tooltipSize.value.height - 10  // 10px 간격
   
-  // 화면 경계를 벗어나지 않도록 조정
+  // 화면 경계를 벗어나지 않도록 조정 (항상 위쪽에만 표시)
   if (y < 0) {
-    // 위쪽으로 벗어나면 마우스 아래쪽에 표시
-    y = currentMousePosition.value.y + 10
+    // 위쪽으로 벗어나도 화면 상단에 고정 (아래로 이동하지 않음)
+    y = 0
   }
   
   if (x < 0) {
