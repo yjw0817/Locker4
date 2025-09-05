@@ -635,9 +635,15 @@ const getManagementPageNumber = () => {
 
 // LockerPlacement 페이지용 번호 반환  
 const getPlacementPageNumber = () => {
-  if (!props.locker || props.locker.parentLockerId) return ''
+  if (!props.locker) return ''
   
-  return getLockrLabel()  // 모든 뷰모드에서 L1, L2 등 (LOCKR_LABEL)
+  if (props.viewMode === 'floor') {
+    // 평면배치에서는 부모 락커만 표시
+    return props.locker.parentLockerId ? '' : getLockrLabel()
+  } else {
+    // 정면배치에서는 모든 락커 표시 (부모, 자식 모두)
+    return getLockrLabel()
+  }
 }
 
 // 메인 디스플레이 번호 라우터 함수
