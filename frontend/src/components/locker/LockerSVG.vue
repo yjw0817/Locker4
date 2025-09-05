@@ -55,87 +55,44 @@
     
     <!-- LockerManagement 평면배치모드에서 자식 락커 분할 표시 -->
     <g v-if="props.isManagementPage && viewMode === 'floor' && props.childLockers && props.childLockers.length > 0">
-      <!-- 세로 락커의 가로 분할선 -->
-      <template v-if="!isHorizontalLocker">
-        <line
-          v-for="(child, index) in props.childLockers"
-          :key="`divider-${child.id}`"
-          :x1="1"
-          :x2="logicalDimensions.width - 1"
-          :y1="getDividerY(index)"
-          :y2="getDividerY(index)"
-          stroke="#6b7280"
-          stroke-width="0.5"
-          opacity="0.8"
-        />
-        
-        <!-- 각 섹션의 락커 번호 표시 (좌측) -->
-        <text
-          v-for="(child, index) in props.childLockers"
-          :key="`label-${child.id}`"
-          :x="8"
-          :y="getSectionCenterY(index) + 4"
-          font-size="10"
-          fill="#374151"
-          font-weight="600"
-          text-anchor="start"
-        >
-          {{ child.number || child.lockrLabel }}
-        </text>
-        
-        <!-- 부모 락커 번호 (마지막 섹션) -->
-        <text
-          :x="8"
-          :y="getSectionCenterY(props.childLockers.length) + 4"
-          font-size="10"
-          fill="#374151"
-          font-weight="600"
-          text-anchor="start"
-        >
-          {{ locker.number }}
-        </text>
-      </template>
+      <!-- 모든 락커에 가로 분할선 표시 (회전 상태와 무관하게) -->
+      <line
+        v-for="(child, index) in props.childLockers"
+        :key="`divider-${child.id}`"
+        :x1="1"
+        :x2="logicalDimensions.width - 1"
+        :y1="getDividerY(index)"
+        :y2="getDividerY(index)"
+        stroke="#6b7280"
+        stroke-width="0.5"
+        opacity="0.8"
+      />
       
-      <!-- 가로 락커의 세로 분할선 -->
-      <template v-else>
-        <line
-          v-for="(child, index) in props.childLockers"
-          :key="`divider-${child.id}`"
-          :x1="getDividerX(index)"
-          :x2="getDividerX(index)"
-          :y1="1"
-          :y2="logicalDimensions.height - 1"
-          stroke="#6b7280"
-          stroke-width="0.5"
-          opacity="0.8"
-        />
-        
-        <!-- 각 섹션의 락커 번호 표시 (상단) -->
-        <text
-          v-for="(child, index) in props.childLockers"
-          :key="`label-${child.id}`"
-          :x="getSectionCenterX(index)"
-          :y="12"
-          font-size="10"
-          fill="#374151"
-          font-weight="600"
-          text-anchor="middle"
-        >
-          {{ child.number || child.lockrLabel }}
-        </text>
-        
-        <!-- 부모 락커 번호 (마지막 섹션) -->
-        <text
-          :x="getSectionCenterX(props.childLockers.length)"
-          :y="12"
-          font-size="10"
-          fill="#374151"
-          font-weight="600"
-          text-anchor="middle"
-        >
-          {{ locker.number }}
-        </text>
-      </template>
+      <!-- 각 섹션의 락커 번호 표시 (좌측) -->
+      <text
+        v-for="(child, index) in props.childLockers"
+        :key="`label-${child.id}`"
+        :x="8"
+        :y="getSectionCenterY(index) + 4"
+        font-size="10"
+        fill="#374151"
+        font-weight="600"
+        text-anchor="start"
+      >
+        {{ child.number || child.lockrLabel }}
+      </text>
+      
+      <!-- 부모 락커 번호 (마지막 섹션) -->
+      <text
+        :x="8"
+        :y="getSectionCenterY(props.childLockers.length) + 4"
+        font-size="10"
+        fill="#374151"
+        font-weight="600"
+        text-anchor="start"
+      >
+        {{ locker.number }}
+      </text>
     </g>
     
     <!-- 전면 표시선 (하단) - 피그마 디자인 준수 - floor view에서만 표시 -->
