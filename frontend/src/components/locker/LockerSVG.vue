@@ -106,7 +106,7 @@
         fill="transparent"
         class="section-hover"
         :class="{ 'section-hovered': hoveredSection === `child-${index}` }"
-        @mouseenter="hoveredSection = `child-${index}`; startTooltipTimer(`child-${index}`, child)"
+        @mouseenter="(e) => { hoveredSection = `child-${index}`; startTooltipTimer(`child-${index}`, child, e) }"
         @mouseleave="hoveredSection = null; clearTooltipTimer()"
         style="cursor: pointer;"
       />
@@ -120,7 +120,7 @@
         fill="transparent"
         class="section-hover"
         :class="{ 'section-hovered': hoveredSection === 'parent' }"
-        @mouseenter="hoveredSection = 'parent'; startTooltipTimer('parent', props.locker)"
+        @mouseenter="(e) => { hoveredSection = 'parent'; startTooltipTimer('parent', props.locker, e) }"
         @mouseleave="hoveredSection = null; clearTooltipTimer()"
         style="cursor: pointer;"
       />
@@ -184,7 +184,7 @@
       
       <!-- 툴팁 화살표 (삼각형) -->
       <polygon
-        :points="`${tooltipPosition.x - 6},${tooltipPosition.y + tooltipSize.height / 2 - 4} ${tooltipPosition.x - 12},${tooltipPosition.y + tooltipSize.height / 2} ${tooltipPosition.x - 6},${tooltipPosition.y + tooltipSize.height / 2 + 4}`"
+        :points="`${tooltipPosition.x - 6},${tooltipPosition.y + tooltipSize.height / 2 - 4} ${tooltipPosition.x},${tooltipPosition.y + tooltipSize.height / 2} ${tooltipPosition.x - 6},${tooltipPosition.y + tooltipSize.height / 2 + 4}`"
         fill="rgba(0, 0, 0, 0.85)"
       />
       
@@ -719,7 +719,7 @@ const getSectionHeight = () => {
 }
 
 // 툴팁 타이머 시작
-const startTooltipTimer = (sectionId: string, lockerData: any) => {
+const startTooltipTimer = (sectionId: string, lockerData: any, event: MouseEvent) => {
   clearTooltipTimer()
   
   tooltipTimer.value = setTimeout(() => {
@@ -728,30 +728,28 @@ const startTooltipTimer = (sectionId: string, lockerData: any) => {
       displayNumber: sectionId === 'parent' ? getDisplayNumber() : getChildDisplayNumber(lockerData)
     }
     
-    // 툴팁 위치 설정 (락커 회전 상태에 따라 적절한 위치 계산)
-    const sectionIndex = sectionId === 'parent' ? props.childLockers!.length : parseInt(sectionId.split('-')[1])
-    const rotation = props.locker.rotation || 0
-    const normalizedRotation = ((rotation % 360) + 360) % 360
+    // 마우스 위치 기준으로 툴팁 표시 (마우스 우측에 약간 떨어뜨려서)
+    // SVG 요소의 bounding rect를 이용해 로컬 좌표 계산
+    const svgElement = event.currentTarget as SVGElement
+    const svgRect = svgElement.ownerSVGElement?.getBoundingClientRect()
     
-    let baseX = logicalDimensions.value.width + 16
-    let baseY = getSectionY(sectionIndex) - 8
-    
-    // 회전각에 따라 툴팁 위치 조정
-    if (normalizedRotation >= 45 && normalizedRotation < 135) {
-      // 90도 근처 (세로로 누운 상태)
-      baseX = logicalDimensions.value.width / 2 + 40
-      baseY = -20
-    } else if (normalizedRotation >= 135 && normalizedRotation < 225) {
-      // 180도 근처 (거꾸로 된 상태)
-      baseX = -96
-      baseY = getSectionY(sectionIndex) - 8
-    } else if (normalizedRotation >= 225 && normalizedRotation < 315) {
-      // 270도 근처 (반대로 누운 상태)
-      baseX = logicalDimensions.value.width / 2 - 40
-      baseY = logicalDimensions.value.height + 20
+    if (svgRect) {
+      // 마우스의 클라이언트 좌표를 SVG 로컬 좌표로 변환
+      const localX = event.clientX - svgRect.left
+      const localY = event.clientY - svgRect.top
+      
+      // 툴팁을 마우스 우측에 약간 떨어뜨려서 표시
+      tooltipPosition.value = { 
+        x: localX + 16, 
+        y: localY - tooltipSize.value.height / 2 
+      }
+    } else {
+      // 백업: SVG rect를 못 구한 경우 기본 위치
+      tooltipPosition.value = { 
+        x: logicalDimensions.value.width + 16, 
+        y: logicalDimensions.value.height / 2 
+      }
     }
-    
-    tooltipPosition.value = { x: baseX, y: baseY }
   }, 400) // 0.4초로 약간 빠르게
 }
 
