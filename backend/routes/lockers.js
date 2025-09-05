@@ -521,7 +521,7 @@ router.post('/:lockrCd/tiers', async (req, res) => {
         FRONT_VIEW_Y: Math.round(tierFrontViewY),
         GROUP_NUM: parentLocker.GROUP_NUM,
         LOCKR_GENDR_SET: parentLocker.LOCKR_GENDR_SET,
-        LOCKR_NO: parentLocker.LOCKR_NO, // 부모 락커의 번호를 상속
+        LOCKR_NO: null, // 단수 입력시 번호는 자동 부여하지 않음
         PARENT_LOCKR_CD: lockrCd,
         TIER_LEVEL: currentTierLevel,
         LOCKR_STAT: '00',
