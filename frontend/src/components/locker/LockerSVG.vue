@@ -101,7 +101,7 @@
         :key="`label-${child.id}`"
         :x="8"
         :y="getSectionCenterY(index) + 4"
-        font-size="10"
+        font-size="8"
         fill="#374151"
         font-weight="600"
         text-anchor="start"
@@ -113,7 +113,7 @@
       <text
         :x="8"
         :y="getSectionCenterY(props.childLockers.length) + 4"
-        font-size="10"
+        font-size="8"
         fill="#374151"
         font-weight="600"
         text-anchor="start"
@@ -475,10 +475,10 @@ const strokeWidth = computed(() => {
 const fontSize = computed(() => {
   // 세로배치 모드에서는 더 작은 폰트 사용
   if (props.viewMode === 'front') {
-    return 4 * LOCKER_VISUAL_SCALE  // 더 작은 폰트 크기 (4px * 2 = 8px)
+    return 3 * LOCKER_VISUAL_SCALE  // 더 작은 폰트 크기 (3px * 2 = 6px)
   }
   // 평면배치 모드에서도 약간 작은 크기
-  return 10 * LOCKER_VISUAL_SCALE  // 기존 12px에서 10px로 축소
+  return 8 * LOCKER_VISUAL_SCALE  // 기존 10px에서 8px로 축소
 })
 
 // Text baseline removed - not used
