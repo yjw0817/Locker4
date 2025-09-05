@@ -8218,6 +8218,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   padding: 16px;
+  padding-left: 0; /* 좌측 패딩 제거 */
   min-height: 792px; /* 740px + padding + 여백 */
   overflow: visible; /* 스크롤 제거 - 윈도우 레벨 스크롤만 사용 */
 }
