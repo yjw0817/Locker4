@@ -233,6 +233,10 @@
             :style="{ cursor: getCursorStyle, margin: 0, padding: 0 }"
             preserveAspectRatio="xMidYMid meet"
             @wheel.prevent="handleWheel"
+            @mousedown="handleCanvasMouseDown"
+            @mousemove="handleCanvasMouseMove"
+            @mouseup="handleCanvasMouseUp"
+            @mouseleave="handleCanvasMouseUp"
           >
             <!-- 그리드 (옵션) -->
             <defs>
