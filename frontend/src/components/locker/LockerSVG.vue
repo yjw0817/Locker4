@@ -95,19 +95,6 @@
       </text>
     </g>
     
-    <!-- 전면 표시선 (하단) - 피그마 디자인 준수 - floor view에서만 표시 -->
-    <line
-      v-if="viewMode === 'floor'"
-      :x1="10"
-      :y1="logicalDimensions.height - 4"
-      :x2="logicalDimensions.width - 10"
-      :y2="logicalDimensions.height - 4"
-      :stroke="props.isManagementPage ? '#000000' : (locker.color || '#1e40af')"
-      stroke-width="4"
-      opacity="0.9"
-      stroke-linecap="square"
-      class="front-indicator"
-    />
     
     <!-- 세로배치 모드에서 하단 라벨 배경 -->
     <path
