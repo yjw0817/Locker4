@@ -101,7 +101,7 @@
         :key="`label-${child.id}`"
         :x="8"
         :y="getSectionCenterY(index) + 1"
-        font-size="8"
+        :font-size="fontSize"
         fill="#374151"
         font-weight="600"
         text-anchor="start"
@@ -114,7 +114,7 @@
       <text
         :x="8"
         :y="getSectionCenterY(props.childLockers.length) + 1"
-        font-size="8"
+        :font-size="fontSize"
         fill="#374151"
         font-weight="600"
         text-anchor="start"
