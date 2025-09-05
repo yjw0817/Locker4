@@ -55,16 +55,16 @@
     
     <!-- LockerManagement 평면배치모드에서 자식 락커 분할 표시 -->
     <g v-if="props.isManagementPage && viewMode === 'floor' && props.childLockers && props.childLockers.length > 0">
-      <!-- 분할선들 -->
+      <!-- 분할선들 (마지막 자식 락커는 제외 - 락커 하단 경계와 겹침) -->
       <line
-        v-for="(child, index) in props.childLockers"
+        v-for="(child, index) in props.childLockers.slice(0, -1)"
         :key="`divider-${child.id}`"
-        :x1="2"
-        :x2="logicalDimensions.width - 2"
+        :x1="0"
+        :x2="logicalDimensions.width"
         :y1="getDividerY(index)"
         :y2="getDividerY(index)"
         stroke="#6b7280"
-        stroke-width="1"
+        stroke-width="0.5"
         opacity="0.8"
       />
       
