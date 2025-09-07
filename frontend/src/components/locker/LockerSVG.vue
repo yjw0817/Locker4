@@ -809,8 +809,10 @@ const updateTooltipPosition = () => {
   
   // 화면 경계를 벗어나지 않도록 조정 (항상 위쪽에만 표시)
   if (y < 0) {
-    // 위쪽으로 벗어나도 화면 상단에 고정 (아래로 이동하지 않음)
-    y = 0
+    // 위쪽으로 벗어나는 경우, 마우스 Y 위치에 따라 동적으로 조정
+    // 마우스가 더 위에 있을수록 툴팁을 더 아래로 배치
+    const mouseYRatio = currentMousePosition.value.y / 200  // 상단 200px 내에서의 비율
+    y = Math.min(currentMousePosition.value.y * 0.5, 100) // 최대 100px까지만 내려가도록
   }
   
   if (x < 0) {
