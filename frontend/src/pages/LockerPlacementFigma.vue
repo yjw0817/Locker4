@@ -8361,7 +8361,7 @@ onUnmounted(() => {
 /* 캔버스 */
 .canvas-wrapper {
   width: 1350px; /* 컨테이너 너비 (200px 축소) */
-  height: 670px; /* 컨테이너 높이 (50px 축소) */
+  height: 665px; /* 컨테이너 높이 (55px 축소) */
   background: white;
   overflow: hidden; /* 스크롤 제거 */
   border: none; /* 경계 제거로 12px 차이 해소 */
