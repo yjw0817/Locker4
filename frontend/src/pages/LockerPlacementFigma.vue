@@ -7980,7 +7980,7 @@ onUnmounted(() => {
 /* 사이드바 */
 .sidebar {
   width: 280px;
-  height: 700px; /* 캔버스보다 30px 높게 조정 */
+  height: 720px; /* 캔버스보다 50px 높게 조정 */
   background: white;
   border: 1px solid black;
   border-radius: 5px;
