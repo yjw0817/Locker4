@@ -848,7 +848,7 @@ const getCanvasDisplayWidth = () => {
 const DISPLAY_SCALE = 1.0
 
 // Floor line position for front view (logical units)
-const FLOOR_Y = 1350  // 바닥선 Y 위치 (캔버스 높이 1440의 약 94% 위치, 250px 아래로 이동)
+const FLOOR_Y = 1250  // 바닥선 Y 위치 (캔버스 높이 1440의 약 87% 위치, 150px 아래로 이동)
 
 // Log scale configuration removed - was causing syntax error
 
@@ -7939,7 +7939,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   background-color: var(--background-main);
-  min-width: 1890px; /* 사이드바(280+32) + 캔버스(1550+32) = 1890px 최소 너비 */
+  min-width: 1690px; /* 사이드바(280+16) + 캔버스(1350+16) = 1690px 최소 너비 */
 }
 
 /* 헤더 */
@@ -7970,7 +7970,7 @@ onUnmounted(() => {
   flex: 1;
   display: flex;
   overflow: visible; /* 윈도우 레벨 스크롤 허용 */
-  min-width: 1890px; /* 컨테이너도 최소 너비 보장 */
+  min-width: 1690px; /* 컨테이너도 최소 너비 보장 */
   margin-left: -10px !important;
   margin-top: 0 !important;
   padding-left: 0 !important;
@@ -7983,7 +7983,7 @@ onUnmounted(() => {
   background: white;
   border: 1px solid black;
   border-radius: 5px;
-  margin: 16px;
+  margin: 0 0 0 16px;
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -8288,7 +8288,7 @@ onUnmounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 16px;
+  padding: 0 0 0 16px;
   min-height: 792px; /* 740px + padding + 여백 */
   overflow: visible; /* 스크롤 제거 - 윈도우 레벨 스크롤만 사용 */
 }
@@ -8358,10 +8358,10 @@ onUnmounted(() => {
 
 /* 캔버스 */
 .canvas-wrapper {
-  width: 1550px; /* 뷰포트 너비 (실제 캔버스는 3100px) */
-  height: 720px; /* 뷰포트 높이 (실제 캔버스는 1440px) */
+  width: 1350px; /* 컨테이너 너비 (200px 축소) */
+  height: 720px; /* 컨테이너 높이 */
   background: white;
-  overflow: hidden; /* 캔버스 내부 스크롤 비활성화 - 줌/팬으로 탐색 */
+  overflow: auto; /* 내부 스크롤 허용 */
   border: none; /* 경계 제거로 12px 차이 해소 */
   position: relative; /* SVG 포지셔닝용 */
   border-radius: 4px;
@@ -8375,8 +8375,8 @@ onUnmounted(() => {
 .canvas {
   background: white;
   cursor: crosshair;
-  width: 100%; /* 부모 컨테이너에 맞춤 - 스크롤 방지 */
-  height: 100%; /* 부모 컨테이너에 맞춤 */
+  width: 1550px; /* 원래 캔버스 크기 유지 */
+  height: 720px; /* 원래 캔버스 높이 유지 */
   display: block;
 }
 

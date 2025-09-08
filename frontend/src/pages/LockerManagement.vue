@@ -840,7 +840,7 @@ const getCanvasDisplayWidth = () => {
 const DISPLAY_SCALE = 1.0
 
 // Floor line position for front view (logical units)
-const FLOOR_Y = 1350  // 바닥선 Y 위치 (캔버스 높이 1440의 약 75% 위치에서 250px 아래로 이동)
+const FLOOR_Y = 1250  // 바닥선 Y 위치 (캔버스 높이 1440의 약 87% 위치, 150px 아래로 이동)
 
 // Log scale configuration removed - was causing syntax error
 
