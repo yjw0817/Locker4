@@ -27,8 +27,8 @@ export default defineConfig({
     }
   },
   server: {
-    port: 5175,  // Frontend server port - updated to match PHP view
-    strictPort: true,  // Use exact port 5175
+    port: 5174,  // Frontend server port
+    strictPort: true,  // Use exact port 5174
     host: true,  // Listen on all network interfaces
     proxy: {
       '/api': {
