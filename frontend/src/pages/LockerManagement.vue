@@ -7810,6 +7810,36 @@ const handleKeyUp = (event: KeyboardEvent) => {
   // }
 }
 
+// 락커 클릭 이벤트 핸들러 - 정면배치모드에서 팝업 표시
+const handleLockerClick = (locker: any) => {
+  // 정면배치모드일 때만 팝업 표시
+  if (currentViewMode.value === 'front') {
+    selectedLockerNumber.value = locker.number || ''
+    selectedLockerData.value = {
+      userName: locker.userName || '',
+      userPhone: locker.userPhone || '',
+      startDate: locker.startDate || '',
+      endDate: locker.endDate || '',
+      usage: locker.usage || ''
+    }
+    showAssignmentModal.value = true
+  }
+}
+
+// 팝업 닫기 핸들러
+const closeAssignmentModal = () => {
+  showAssignmentModal.value = false
+  selectedLockerNumber.value = ''
+  selectedLockerData.value = null
+}
+
+// 락커 배정 확인 핸들러
+const handleAssignmentConfirm = (data: any) => {
+  console.log('락커 배정 데이터:', data)
+  // TODO: API 호출하여 락커 배정 정보 저장
+  // 임시로 콘솔에만 출력
+}
+
 // 컴포넌트 언마운트 시 정리
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeyDown)
@@ -8996,53 +9026,6 @@ onUnmounted(() => {
   
   .mode-toggle-inline .mode-btn {
     padding: 8px 10px;
-  }
-}
-
-// 락커 클릭 이벤트 핸들러 - 정면배치모드에서 팝업 표시
-const handleLockerClick = (locker: any) => {
-  // 정면배치모드일 때만 팝업 표시
-  if (currentViewMode.value === 'front') {
-    selectedLockerNumber.value = locker.number || ''
-    selectedLockerData.value = {
-      userName: locker.userName || '',
-      userPhone: locker.userPhone || '',
-      startDate: locker.startDate || '',
-      endDate: locker.endDate || '',
-      usage: locker.usage || ''
-    }
-    showAssignmentModal.value = true
-  }
-}
-
-// 팝업 닫기 핸들러
-const closeAssignmentModal = () => {
-  showAssignmentModal.value = false
-  selectedLockerNumber.value = ''
-  selectedLockerData.value = null
-}
-
-// 락커 배정 확인 핸들러
-const handleAssignmentConfirm = (data: any) => {
-  console.log('락커 배정 데이터:', data)
-  // TODO: API 호출하여 락커 배정 정보 저장
-  // 임시로 콘솔에만 출력
-}
-
-/* 통합 선택 외곽선 - 단일 선택과 동일한 스타일 */
-.unified-selection-outline {
-  stroke: #3b82f6;
-  stroke-width: 3;
-  stroke-dasharray: 8 4; /* 8px 선, 4px 공백 = 총 12px */
-  animation: dash-rotate 0.5s linear infinite;
-}
-
-@keyframes dash-rotate {
-  from {
-    stroke-dashoffset: 0;
-  }
-  to {
-    stroke-dashoffset: 12; /* dasharray 합계와 동일 */
   }
 }
 </style>
