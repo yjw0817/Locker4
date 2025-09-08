@@ -7814,7 +7814,10 @@ const handleKeyUp = (event: KeyboardEvent) => {
 const handleLockerClick = (locker: any) => {
   // 정면배치모드일 때만 팝업 표시
   if (currentViewMode.value === 'front') {
-    selectedLockerNumber.value = locker.locker_no || ''
+    // LockerSVG 컴포넌트와 동일한 로직으로 락커 번호 가져오기
+    selectedLockerNumber.value = locker.lockrNo !== undefined && locker.lockrNo !== null 
+      ? locker.lockrNo 
+      : (locker.lockrLabel || locker.number || '')
     selectedLockerData.value = {
       userName: locker.userName || '',
       userPhone: locker.userPhone || '',
