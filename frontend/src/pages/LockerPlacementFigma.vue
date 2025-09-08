@@ -571,10 +571,16 @@
       <div class="form-section">
         <label class="section-label">추가옵션:</label>
         <div style="margin-top: 10px;">
-          <span style="margin-right: 8px;">역방향</span>
-          <input type="checkbox" v-model="reverseDirection" style="margin-right: 30px;">
-          <span style="margin-right: 8px;">아래에서부터</span>
-          <input type="checkbox" v-model="fromTop">
+          <label style="margin-right: 30px; display: inline-flex; align-items: center; cursor: pointer;">
+            <span style="margin-right: 8px;">역방향</span>
+            <input type="checkbox" v-model="reverseDirection" @change="console.log('역방향:', reverseDirection)" style="margin-right: 5px;">
+            <span style="font-size: 12px; color: #666;">({{ reverseDirection ? '활성' : '비활성' }})</span>
+          </label>
+          <label style="display: inline-flex; align-items: center; cursor: pointer;">
+            <span style="margin-right: 8px;">아래에서부터</span>
+            <input type="checkbox" v-model="fromTop" @change="console.log('아래에서부터:', fromTop)" style="margin-right: 5px;">
+            <span style="font-size: 12px; color: #666;">({{ fromTop ? '활성' : '비활성' }})</span>
+          </label>
         </div>
       </div>
       
