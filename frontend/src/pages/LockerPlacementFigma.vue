@@ -856,8 +856,8 @@ const FLOOR_Y = 1250  // 바닥선 Y 위치 (캔버스 높이 1440의 약 87% �
 // 실제 캔버스 크기는 크게 설정하여 더 많은 락커 배치 가능
 const ACTUAL_CANVAS_WIDTH = 3100  // 실제 캔버스 너비 (2배)
 const ACTUAL_CANVAS_HEIGHT = 1440  // 실제 캔버스 높이 (2배)
-const INITIAL_VIEWPORT_WIDTH = 1550  // 초기 뷰포트 너비
-const INITIAL_VIEWPORT_HEIGHT = 720  // 초기 뷰포트 높이
+const INITIAL_VIEWPORT_WIDTH = 1350  // 초기 뷰포트 너비 (200px 축소)
+const INITIAL_VIEWPORT_HEIGHT = 670  // 초기 뷰포트 높이 (50px 축소)
 
 const canvasWidth = ref(ACTUAL_CANVAS_WIDTH)  // 실제 캔버스 크기
 const canvasHeight = ref(ACTUAL_CANVAS_HEIGHT)  // 실제 캔버스 크기
@@ -8358,8 +8358,8 @@ onUnmounted(() => {
 
 /* 캔버스 */
 .canvas-wrapper {
-  width: 1550px; /* 캔버스 크기에 맞춤 */
-  height: 720px; /* 컨테이너 높이 */
+  width: 1350px; /* 컨테이너 너비 (200px 축소) */
+  height: 670px; /* 컨테이너 높이 (50px 축소) */
   background: white;
   overflow: hidden; /* 스크롤 제거 */
   border: none; /* 경계 제거로 12px 차이 해소 */
@@ -8375,8 +8375,8 @@ onUnmounted(() => {
 .canvas {
   background: white;
   cursor: crosshair;
-  width: 1550px; /* 원래 캔버스 크기 유지 */
-  height: 720px; /* 원래 캔버스 높이 유지 */
+  width: 1350px; /* 컨테이너에 맞춤 */
+  height: 670px; /* 컨테이너에 맞춤 */
   display: block;
 }
 
