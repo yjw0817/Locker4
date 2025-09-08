@@ -26,8 +26,7 @@ const routes: Array<RouteRecordRaw> = [
 
 // Check if running inside CodeIgniter
 const isCodeIgniter = typeof window !== 'undefined' && 
-  (window as any).LockerConfig?.baseUrl && 
-  window.location.pathname.includes('/locker/setting')
+  ((window as any).LockerConfig?.baseUrl || (window as any).LockerAppType)
 
 // Use memory history when running inside CodeIgniter to prevent URL changes
 // Use normal web history when running standalone
@@ -35,7 +34,8 @@ const history = isCodeIgniter
   ? createMemoryHistory()
   : createWebHistory(import.meta.env.BASE_URL)
 
-console.log('[Locker4] Router mode:', isCodeIgniter ? 'memory' : 'web')
+console.log('[Locker4] Router mode:', isCodeIgniter ? 'memory (CodeIgniter)' : 'web (standalone)')
+console.log('[Locker4] Available routes:', routes.map(r => r.path))
 
 const router = createRouter({
   history,

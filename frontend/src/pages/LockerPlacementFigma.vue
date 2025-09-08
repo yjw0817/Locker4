@@ -8358,10 +8358,10 @@ onUnmounted(() => {
 
 /* 캔버스 */
 .canvas-wrapper {
-  width: 1350px; /* 컨테이너 너비 (200px 축소) */
+  width: 1550px; /* 캔버스 크기에 맞춤 */
   height: 720px; /* 컨테이너 높이 */
   background: white;
-  overflow: auto; /* 내부 스크롤 허용 */
+  overflow: hidden; /* 스크롤 제거 */
   border: none; /* 경계 제거로 12px 차이 해소 */
   position: relative; /* SVG 포지셔닝용 */
   border-radius: 4px;
