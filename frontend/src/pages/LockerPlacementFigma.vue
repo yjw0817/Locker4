@@ -7980,6 +7980,7 @@ onUnmounted(() => {
 /* 사이드바 */
 .sidebar {
   width: 280px;
+  height: 670px; /* 캔버스 높이에 맞춤 (50px 축소) */
   background: white;
   border: 1px solid black;
   border-radius: 5px;
@@ -7989,6 +7990,7 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 20px;
   flex-shrink: 0; /* 사이드바 크기 고정 */
+  overflow-y: auto; /* 내용이 많을 때 스크롤 가능 */
 }
 
 .sidebar-title {
@@ -8289,7 +8291,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   padding: 0 0 0 16px;
-  min-height: 792px; /* 740px + padding + 여백 */
+  min-height: 742px; /* 690px + padding + 여백 (50px 축소) */
   overflow: visible; /* 스크롤 제거 - 윈도우 레벨 스크롤만 사용 */
 }
 
