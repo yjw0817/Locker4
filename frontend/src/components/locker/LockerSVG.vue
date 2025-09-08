@@ -807,11 +807,10 @@ const updateTooltipPosition = () => {
   let x = currentMousePosition.value.x - tooltipSize.value.width / 2
   let y = currentMousePosition.value.y - tooltipSize.value.height - 10  // 10px 간격
   
-  // 화면 경계를 벗어나지 않도록 조정 (항상 위쪽에만 표시)
+  // 화면 경계를 벗어나지 않도록 조정
   if (y < 0) {
-    // 위쪽으로 벗어나는 경우, 마우스 Y 위치에 따라 동적으로 조정
-    // 마우스가 더 위에 있을수록 툴팁을 더 아래로 배치
-    y = Math.min(currentMousePosition.value.y * 0.5, 100) // 최대 100px까지만 내려가도록
+    // 위쪽으로 벗어나면 마우스 아래쪽에 표시
+    y = currentMousePosition.value.y + 10
   }
   
   if (x < 0) {
