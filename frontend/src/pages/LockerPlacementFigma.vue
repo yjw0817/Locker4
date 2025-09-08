@@ -3453,29 +3453,69 @@ const handleDragMove = (event) => {
   const proposedPositions = []
   let hasCollision = false
   
-  // First pass: Calculate all new positions
+  // First, calculate the bounding box of the entire group
+  let groupMinX = Infinity, groupMinY = Infinity
+  let groupMaxX = -Infinity, groupMaxY = -Infinity
+  
+  draggedLockers.value.forEach(dragInfo => {
+    const locker = currentLockers.value.find(l => l.id === dragInfo.id)
+    if (locker) {
+      const dims = getLockerDimensions(locker)
+      let lockerX, lockerY
+      
+      if (dragInfo.isLeader) {
+        lockerX = snappedLeader.x
+        lockerY = snappedLeader.y
+      } else {
+        lockerX = snappedLeader.x + dragInfo.relativeX
+        lockerY = snappedLeader.y + dragInfo.relativeY
+      }
+      
+      groupMinX = Math.min(groupMinX, lockerX)
+      groupMinY = Math.min(groupMinY, lockerY)
+      groupMaxX = Math.max(groupMaxX, lockerX + dims.width)
+      groupMaxY = Math.max(groupMaxY, lockerY + dims.height)
+    }
+  })
+  
+  // Calculate how much to adjust the leader position to keep the entire group within canvas
+  let leaderAdjustX = 0, leaderAdjustY = 0
+  
+  if (groupMinX < 0) {
+    leaderAdjustX = -groupMinX  // Move right to keep group in bounds
+  } else if (groupMaxX > canvasWidth.value) {
+    leaderAdjustX = canvasWidth.value - groupMaxX  // Move left to keep group in bounds
+  }
+  
+  if (groupMinY < 0) {
+    leaderAdjustY = -groupMinY  // Move down to keep group in bounds
+  } else if (groupMaxY > canvasHeight.value) {
+    leaderAdjustY = canvasHeight.value - groupMaxY  // Move up to keep group in bounds
+  }
+  
+  // Apply the adjustment to the leader position
+  const constrainedLeaderX = snappedLeader.x + leaderAdjustX
+  const constrainedLeaderY = snappedLeader.y + leaderAdjustY
+  
+  // Now calculate all positions based on the constrained leader position
   draggedLockers.value.forEach(dragInfo => {
     const locker = currentLockers.value.find(l => l.id === dragInfo.id)
     if (locker) {
       const dims = getLockerDimensions(locker)
       
-      // For leader, use the snapped position
-      // For followers, maintain relative position to leader
+      // For leader, use the constrained position
+      // For followers, maintain relative position to constrained leader
       let newX, newY
       if (dragInfo.isLeader) {
-        newX = snappedLeader.x
-        newY = snappedLeader.y
+        newX = constrainedLeaderX
+        newY = constrainedLeaderY
       } else {
         // Maintain exact relative position to leader
-        newX = snappedLeader.x + dragInfo.relativeX
-        newY = snappedLeader.y + dragInfo.relativeY
+        newX = constrainedLeaderX + dragInfo.relativeX
+        newY = constrainedLeaderY + dragInfo.relativeY
       }
       
-      // Canvas boundary check
-      const maxX = canvasWidth.value - dims.width
-      const maxY = canvasHeight.value - dims.height
-      newX = Math.max(0, Math.min(newX, maxX))
-      newY = Math.max(0, Math.min(newY, maxY))
+      // No individual boundary check needed - group boundary already handled
       
       // Check for collisions with non-selected lockers (considering rotation)
       // Pass wasSnapped flag to use appropriate tolerance

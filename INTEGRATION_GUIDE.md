@@ -6,7 +6,7 @@
 ## 통합 구조
 
 ### 1. 빌드된 파일 위치
-- **Vue 빌드 출력**: `/mnt/d/Projects/html/SpoqPlus_Color_Admin_Except_Mobile_claude2/public/assets/locker4/`
+- **Vue 빌드 출력**: `/mnt/d/Projects/html/SpoqPlus_v1.2/public/assets/locker4/`
 - **JavaScript**: `public/assets/locker4/js/`
 - **CSS**: `public/assets/locker4/css/`
 
@@ -37,7 +37,7 @@ npm run build
 ```typescript
 base: '/assets/locker4/',
 build: {
-  outDir: '../../html/SpoqPlus_Color_Admin_Except_Mobile_claude2/public/assets/locker4'
+  outDir: '../../html/SpoqPlus_v1.2/public/assets/locker4'
 }
 ```
 
