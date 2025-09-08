@@ -811,7 +811,6 @@ const updateTooltipPosition = () => {
   if (y < 0) {
     // 위쪽으로 벗어나는 경우, 마우스 Y 위치에 따라 동적으로 조정
     // 마우스가 더 위에 있을수록 툴팁을 더 아래로 배치
-    const mouseYRatio = currentMousePosition.value.y / 200  // 상단 200px 내에서의 비율
     y = Math.min(currentMousePosition.value.y * 0.5, 100) // 최대 100px까지만 내려가도록
   }
   
