@@ -855,7 +855,7 @@ const FLOOR_Y = 1250  // 바닥선 Y 위치 (캔버스 높이 1440의 약 87% �
 // 캔버스 크기 (동적으로 조정)
 // 실제 캔버스 크기는 크게 설정하여 더 많은 락커 배치 가능
 const ACTUAL_CANVAS_WIDTH = 3100  // 실제 캔버스 너비 (2배)
-const ACTUAL_CANVAS_HEIGHT = 1440  // 실제 캔버스 높이 (2배)
+const ACTUAL_CANVAS_HEIGHT = 1435  // 실제 캔버스 높이 (5px 축소)
 const INITIAL_VIEWPORT_WIDTH = 1350  // 초기 뷰포트 너비 (200px 축소)
 const INITIAL_VIEWPORT_HEIGHT = 670  // 초기 뷰포트 높이 (50px 축소)
 
@@ -8291,7 +8291,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   padding: 0 0 0 16px;
-  min-height: 742px; /* 690px + padding + 여백 (50px 축소) */
+  min-height: 727px; /* 690px + padding + 여백 (추가 15px 축소) */
   overflow: visible; /* 스크롤 제거 - 윈도우 레벨 스크롤만 사용 */
 }
 
