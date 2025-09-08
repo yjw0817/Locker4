@@ -497,6 +497,7 @@
       <div class="form-group">
         <label>단수:</label>
         <input 
+          ref="floorInputRef"
           v-model.number="floorCount" 
           type="number" 
           min="1" 
@@ -504,6 +505,7 @@
           placeholder="1-9 사이 입력"
           class="form-control"
           @input="validateFloorCount"
+          @keyup.enter="addFloors"
         >
       </div>
       <div class="modal-buttons">
@@ -799,6 +801,7 @@ const contextMenuType = ref(null)
 // Dialog states
 const floorInputVisible = ref(false)
 const floorCount = ref(1)
+const floorInputRef = ref<HTMLInputElement | null>(null)
 
 // 디버깅용 팝업 상태
 const debugPopupVisible = ref(false)
@@ -5316,6 +5319,15 @@ const showFloorInputDialog = () => {
   hideContextMenu()
   floorInputVisible.value = true
   floorCount.value = 1
+  
+  // Auto-focus on the input field after modal is rendered
+  nextTick(() => {
+    const inputElement = floorInputRef.value
+    if (inputElement) {
+      inputElement.focus()
+      inputElement.select() // Select all text for easy typing
+    }
+  })
 }
 
 // Add floors (단수 입력)

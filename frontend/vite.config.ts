@@ -27,15 +27,15 @@ export default defineConfig({
     }
   },
   server: {
-    port: 5174,  // Frontend server port - fixed to avoid conflicts
-    strictPort: true,  // Use exact port 5174
+    port: 5175,  // Frontend server port - updated to match PHP view
+    strictPort: true,  // Use exact port 5175
     host: true,  // Listen on all network interfaces
     proxy: {
       '/api': {
-        target: 'http://localhost:3333',
+        target: 'http://localhost/spoq-admin',  // CodeIgniter backend
         changeOrigin: true,
         secure: false,
-        rewrite: (path) => path
+        rewrite: (path) => path.replace(/^\/api/, '/api')
       }
     }
   }
