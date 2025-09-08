@@ -526,12 +526,14 @@
         </div>
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
           <input 
+            ref="startNumberInputRef"
             v-model.number="startNumber" 
             type="number" 
             :min="1" 
             placeholder="시작 번호"
             class="form-control number-input"
             style="width: 120px;"
+            @keyup.enter="assignNumbers"
           >
           <div class="radio-group-horizontal" style="flex: 1; margin-left: 20px;">
             <label class="radio-label">
@@ -802,6 +804,7 @@ const contextMenuType = ref(null)
 const floorInputVisible = ref(false)
 const floorCount = ref(1)
 const floorInputRef = ref<HTMLInputElement | null>(null)
+const startNumberInputRef = ref<HTMLInputElement | null>(null)
 
 // 디버깅용 팝업 상태
 const debugPopupVisible = ref(false)
@@ -5549,6 +5552,15 @@ const showNumberAssignDialog = () => {
   numberDirection.value = 'horizontal'
   reverseDirection.value = false
   fromTop.value = false
+  
+  // Auto-focus on the input field after modal is rendered
+  nextTick(() => {
+    const inputElement = startNumberInputRef.value
+    if (inputElement) {
+      inputElement.focus()
+      inputElement.select() // Select all text for easy typing
+    }
+  })
 }
 
 // Clean up duplicate tier lockers
