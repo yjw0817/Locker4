@@ -315,6 +315,7 @@
               :zoom-level="zoomLevel"
               :is-management-page="true"
               :child-lockers="lockersWithChildren[locker.id] || []"
+              @click="handleLockerClick(locker)"
             />
             
             <!-- 통합 외곽선 그리기 (드래그 중에는 숨김) -->
@@ -735,6 +736,15 @@
         </div>
       </div>
     </teleport>
+    
+    <!-- 락커 배정 팝업 모달 -->
+    <LockerAssignmentModal
+      :is-open="showAssignmentModal"
+      :locker-number="selectedLockerNumber"
+      :locker-data="selectedLockerData"
+      @close="closeAssignmentModal"
+      @confirm="handleAssignmentConfirm"
+    />
   </div> <!-- Close locker-placement -->
 </template>
 
@@ -744,6 +754,7 @@ import { useLockerStore, type Locker, type LockerZone } from '@/stores/lockerSto
 import LockerSVG from '@/components/locker/LockerSVG.vue'
 import ZoneModal from '@/components/modals/ZoneModal.vue'
 import LockerRegistrationModal from '@/components/modals/LockerRegistrationModal.vue'
+import LockerAssignmentModal from '@/components/locker/LockerAssignmentModal.vue'
 import { getLockerConfig, isCodeIgniterEnvironment } from '@/config/codeigniter'
 // import * as lockerApi from '@/api/lockers' // TODO: Add this when API module is created
 
@@ -757,6 +768,9 @@ const selectedLocker = ref<Locker | null>(null)
 const isVerticalMode = ref(false)
 const canvasRef = ref<any>(null)
 const showZoneModal = ref(false)
+const showAssignmentModal = ref(false)
+const selectedLockerNumber = ref('')
+const selectedLockerData = ref<any>(null)
 const showLockerRegistrationModal = ref(false) // 락커 등록 모달
 const isDragging = ref(false)
 const dragOffset = ref({ x: 0, y: 0 })
@@ -8983,6 +8997,36 @@ onUnmounted(() => {
   .mode-toggle-inline .mode-btn {
     padding: 8px 10px;
   }
+}
+
+// 락커 클릭 이벤트 핸들러 - 정면배치모드에서 팝업 표시
+const handleLockerClick = (locker: any) => {
+  // 정면배치모드일 때만 팝업 표시
+  if (currentViewMode.value === 'front') {
+    selectedLockerNumber.value = locker.number || ''
+    selectedLockerData.value = {
+      userName: locker.userName || '',
+      userPhone: locker.userPhone || '',
+      startDate: locker.startDate || '',
+      endDate: locker.endDate || '',
+      usage: locker.usage || ''
+    }
+    showAssignmentModal.value = true
+  }
+}
+
+// 팝업 닫기 핸들러
+const closeAssignmentModal = () => {
+  showAssignmentModal.value = false
+  selectedLockerNumber.value = ''
+  selectedLockerData.value = null
+}
+
+// 락커 배정 확인 핸들러
+const handleAssignmentConfirm = (data: any) => {
+  console.log('락커 배정 데이터:', data)
+  // TODO: API 호출하여 락커 배정 정보 저장
+  // 임시로 콘솔에만 출력
 }
 
 /* 통합 선택 외곽선 - 단일 선택과 동일한 스타일 */

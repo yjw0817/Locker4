@@ -804,20 +804,35 @@ const updateTooltipPosition = () => {
   console.log('Updating tooltip position, mouse:', currentMousePosition.value)
   
   // 기본 위치 계산 (마우스 위쪽에 중앙 정렬)
-  let x = currentMousePosition.value.x - tooltipSize.value.width / 2
-  let y = currentMousePosition.value.y - tooltipSize.value.height - 10  // 10px 간격
+  // 여기에 락커의 회전각도에 따른 계산 추가
+
   
-  // 화면 경계를 벗어나지 않도록 조정
-  if (y < 0) {
-    // 위쪽으로 벗어나면 마우스 아래쪽에 표시
-    y = currentMousePosition.value.y + 10
+  let x = 0
+  let y = 0
+  
+  // 락커의 회전각도에 따른 계산
+  const rotation = props.locker.rotation
+  const displayWidth = props.locker.displayWidth
+  const displayHeight = props.locker.displayHeight
+  switch (rotation) {
+    case 0:
+      x = currentMousePosition.value.x - 40
+      y = currentMousePosition.value.y - 40
+      break
+    case 90:      
+      x =  20 - currentMousePosition.value.y
+      y = currentMousePosition.value.x - 40
+      break
+    case 180:
+      x = 20 - currentMousePosition.value.x 
+      y = 20 - currentMousePosition.value.y 
+      break
+    case 270:
+    x =  20 - currentMousePosition.value.y
+    y = 20 - currentMousePosition.value.x 
+      break
   }
   
-  if (x < 0) {
-    x = 0
-  } else if (x + tooltipSize.value.width > logicalDimensions.value.width) {
-    x = logicalDimensions.value.width - tooltipSize.value.width
-  }
   
   tooltipPosition.value = { x, y }
   
