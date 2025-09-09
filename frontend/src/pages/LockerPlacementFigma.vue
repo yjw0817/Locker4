@@ -8291,7 +8291,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   padding: 0 0 0 16px;
-  min-height: 727px; /* 690px + padding + 여백 (추가 15px 축소) */
+  height: auto; /* 내용에 따라 자동 조절 */
   overflow: visible; /* 스크롤 제거 - 윈도우 레벨 스크롤만 사용 */
 }
 
