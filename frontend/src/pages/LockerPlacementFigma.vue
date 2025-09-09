@@ -7989,18 +7989,18 @@ onUnmounted(() => {
 }
 
 /* 컨테이너 */
-#locker4-app .container {
-  flex: 1 !important;
-  width: 100% !important; /* 너비 100% */
-  display: flex !important;
-  align-items: stretch !important; /* 자식 요소들이 컨테이너 높이를 채우도록 */
-  min-width: 1200px !important; /* 최소 너비 보장 */
-  height: calc(100% - 60px) !important; /* 높이를 100% - 60px로 설정 */
-  overflow-x: auto !important; /* 필요시 가로 스크롤 */
-  overflow-y: hidden !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  max-width: none !important; /* Bootstrap container max-width 무시 */
+.container {
+  flex: 1;
+  width: 100%; /* 너비 100% */
+  display: flex;
+  align-items: stretch; /* 자식 요소들이 컨테이너 높이를 채우도록 */
+  min-width: 1200px; /* 최소 너비 보장 */
+  height: calc(100% - 60px); /* 높이를 100% - 60px로 설정 */
+  overflow-x: auto; /* 필요시 가로 스크롤 */
+  overflow-y: hidden;
+  margin: 0;
+  padding: 0;
+  max-width: none; /* Bootstrap container max-width 무시 */
 }
 
 /* 사이드바 */
