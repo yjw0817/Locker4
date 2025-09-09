@@ -200,16 +200,19 @@
                   </svg>
                   <span>{{ Math.round(zoomLevel * 100) }}%</span>
                 </button>
-                <div class="zoom-hints">
+                <!-- 줌 힌트 숨김 -->
+                <div class="zoom-hints" style="display: none;">
                   <span class="hint">Ctrl+스크롤: 줌</span>
                   <span class="hint">휠클릭+드래그: 이동</span>
                 </div>
               </div>
               
+              <!-- 디버그 버튼 숨김 -->
               <button 
                 class="mode-btn debug-btn"
                 @click="debugPopupVisible = true"
                 title="락커 데이터 상세 확인"
+                style="display: none;"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="m9 12 2 2 4-4"/>
