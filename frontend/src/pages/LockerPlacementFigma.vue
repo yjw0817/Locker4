@@ -2618,18 +2618,34 @@ const autoFitLockers = () => {
   // 줌 범위 제한
   newZoom = Math.max(minZoom, Math.min(newZoom, maxZoom))
   
-  // 중앙 정렬을 위한 팬 오프셋 계산
-  const centerX = (minX + maxX) / 2
-  const centerY = (minY + maxY) / 2
-  const viewCenterX = INITIAL_VIEWPORT_WIDTH / (2 * newZoom)
-  const viewCenterY = INITIAL_VIEWPORT_HEIGHT / (2 * newZoom)
+  // 정면배치모드일 때는 viewport 하단을 캔버스 하단에 맞춤
+  let newOffset
+  if (currentViewMode.value === 'front') {
+    // viewport 하단을 캔버스 하단(maxY)에 맞춤
+    const viewportHeight = INITIAL_VIEWPORT_HEIGHT / newZoom
+    const viewportWidth = INITIAL_VIEWPORT_WIDTH / newZoom
+    
+    // 세로는 하단 맞춤, 가로는 중앙 정렬
+    const centerX = (minX + maxX) / 2
+    newOffset = {
+      x: centerX - viewportWidth / 2,
+      y: maxY - viewportHeight  // viewport 하단을 maxY에 맞춤
+    }
+  } else {
+    // 평면배치모드는 기존대로 중앙 정렬
+    const centerX = (minX + maxX) / 2
+    const centerY = (minY + maxY) / 2
+    const viewCenterX = INITIAL_VIEWPORT_WIDTH / (2 * newZoom)
+    const viewCenterY = INITIAL_VIEWPORT_HEIGHT / (2 * newZoom)
+    
+    newOffset = {
+      x: centerX - viewCenterX,
+      y: centerY - viewCenterY
+    }
+  }
   
   // 줌과 팬 적용
   zoomLevel.value = newZoom
-  const newOffset = {
-    x: centerX - viewCenterX,
-    y: centerY - viewCenterY
-  }
   
   // 팬 오프셋을 경계 내로 제한
   panOffset.value = clampPanOffset(newOffset, newZoom)
