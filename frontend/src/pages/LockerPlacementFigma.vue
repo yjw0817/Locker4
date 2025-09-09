@@ -8366,7 +8366,6 @@ onUnmounted(() => {
 /* 캔버스 */
 .canvas-wrapper {
   width: 100%;
-  max-width: 1350px; /* 최대 너비 제한 */
   height: 100%; /* 100% 높이 */
   min-height: 500px;
   background: white;
