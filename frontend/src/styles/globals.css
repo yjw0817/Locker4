@@ -16,6 +16,13 @@ html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  height: 100%;
+}
+
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 /* body 스타일을 #locker4-app 내부로 제한 */
@@ -30,8 +37,8 @@ html {
 
 /* === 레이아웃 기본 스타일 === */
 #app {
-  min-height: auto;
-  height: auto;
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
 }

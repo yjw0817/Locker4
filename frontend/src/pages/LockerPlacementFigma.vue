@@ -7982,18 +7982,19 @@ onUnmounted(() => {
 /* 사이드바 */
 .sidebar {
   width: 280px;
-  height: calc(100% - 32px); /* 상하 여백 고려 */
+  height: 100%; /* 100% 높이 */
   min-height: 600px;
   background: white;
   border: 1px solid black;
   border-radius: 5px;
-  margin: 16px 0 16px 16px;
+  margin: 16px;
   padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 20px;
   flex-shrink: 0; /* 사이드바 크기 고정 */
   overflow-y: auto; /* 내용이 많을 때 스크롤 가능 */
+  box-sizing: border-box;
 }
 
 .sidebar-title {
@@ -8366,7 +8367,7 @@ onUnmounted(() => {
 .canvas-wrapper {
   width: 100%;
   max-width: 1350px; /* 최대 너비 제한 */
-  height: calc(100% - 80px); /* 탭 영역 제외 */
+  height: 100%; /* 100% 높이 */
   min-height: 500px;
   background: white;
   overflow: auto; /* 필요시 스크롤 */
@@ -8382,8 +8383,10 @@ onUnmounted(() => {
 .canvas {
   background: white;
   cursor: crosshair;
-  width: 1350px; /* 컨테이너에 맞춤 */
-  height: 670px; /* 컨테이너에 맞춤 */
+  width: 100%; /* 동적 크기 */
+  min-width: 1350px; /* 최소 너비 */
+  height: 100%; /* 동적 높이 */
+  min-height: 670px; /* 최소 높이 */
   display: block;
 }
 
