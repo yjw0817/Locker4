@@ -8393,7 +8393,7 @@ onUnmounted(() => {
 /* 캔버스 */
 .canvas-wrapper {
   width: 100%;
-  height: 100%; /* 100% 높이 */
+  height: calc(100% - 16px); /* 100% - 16px 높이 */
   min-height: 500px;
   background: white;
   overflow: auto; /* 필요시 스크롤 */
