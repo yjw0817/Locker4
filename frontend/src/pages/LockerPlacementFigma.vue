@@ -7958,7 +7958,7 @@ onUnmounted(() => {
 
 .locker-placement {
   width: 100%;
-  height: 100%;
+  height: calc(100% - 60px); /* 높이를 100% - 60px로 설정 */
   display: flex;
   flex-direction: column;
   background-color: var(--background-main);
@@ -7995,7 +7995,7 @@ onUnmounted(() => {
   display: flex;
   align-items: stretch; /* 자식 요소들이 컨테이너 높이를 채우도록 */
   min-width: 1200px; /* 최소 너비 보장 */
-  height: calc(100% - 60px); /* 높이를 100% - 60px로 설정 */
+  height: 100%; /* 높이 100% */
   overflow-x: auto; /* 필요시 가로 스크롤 */
   overflow-y: hidden;
   margin: 0;
