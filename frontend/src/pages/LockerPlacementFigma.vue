@@ -8297,6 +8297,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   padding: 16px;
+  padding-bottom: 0; /* padding-bottom을 0으로 설정 */
   min-width: 900px; /* 최소 너비 */
   height: 100%;
   overflow: auto; /* 필요시 스크롤 */
