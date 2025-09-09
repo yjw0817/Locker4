@@ -7970,6 +7970,7 @@ onUnmounted(() => {
 .container {
   flex: 1;
   display: flex;
+  height: 100%; /* 높이 100% 추가 */
   overflow: visible; /* 윈도우 레벨 스크롤 허용 */
   min-width: 1890px; /* 컨테이너도 최소 너비 보장 */
   margin-left: 0px !important;
