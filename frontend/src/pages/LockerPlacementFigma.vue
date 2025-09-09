@@ -231,7 +231,7 @@
             height="100%"
             :viewBox="computedViewBox"
             :style="{ cursor: getCursorStyle, margin: 0, padding: 0 }"
-            preserveAspectRatio="none"
+            preserveAspectRatio="xMidYMid meet"
             @wheel.prevent="handleWheel"
             @mousedown="handleCanvasMouseDown"
             @mousemove="handleCanvasMouseMove"
@@ -892,11 +892,14 @@ const updateCanvasSize = () => {
   const wrapper = document.querySelector('.canvas-wrapper')
   if (wrapper) {
     const rect = wrapper.getBoundingClientRect()
-    // Use full wrapper dimensions without subtracting padding
+    // Use full wrapper dimensions
     const wrapperWidth = rect.width
     const wrapperHeight = rect.height
     
-    // Canvas dimensions updated
+    // Update dynamic canvas size based on wrapper dimensions
+    // Keep aspect ratio while using available space
+    dynamicCanvasWidth.value = Math.max(wrapperWidth, INITIAL_VIEWPORT_WIDTH)
+    dynamicCanvasHeight.value = Math.max(wrapperHeight, INITIAL_VIEWPORT_HEIGHT)
   }
 }
 
@@ -7699,10 +7702,9 @@ const getCursorStyle = computed(() => {
 
 // Computed property for viewBox with zoom and pan
 const computedViewBox = computed(() => {
-  // 평면모드(floor)와 세로모드(front) 모두에서 줌과 팬 적용
-  // 초기 뷰포트는 1550x720으로 설정
-  const effectiveWidth = INITIAL_VIEWPORT_WIDTH / zoomLevel.value
-  const effectiveHeight = INITIAL_VIEWPORT_HEIGHT / zoomLevel.value
+  // Use dynamic canvas size that expands with wrapper
+  const effectiveWidth = dynamicCanvasWidth.value / zoomLevel.value
+  const effectiveHeight = dynamicCanvasHeight.value / zoomLevel.value
   const x = panOffset.value.x
   const y = panOffset.value.y
   
@@ -7802,9 +7804,9 @@ onMounted(async () => {
   }
   
   // Canvas size update는 데이터 로딩 완료 후에만 실행 (깜빡임 방지)
-  // setTimeout(() => {
-  //   updateCanvasSize()
-  // }, 100)
+  setTimeout(() => {
+    updateCanvasSize()
+  }, 100)
   
   // Add resize listener
   window.addEventListener('resize', updateCanvasSize)
