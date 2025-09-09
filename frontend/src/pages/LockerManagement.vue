@@ -8363,7 +8363,7 @@ onUnmounted(() => {
 /* 캔버스 */
 .canvas-wrapper {
   width: 100%;
-  height: calc(100vh - 150px);
+  height: 100%; /* 100% 높이로 변경 */
   background: white;
   overflow: hidden;
   border: none;
