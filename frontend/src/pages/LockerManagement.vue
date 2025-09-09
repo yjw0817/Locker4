@@ -12,8 +12,8 @@
     <div v-else class="main-content">
       <div class="container">
       <!-- 좌측 사이드바 - 관리모드에서는 숨김 -->
-      <aside class="sidebar" v-if="false">
-        <h2 class="sidebar-title">락커 선택창</h2>
+      <aside class="locker-sidebar" v-if="false">
+        <h2 class="locker-sidebar-title">락커 선택창</h2>
         
         <!-- Loading state -->
         <div v-if="isLoadingTypes" class="loading-state">
@@ -7969,36 +7969,40 @@ onUnmounted(() => {
   margin: 0 8px;
 }
 
-/* 컨테이너 */
-.container {
-  flex: 1;
-  display: flex;
-  align-items: stretch; /* 자식 요소들이 컨테이너 높이를 채우도록 */
-  height: 100%; /* 높이 100% 추가 */
-  overflow: visible; /* 윈도우 레벨 스크롤 허용 */
-  min-width: 1890px; /* 컨테이너도 최소 너비 보장 */
+/* 컨테이너 - specificity 높임 */
+#locker4-app .container {
+  flex: 1 !important;
+  display: flex !important;
+  align-items: stretch !important; /* 자식 요소들이 컨테이너 높이를 채우도록 */
+  height: 100% !important; /* 높이 100% 추가 */
+  width: 100% !important; /* 너비 100% 강제 */
+  overflow: visible !important; /* 윈도우 레벨 스크롤 허용 */
+  min-width: 1890px !important; /* 컨테이너도 최소 너비 보장 */
   margin-left: 0px !important;
   margin-top: 0 !important;
   padding-left: 0 !important;
   padding-top: 0 !important;
+  max-width: none !important; /* Bootstrap container max-width 무시 */
 }
 
-/* 사이드바 */
-.sidebar {
-  width: 280px;
-  background: white;
-  border: 1px solid black;
-  border-radius: 5px;
-  margin: 16px;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  flex-shrink: 0; /* 사이드바 크기 고정 */
-  box-sizing: border-box;
+/* 사이드바 - specificity 높임 */
+.locker-sidebar {
+  width: 280px !important;
+  height: 100% !important; /* 높이 100% 추가 */
+  background: white !important;
+  border: 1px solid black !important;
+  border-radius: 5px !important;
+  margin: 16px !important;
+  padding: 20px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 20px !important;
+  flex-shrink: 0 !important; /* 사이드바 크기 고정 */
+  box-sizing: border-box !important;
+  /* align-items: stretch에 의해 자동으로 높이 채워짐 */
 }
 
-.sidebar-title {
+.locker-sidebar-title {
   font-size: 18px;
   font-weight: 600;
   margin: 0;

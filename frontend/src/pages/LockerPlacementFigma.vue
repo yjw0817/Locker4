@@ -12,8 +12,8 @@
     <div v-else class="main-content">
       <div class="container">
       <!-- 좌측 사이드바 - 평면배치모드에서만 표시 -->
-      <aside class="sidebar">
-        <h2 class="sidebar-title">락커 선택창</h2>
+      <aside class="locker-sidebar">
+        <h2 class="locker-sidebar-title">락커 선택창</h2>
         
         <!-- Loading state -->
         <div v-if="isLoadingTypes" class="loading-state">
@@ -7989,38 +7989,40 @@ onUnmounted(() => {
 }
 
 /* 컨테이너 */
-.container {
-  flex: 1;
-  width: 100%; /* 너비 100% 추가 */
-  display: flex;
-  align-items: stretch; /* 자식 요소들이 컨테이너 높이를 채우도록 */
-  min-width: 1200px; /* 최소 너비 보장 */
-  height: 100%;
-  overflow-x: auto; /* 필요시 가로 스크롤 */
-  overflow-y: hidden;
-  margin: 0;
-  padding: 0;
+#locker4-app .container {
+  flex: 1 !important;
+  width: calc(100% - 60px) !important; /* 너비를 100% - 60px로 설정 */
+  display: flex !important;
+  align-items: stretch !important; /* 자식 요소들이 컨테이너 높이를 채우도록 */
+  min-width: 1200px !important; /* 최소 너비 보장 */
+  height: 100% !important;
+  overflow-x: auto !important; /* 필요시 가로 스크롤 */
+  overflow-y: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  max-width: none !important; /* Bootstrap container max-width 무시 */
 }
 
 /* 사이드바 */
-.sidebar {
-  width: 280px;
-  height: 100%; /* 100% 높이 */
-  min-height: 600px;
-  background: white;
-  border: 1px solid black;
-  border-radius: 5px;
-  margin: 0 16px 16px 0; /* top과 left margin을 0으로 설정 */
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  flex-shrink: 0; /* 사이드바 크기 고정 */
-  overflow-y: auto; /* 내용이 많을 때 스크롤 가능 */
-  box-sizing: border-box;
+.locker-sidebar {
+  width: 280px !important;
+  height: calc(100% - 16px) !important; /* bottom margin을 뺀 높이 */
+  min-height: 600px !important;
+  background: white !important;
+  border: 1px solid black !important;
+  border-radius: 5px !important;
+  margin: 0 16px 16px 0 !important; /* top과 left margin을 0으로 설정 */
+  padding: 20px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 20px !important;
+  flex-shrink: 0 !important; /* 사이드바 크기 고정 */
+  overflow-y: auto !important; /* 내용이 많을 때 스크롤 가능 */
+  box-sizing: border-box !important;
+  align-self: stretch !important; /* 부모의 높이에 맞춤 */
 }
 
-.sidebar-title {
+.locker-sidebar-title {
   font-size: 18px;
   font-weight: 600;
   margin: 0;
