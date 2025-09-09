@@ -7991,11 +7991,11 @@ onUnmounted(() => {
 /* 컨테이너 */
 #locker4-app .container {
   flex: 1 !important;
-  width: calc(100% - 60px) !important; /* 너비를 100% - 60px로 설정 */
+  width: 100% !important; /* 너비 100% */
   display: flex !important;
   align-items: stretch !important; /* 자식 요소들이 컨테이너 높이를 채우도록 */
   min-width: 1200px !important; /* 최소 너비 보장 */
-  height: 100% !important;
+  height: calc(100% - 60px) !important; /* 높이를 100% - 60px로 설정 */
   overflow-x: auto !important; /* 필요시 가로 스크롤 */
   overflow-y: hidden !important;
   margin: 0 !important;
