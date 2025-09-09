@@ -7973,6 +7973,7 @@ onUnmounted(() => {
 .container {
   flex: 1;
   display: flex;
+  align-items: stretch; /* 자식 요소들이 컨테이너 높이를 채우도록 */
   height: 100%; /* 높이 100% 추가 */
   overflow: visible; /* 윈도우 레벨 스크롤 허용 */
   min-width: 1890px; /* 컨테이너도 최소 너비 보장 */
@@ -7994,6 +7995,7 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 20px;
   flex-shrink: 0; /* 사이드바 크기 고정 */
+  box-sizing: border-box;
 }
 
 .sidebar-title {

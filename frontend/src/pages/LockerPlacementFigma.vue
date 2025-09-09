@@ -7991,7 +7991,9 @@ onUnmounted(() => {
 /* 컨테이너 */
 .container {
   flex: 1;
+  width: 100%; /* 너비 100% 추가 */
   display: flex;
+  align-items: stretch; /* 자식 요소들이 컨테이너 높이를 채우도록 */
   min-width: 1200px; /* 최소 너비 보장 */
   height: 100%;
   overflow-x: auto; /* 필요시 가로 스크롤 */

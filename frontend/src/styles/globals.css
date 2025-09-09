@@ -27,6 +27,8 @@ body {
 
 /* body 스타일을 #locker4-app 내부로 제한 */
 #locker4-app {
+  width: 100%;
+  height: 100%;
   font-family: var(--font-primary);
   font-size: var(--text-base);
   font-weight: var(--font-normal);
