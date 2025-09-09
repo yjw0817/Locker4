@@ -7928,18 +7928,20 @@ onUnmounted(() => {
   height: 100%;
   opacity: 1;
   transition: opacity 0.3s ease-in-out;
-  margin-left: -10px !important;
-  padding-left: 0 !important;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .locker-placement {
   width: 100%;
-  height: 100%; /* Changed from 100vh to 100% to fit within panel */
-  min-height: 600px;
+  height: 100%;
   display: flex;
   flex-direction: column;
   background-color: var(--background-main);
-  min-width: 1690px; /* 사이드바(280+16) + 캔버스(1350+16) = 1690px 최소 너비 */
+  overflow: hidden;
 }
 
 /* 헤더 */
@@ -7969,22 +7971,23 @@ onUnmounted(() => {
 .container {
   flex: 1;
   display: flex;
-  overflow: visible; /* 윈도우 레벨 스크롤 허용 */
-  min-width: 1690px; /* 컨테이너도 최소 너비 보장 */
-  margin-left: -10px !important;
-  margin-top: 0 !important;
-  padding-left: 0 !important;
-  padding-top: 0 !important;
+  min-width: 1200px; /* 최소 너비 보장 */
+  height: 100%;
+  overflow-x: auto; /* 필요시 가로 스크롤 */
+  overflow-y: hidden;
+  margin: 0;
+  padding: 0;
 }
 
 /* 사이드바 */
 .sidebar {
   width: 280px;
-  height: 740px; /* 캔버스보다 70px 높게 조정 */
+  height: calc(100% - 32px); /* 상하 여백 고려 */
+  min-height: 600px;
   background: white;
   border: 1px solid black;
   border-radius: 5px;
-  margin: 0 0 0 16px;
+  margin: 16px 0 16px 16px;
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -8290,9 +8293,10 @@ onUnmounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 0 0 0 16px;
-  height: auto; /* 내용에 따라 자동 조절 */
-  overflow: visible; /* 스크롤 제거 - 윈도우 레벨 스크롤만 사용 */
+  padding: 16px;
+  min-width: 900px; /* 최소 너비 */
+  height: 100%;
+  overflow: auto; /* 필요시 스크롤 */
 }
 
 /* 구역 탭 */
@@ -8360,18 +8364,19 @@ onUnmounted(() => {
 
 /* 캔버스 */
 .canvas-wrapper {
-  width: 1350px; /* 컨테이너 너비 (200px 축소) */
-  height: 665px; /* 컨테이너 높이 (55px 축소) */
+  width: 100%;
+  max-width: 1350px; /* 최대 너비 제한 */
+  height: calc(100% - 80px); /* 탭 영역 제외 */
+  min-height: 500px;
   background: white;
-  overflow: hidden; /* 스크롤 제거 */
-  border: none; /* 경계 제거로 12px 차이 해소 */
+  overflow: auto; /* 필요시 스크롤 */
+  border: 1px solid #e5e5e5;
   position: relative; /* SVG 포지셔닝용 */
   border-radius: 4px;
   display: block;
-  padding: 0 !important;
-  margin: 0; /* 마진도 제거 */
+  padding: 0;
+  margin: 0 auto; /* 중앙 정렬 */
   box-sizing: border-box;
-  flex-shrink: 0; /* 캔버스 크기 고정 */
 }
 
 .canvas {
