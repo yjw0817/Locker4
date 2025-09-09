@@ -8008,7 +8008,7 @@ onUnmounted(() => {
   background: white;
   border: 1px solid black;
   border-radius: 5px;
-  margin: 16px 16px 16px 0; /* left margin만 0으로 설정 */
+  margin: 0 16px 16px 0; /* top과 left margin을 0으로 설정 */
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -8316,6 +8316,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   padding: 16px;
+  padding-top: 0; /* padding-top을 0으로 설정 */
   padding-bottom: 0; /* padding-bottom을 0으로 설정 */
   min-width: 900px; /* 최소 너비 */
   height: 100%;
