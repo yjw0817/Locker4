@@ -8323,7 +8323,7 @@ onUnmounted(() => {
   padding-top: 0; /* padding-top을 0으로 설정 */
   padding-bottom: 0; /* padding-bottom을 0으로 설정 */
   min-width: 900px; /* 최소 너비 */
-  height: 100%;
+  height: calc(100% - 16px); /* 100% - 16px 높이 */
   overflow: auto; /* 필요시 스크롤 */
 }
 
@@ -8393,7 +8393,7 @@ onUnmounted(() => {
 /* 캔버스 */
 .canvas-wrapper {
   width: 100%;
-  height: calc(100% - 50px); /* 100% - 50px 높이 */
+  height: 100%; /* 100% 높이 */
   min-height: 500px;
   background: white;
   overflow: auto; /* 필요시 스크롤 */
