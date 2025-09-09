@@ -7990,7 +7990,6 @@ onUnmounted(() => {
   border: 1px solid black;
   border-radius: 5px;
   margin: 16px;
-  margin-bottom: 32px; /* 하단 여백 16px 추가 (기존 16px + 추가 16px) */
   padding: 20px;
   display: flex;
   flex-direction: column;
