@@ -5,7 +5,7 @@ const pool = require('../config/database');
 // Get all locker types
 router.get('/', async (req, res) => {
   try {
-    const { COMP_CD = '001', BCOFF_CD = '001' } = req.query;
+    const { COMP_CD = 'C0001', BCOFF_CD = 'C0001F0020' } = req.query;
     
     // Check if lockr_types table exists
     const [tables] = await pool.query(

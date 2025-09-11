@@ -5,7 +5,7 @@ const pool = require('../config/database');
 // Get all zones
 router.get('/', async (req, res) => {
   try {
-    const { COMP_CD = '001', BCOFF_CD = '001' } = req.query;
+    const { COMP_CD = 'C0001', BCOFF_CD = 'C0001F0020' } = req.query;
     
     // Check if lockr_area table exists, otherwise use default zones
     const [tables] = await pool.query(
@@ -86,8 +86,8 @@ router.post('/', async (req, res) => {
       WIDTH = 800,
       HEIGHT = 600,
       COLOR = '#e5e7eb',
-      COMP_CD = '001',
-      BCOFF_CD = '001'
+      COMP_CD = 'C0001',
+      BCOFF_CD = 'C0001F0020'
     } = req.body;
     
     // Check if table exists

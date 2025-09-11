@@ -22,7 +22,7 @@ const statusMapReverse = {
 // Get all lockers
 router.get('/', async (req, res) => {
   try {
-    const { COMP_CD = '001', BCOFF_CD = '001', parentOnly } = req.query;
+    const { COMP_CD = 'C0001', BCOFF_CD = 'C0001F0020', parentOnly } = req.query;
     
     // Build dynamic query based on parentOnly parameter
     let query = 'SELECT * FROM lockrs WHERE COMP_CD = ? AND BCOFF_CD = ?';
