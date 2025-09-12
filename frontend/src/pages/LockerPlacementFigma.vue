@@ -248,7 +248,7 @@
             <!-- 그리드 (옵션) -->
             <defs>
               <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
-                <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#e5e5e5" stroke-width="0.5"/>
+                <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#9ca3af" stroke-width="0.8"/>
               </pattern>
               <filter id="buttonShadow" x="-50%" y="-50%" width="200%" height="200%">
                 <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.1"/>
@@ -2605,10 +2605,10 @@ const handleWheel = (event: WheelEvent) => {
     return
   }
   
-  // Ctrl 키가 눌려있을 때만 줌
-  if (!event.ctrlKey) {
-    return
-  }
+  // Ctrl 키 체크 제거 - 그냥 스크롤로 줌 가능
+  // if (!event.ctrlKey) {
+  //   return
+  // }
   
   event.preventDefault()
   
