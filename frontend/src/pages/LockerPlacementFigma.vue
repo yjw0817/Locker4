@@ -254,7 +254,7 @@
                 <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.1"/>
               </filter>
             </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" class="canvas-background" />
+            <rect x="0" y="0" :width="ACTUAL_CANVAS_WIDTH" :height="ACTUAL_CANVAS_HEIGHT" fill="url(#grid)" class="canvas-background" />
 
             <!-- 구역 경계 -->
             <rect 
