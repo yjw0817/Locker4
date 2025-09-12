@@ -268,9 +268,9 @@
         </filter>
         <!-- 그라데이션 정의 -->
         <linearGradient :id="`numGradient-${props.locker.id}`" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" style="stop-color:#7A7A7A;stop-opacity:0.9" />
-          <stop offset="50%" style="stop-color:#5A5A5A;stop-opacity:0.8" />
-          <stop offset="100%" style="stop-color:#3A3A3A;stop-opacity:0.7" />
+          <stop offset="0%" style="stop-color:#B0B0B0;stop-opacity:0.6" />
+          <stop offset="50%" style="stop-color:#9A9A9A;stop-opacity:0.5" />
+          <stop offset="100%" style="stop-color:#808080;stop-opacity:0.4" />
         </linearGradient>
       </defs>
       
@@ -280,7 +280,7 @@
         :y="logicalDimensions.height / 2 + 3"
         text-anchor="middle"
         dominant-baseline="middle"
-        :font-size="fontSize * 2.5"
+        :font-size="fontSize * 2.0"
         fill="#00000015"
         font-weight="700"
         style="user-select: none; pointer-events: none; filter: blur(2px);"
@@ -294,7 +294,7 @@
         :y="logicalDimensions.height / 2 + 1.5"
         text-anchor="middle"
         dominant-baseline="middle"
-        :font-size="fontSize * 2.5"
+        :font-size="fontSize * 2.0"
         fill="#00000025"
         font-weight="700"
         style="user-select: none; pointer-events: none; filter: blur(1px);"
@@ -308,10 +308,9 @@
         :y="logicalDimensions.height / 2"
         text-anchor="middle"
         dominant-baseline="middle"
-        :font-size="fontSize * 2.5"
+        :font-size="fontSize * 2.0"
         :fill="`url(#numGradient-${props.locker.id})`"
         font-weight="700"
-        :filter="`url(#inset-${props.locker.id})`"
         style="user-select: none; pointer-events: none; font-family: 'Helvetica Neue', Arial, sans-serif; letter-spacing: 1px;"
       >
         {{ props.locker.lockrNo !== undefined && props.locker.lockrNo !== null ? props.locker.lockrNo : (props.locker.lockrLabel || props.locker.number) }}
@@ -323,7 +322,7 @@
         :y="logicalDimensions.height / 2 - 0.5"
         text-anchor="middle"
         dominant-baseline="middle"
-        :font-size="fontSize * 2.5"
+        :font-size="fontSize * 2.0"
         fill="#FFFFFF"
         font-weight="700"
         style="user-select: none; pointer-events: none; opacity: 0.3; font-family: 'Helvetica Neue', Arial, sans-serif; letter-spacing: 1px;"
