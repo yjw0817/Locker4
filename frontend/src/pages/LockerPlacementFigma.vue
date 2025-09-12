@@ -36,10 +36,12 @@
             <div
               class="locker-type-item"
               :class="{ active: selectedType?.id === type.id }"
+              draggable="true"
               @click="selectLockerType(type)"
               @dblclick="() => { console.log('[TEST] Double click detected!', type); addLockerByDoubleClick(type) }"
+              @dragstart="handleDragStart($event, type)"
               @contextmenu.prevent="showTypeContextMenuHandler($event, type)"
-              style="cursor: pointer"
+              style="cursor: move"
             >
               <div class="type-visual">
               <!-- SVG preview matching actual display size -->
@@ -241,6 +243,8 @@
             @mouseup="handleCanvasMouseUp"
             @mouseleave="handleCanvasMouseUp"
             @click="handleCanvasClick"
+            @dragover.prevent="handleDragOver"
+            @drop.prevent="handleDrop"
           >
             <!-- 그리드 (옵션) -->
             <defs>
@@ -2427,6 +2431,132 @@ const addLockerByDoubleClick = async (type: any) => {
   }
   
   console.log('[DoubleClick] Locker added successfully')
+}
+
+// 드래그 중인 락커 타입을 저장할 변수
+let draggedType = null
+
+// 락커 타입 드래그 시작
+const handleDragStart = (event: DragEvent, type: any) => {
+  console.log('[DragStart] Starting drag for type:', type)
+  draggedType = type
+  
+  // 드래그 이미지 설정 (옵션)
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'copy'
+    event.dataTransfer.setData('text/plain', JSON.stringify(type))
+  }
+}
+
+// 드래그 오버 이벤트 처리
+const handleDragOver = (event: DragEvent) => {
+  // 평면배치모드에서만 드롭 허용
+  if (currentViewMode.value !== 'floor') {
+    return
+  }
+  
+  // 드롭 허용 표시
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'copy'
+  }
+}
+
+// 드롭 이벤트 처리
+const handleDrop = async (event: DragEvent) => {
+  console.log('[Drop] Drop event triggered')
+  
+  // 평면배치모드 체크
+  if (currentViewMode.value !== 'floor') {
+    alert('평면배치모드에서만 락커를 추가할 수 있습니다.')
+    return
+  }
+  
+  // 구역 체크
+  if (!selectedZone.value) {
+    alert('구역을 선택해주세요.')
+    return
+  }
+  
+  // 드래그된 타입 체크
+  if (!draggedType) {
+    console.error('[Drop] No dragged type found')
+    return
+  }
+  
+  // 드롭 위치 계산
+  const dropPosition = getMousePosition(event as MouseEvent)
+  console.log('[Drop] Drop position:', dropPosition)
+  
+  // 스냅 위치 계산
+  const snappedPosition = snapToAdjacent(
+    dropPosition.x,
+    dropPosition.y,
+    draggedType.width,
+    draggedType.depth || draggedType.width
+  )
+  
+  // 새 락커 생성
+  const newLocker = {
+    id: `locker-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    name: draggedType.name,
+    x: snappedPosition.x,
+    y: snappedPosition.y,
+    width: draggedType.width,
+    height: draggedType.depth || draggedType.width,
+    depth: draggedType.depth || draggedType.width,
+    actualHeight: draggedType.height,
+    color: draggedType.color,
+    rotation: 0,
+    type: draggedType.name,
+    status: 'available',
+    number: findNextAvailableLabel(),
+    zoneId: selectedZone.value.id
+  }
+  
+  console.log('[Drop] Creating locker at position:', newLocker.x, newLocker.y)
+  
+  // 데이터베이스에 저장
+  try {
+    const saveData = {
+      LOCKR_KND: selectedZone.value.id,
+      LOCKR_TYPE_CD: draggedType.id || draggedType.type,
+      X: newLocker.x,
+      Y: newLocker.y,
+      LOCKR_LABEL: newLocker.number,
+      ROTATION: newLocker.rotation || 0,
+      LOCKR_STAT: '00'
+    }
+    
+    const result = await saveLocker(saveData)
+    if (result && result.lockrCd) {
+      console.log('[Drop] Locker saved successfully')
+      await loadLockers()
+      autoFitLockers()
+      
+      // 새로 생성된 락커 선택
+      const created = currentLockers.value.find(l => 
+        l.x === newLocker.x && 
+        l.y === newLocker.y && 
+        l.number === newLocker.number
+      )
+      
+      if (created) {
+        selectedLocker.value = created
+        selectedLockerIds.value.clear()
+        selectedLockerIds.value.add(created.id)
+        showSelectionUI.value = true
+      }
+    }
+  } catch (error) {
+    console.error('[Drop] Failed to save locker:', error)
+    // 실패 시 로컬에만 추가
+    lockerStore.addLocker(newLocker)
+  }
+  
+  // 드래그 타입 초기화
+  draggedType = null
+  
+  console.log('[Drop] Locker added via drag and drop')
 }
 
 // Restore deleted locker type
