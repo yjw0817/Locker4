@@ -249,19 +249,28 @@
       <!-- SVG 필터 정의 -->
       <defs>
         <!-- 입체감을 위한 필터 -->
-        <filter :id="`emboss-${props.locker.id}`" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur"/>
-          <feSpecularLighting result="specOut" in="blur" specularConstant="1.5" specularExponent="20" lighting-color="white">
-            <fePointLight x="50" y="30" z="100"/>
-          </feSpecularLighting>
-          <feComposite in="specOut" in2="SourceAlpha" operator="in" result="specOut2"/>
-          <feComposite in="SourceGraphic" in2="specOut2" operator="arithmetic" k1="0" k2="1" k3="1" k4="0"/>
+        <filter :id="`inset-${props.locker.id}`" x="-50%" y="-50%" width="200%" height="200%">
+          <!-- 내부 어둠 효과 -->
+          <feOffset in="SourceAlpha" dx="2" dy="2" result="offset1"/>
+          <feGaussianBlur in="offset1" stdDeviation="1.5" result="blur1"/>
+          <feFlood flood-color="#000000" flood-opacity="0.6" result="shadow"/>
+          <feComposite in="shadow" in2="blur1" operator="in" result="innerShadow"/>
+          
+          <!-- 상단 하이라이트 -->
+          <feOffset in="SourceAlpha" dx="-1" dy="-1" result="offset2"/>
+          <feGaussianBlur in="offset2" stdDeviation="0.8" result="blur2"/>
+          <feFlood flood-color="#FFFFFF" flood-opacity="0.2" result="highlight"/>
+          <feComposite in="highlight" in2="blur2" operator="in" result="innerHighlight"/>
+          
+          <!-- 원본 텍스트와 합성 -->
+          <feComposite in="SourceGraphic" in2="innerShadow" operator="over" result="withShadow"/>
+          <feComposite in="withShadow" in2="innerHighlight" operator="over"/>
         </filter>
         <!-- 그라데이션 정의 -->
         <linearGradient :id="`numGradient-${props.locker.id}`" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" style="stop-color:#D1D5DB;stop-opacity:0.8" />
-          <stop offset="50%" style="stop-color:#9CA3AF;stop-opacity:0.7" />
-          <stop offset="100%" style="stop-color:#6B7280;stop-opacity:0.6" />
+          <stop offset="0%" style="stop-color:#7A7A7A;stop-opacity:0.9" />
+          <stop offset="50%" style="stop-color:#5A5A5A;stop-opacity:0.8" />
+          <stop offset="100%" style="stop-color:#3A3A3A;stop-opacity:0.7" />
         </linearGradient>
       </defs>
       
@@ -302,7 +311,7 @@
         :font-size="fontSize * 2.5"
         :fill="`url(#numGradient-${props.locker.id})`"
         font-weight="700"
-        :filter="`url(#emboss-${props.locker.id})`"
+        :filter="`url(#inset-${props.locker.id})`"
         style="user-select: none; pointer-events: none; font-family: 'Helvetica Neue', Arial, sans-serif; letter-spacing: 1px;"
       >
         {{ props.locker.lockrNo !== undefined && props.locker.lockrNo !== null ? props.locker.lockrNo : (props.locker.lockrLabel || props.locker.number) }}
