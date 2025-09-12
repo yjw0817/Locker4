@@ -7813,6 +7813,9 @@ const handleKeyUp = (event: KeyboardEvent) => {
 const handleLockerClick = (locker: any) => {
   // 정면배치모드일 때만 팝업 표시
   if (currentViewMode.value === 'front') {
+    // selectedLocker 설정 - API 호출 시 필요
+    selectedLocker.value = locker
+    
     // LockerSVG 컴포넌트와 동일한 로직으로 락커 번호 가져오기
     selectedLockerNumber.value = locker.lockrNo !== undefined && locker.lockrNo !== null 
       ? locker.lockrNo 
@@ -7836,10 +7839,48 @@ const closeAssignmentModal = () => {
 }
 
 // 락커 배정 확인 핸들러
-const handleAssignmentConfirm = (data: any) => {
+const handleAssignmentConfirm = async (data: any) => {
   console.log('락커 배정 데이터:', data)
-  // TODO: API 호출하여 락커 배정 정보 저장
-  // 임시로 콘솔에만 출력
+  
+  // selectedLocker가 없으면 에러
+  if (!selectedLocker.value || !selectedLocker.value.lockrCd) {
+    console.error('락커 정보가 없습니다.')
+    alert('락커 정보를 찾을 수 없습니다.')
+    return
+  }
+  
+  const lockrCd = selectedLocker.value.lockrCd
+  console.log('락커 배정 API 호출 - LOCKR_CD:', lockrCd)
+  
+  try {
+    const response = await fetch(`http://localhost:3333/api/lockrs/${lockrCd}/assign`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data)
+    })
+    
+    if (!response.ok) {
+      throw new Error(`API 요청 실패: ${response.status}`)
+    }
+    
+    const result = await response.json()
+    console.log('락커 배정 성공:', result)
+    
+    // 성공 메시지 표시
+    alert('락커 배정이 완료되었습니다.')
+    
+    // 모달 닫기
+    closeAssignmentModal()
+    
+    // 락커 목록 새로고침
+    await loadLockers()
+    
+  } catch (error) {
+    console.error('락커 배정 실패:', error)
+    alert('락커 배정 중 오류가 발생했습니다.')
+  }
 }
 
 // 컴포넌트 언마운트 시 정리

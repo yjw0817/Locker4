@@ -686,18 +686,22 @@ router.get('/:lockrCd/children', async (req, res) => {
 });
 
 // 락커 배정 API
-router.put('/:id/assign', async (req, res) => {
-  const { id } = req.params;
+router.put('/:lockrCd/assign', async (req, res) => {
+  const { lockrCd } = req.params;
   const { 
-    memberName, 
+    userName, 
+    userPhone,
     memberSno, 
     startDate, 
     endDate, 
     memo,
-    voucherId 
+    voucherId,
+    usage
   } = req.body;
   
-  if (!memberName || !memberSno || !startDate || !endDate) {
+  console.log('[API] 락커 배정 요청:', { lockrCd, body: req.body });
+  
+  if (!userName || !memberSno || !startDate || !endDate) {
     return res.status(400).json({ 
       error: '필수 정보가 누락되었습니다.' 
     });
@@ -714,31 +718,38 @@ router.put('/:id/assign', async (req, res) => {
         MEMO = ?,
         UPDATE_BY = 'SYSTEM',
         UPDATE_DT = NOW(),
-        LOCKR_STAT = 'I',
+        LOCKR_STAT = '01',
         BUY_EVENT_SNO = ?
-      WHERE LOCKR_ID = ?
-        AND COMP_CD = 'C00001'
-        AND BCOFF_CD = 'B00001'
+      WHERE LOCKR_CD = ?
     `;
     
-    await pool.query(sql, [
-      memberName,
+    const [result] = await pool.query(sql, [
+      userName,
       memberSno,
       startDate,
       endDate,
       memo || null,
-      voucherId || null,
-      id
+      voucherId || usage || null,
+      lockrCd
     ]);
+    
+    console.log(`[API] 락커 배정 결과: ${result.affectedRows}개 업데이트됨`);
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ 
+        error: '해당 락커를 찾을 수 없습니다.' 
+      });
+    }
     
     res.json({ 
       success: true, 
       message: '락커가 성공적으로 배정되었습니다.' 
     });
   } catch (error) {
-    console.error('락커 배정 오류:', error);
+    console.error('[API] 락커 배정 오류:', error);
     res.status(500).json({ 
-      error: '락커 배정 중 오류가 발생했습니다.' 
+      error: '락커 배정 중 오류가 발생했습니다.',
+      details: error.message 
     });
   }
 });
