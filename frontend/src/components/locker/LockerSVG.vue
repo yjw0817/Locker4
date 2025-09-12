@@ -227,9 +227,10 @@
     
     
     
-    <!-- 락커 번호 (좌측 상단 - 세로모드에서만) -->
+    <!-- 락커 번호 표시 -->
+    <!-- 사용중인 락커: 왼쪽 상단에 작게 -->
     <text
-      v-if="viewMode === 'front' && props.locker.lockrNo"
+      v-if="viewMode === 'front' && props.locker.lockrNo && props.lockerStatus?.MEM_NM"
       :x="4 * LOCKER_VISUAL_SCALE"
       :y="6 * LOCKER_VISUAL_SCALE"
       text-anchor="start"
@@ -243,17 +244,47 @@
       {{ props.locker.lockrNo !== undefined && props.locker.lockrNo !== null ? props.locker.lockrNo : (props.locker.lockrLabel || props.locker.number) }}
     </text>
     
+    <!-- 빈 락커: 중앙에 크게 입체감 있게 -->
+    <g v-if="viewMode === 'front' && props.locker.lockrNo && !props.lockerStatus?.MEM_NM">
+      <!-- 그림자 효과 -->
+      <text
+        :x="logicalDimensions.width / 2 + 2"
+        :y="logicalDimensions.height / 2 + 2"
+        text-anchor="middle"
+        dominant-baseline="middle"
+        :font-size="fontSize * 3"
+        fill="#00000020"
+        font-weight="900"
+        style="user-select: none; pointer-events: none;"
+      >
+        {{ props.locker.lockrNo !== undefined && props.locker.lockrNo !== null ? props.locker.lockrNo : (props.locker.lockrLabel || props.locker.number) }}
+      </text>
+      <!-- 메인 번호 (회색, 약간 투명) -->
+      <text
+        :x="logicalDimensions.width / 2"
+        :y="logicalDimensions.height / 2"
+        text-anchor="middle"
+        dominant-baseline="middle"
+        :font-size="fontSize * 3"
+        fill="#9CA3AF"
+        font-weight="900"
+        style="user-select: none; pointer-events: none; opacity: 0.6;"
+      >
+        {{ props.locker.lockrNo !== undefined && props.locker.lockrNo !== null ? props.locker.lockrNo : (props.locker.lockrLabel || props.locker.number) }}
+      </text>
+    </g>
+    
     <!-- 회원 정보 표시 (사용 중인 락커만) -->
     <g v-if="props.lockerStatus?.MEM_NM && viewMode === 'front'">
-      <!-- 회원 이름 -->
+      <!-- 회원 이름 (중앙에 표시) -->
       <text
         :x="logicalDimensions.width / 2"
         :y="logicalDimensions.height / 2 - 15"
         text-anchor="middle"
         dominant-baseline="middle"
-        font-size="11"
+        :font-size="fontSize * 1.1"
         fill="#1F2937"
-        font-weight="600"
+        font-weight="700"
         style="user-select: none; pointer-events: none;"
       >
         {{ props.lockerStatus.MEM_NM }}
