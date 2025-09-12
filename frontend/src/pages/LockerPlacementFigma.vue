@@ -248,7 +248,7 @@
             <!-- 그리드 (옵션) -->
             <defs>
               <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
-                <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#9ca3af" stroke-width="0.8"/>
+                <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#d1d5db" stroke-width="0.6"/>
               </pattern>
               <filter id="buttonShadow" x="-50%" y="-50%" width="200%" height="200%">
                 <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.1"/>
