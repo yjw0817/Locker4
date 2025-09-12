@@ -244,31 +244,81 @@
       {{ props.locker.lockrNo !== undefined && props.locker.lockrNo !== null ? props.locker.lockrNo : (props.locker.lockrLabel || props.locker.number) }}
     </text>
     
-    <!-- 빈 락커: 중앙에 크게 입체감 있게 -->
+    <!-- 빈 락커: 중앙에 고급스럽게 입체감 있게 -->
     <g v-if="viewMode === 'front' && props.locker.lockrNo && !props.lockerStatus?.MEM_NM">
-      <!-- 그림자 효과 -->
+      <!-- SVG 필터 정의 -->
+      <defs>
+        <!-- 입체감을 위한 필터 -->
+        <filter :id="`emboss-${props.locker.id}`" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur"/>
+          <feSpecularLighting result="specOut" in="blur" specularConstant="1.5" specularExponent="20" lighting-color="white">
+            <fePointLight x="50" y="30" z="100"/>
+          </feSpecularLighting>
+          <feComposite in="specOut" in2="SourceAlpha" operator="in" result="specOut2"/>
+          <feComposite in="SourceGraphic" in2="specOut2" operator="arithmetic" k1="0" k2="1" k3="1" k4="0"/>
+        </filter>
+        <!-- 그라데이션 정의 -->
+        <linearGradient :id="`numGradient-${props.locker.id}`" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:#D1D5DB;stop-opacity:0.8" />
+          <stop offset="50%" style="stop-color:#9CA3AF;stop-opacity:0.7" />
+          <stop offset="100%" style="stop-color:#6B7280;stop-opacity:0.6" />
+        </linearGradient>
+      </defs>
+      
+      <!-- 깊은 그림자 (더 멀리) -->
       <text
-        :x="logicalDimensions.width / 2 + 2"
-        :y="logicalDimensions.height / 2 + 2"
+        :x="logicalDimensions.width / 2 + 3"
+        :y="logicalDimensions.height / 2 + 3"
         text-anchor="middle"
         dominant-baseline="middle"
-        :font-size="fontSize * 3"
-        fill="#00000020"
-        font-weight="900"
-        style="user-select: none; pointer-events: none;"
+        :font-size="fontSize * 2.5"
+        fill="#00000015"
+        font-weight="700"
+        style="user-select: none; pointer-events: none; filter: blur(2px);"
       >
         {{ props.locker.lockrNo !== undefined && props.locker.lockrNo !== null ? props.locker.lockrNo : (props.locker.lockrLabel || props.locker.number) }}
       </text>
-      <!-- 메인 번호 (회색, 약간 투명) -->
+      
+      <!-- 중간 그림자 -->
+      <text
+        :x="logicalDimensions.width / 2 + 1.5"
+        :y="logicalDimensions.height / 2 + 1.5"
+        text-anchor="middle"
+        dominant-baseline="middle"
+        :font-size="fontSize * 2.5"
+        fill="#00000025"
+        font-weight="700"
+        style="user-select: none; pointer-events: none; filter: blur(1px);"
+      >
+        {{ props.locker.lockrNo !== undefined && props.locker.lockrNo !== null ? props.locker.lockrNo : (props.locker.lockrLabel || props.locker.number) }}
+      </text>
+      
+      <!-- 메인 번호 (그라데이션과 필터 적용) -->
       <text
         :x="logicalDimensions.width / 2"
         :y="logicalDimensions.height / 2"
         text-anchor="middle"
         dominant-baseline="middle"
-        :font-size="fontSize * 3"
-        fill="#9CA3AF"
-        font-weight="900"
-        style="user-select: none; pointer-events: none; opacity: 0.6;"
+        :font-size="fontSize * 2.5"
+        :fill="`url(#numGradient-${props.locker.id})`"
+        font-weight="700"
+        :filter="`url(#emboss-${props.locker.id})`"
+        style="user-select: none; pointer-events: none; font-family: 'Helvetica Neue', Arial, sans-serif; letter-spacing: 1px;"
+      >
+        {{ props.locker.lockrNo !== undefined && props.locker.lockrNo !== null ? props.locker.lockrNo : (props.locker.lockrLabel || props.locker.number) }}
+      </text>
+      
+      <!-- 하이라이트 효과 (상단) -->
+      <text
+        :x="logicalDimensions.width / 2"
+        :y="logicalDimensions.height / 2 - 0.5"
+        text-anchor="middle"
+        dominant-baseline="middle"
+        :font-size="fontSize * 2.5"
+        fill="#FFFFFF"
+        font-weight="700"
+        style="user-select: none; pointer-events: none; opacity: 0.3; font-family: 'Helvetica Neue', Arial, sans-serif; letter-spacing: 1px;"
+        mask="url(#topMask)"
       >
         {{ props.locker.lockrNo !== undefined && props.locker.lockrNo !== null ? props.locker.lockrNo : (props.locker.lockrLabel || props.locker.number) }}
       </text>
