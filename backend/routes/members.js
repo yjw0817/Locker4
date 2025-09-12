@@ -64,7 +64,7 @@ router.get('/:memSno/vouchers', async (req, res) => {
     const sql = `
       SELECT 
         SELL_EVENT_NM, 
-        CUR_LOCKER_INFO, 
+        CUR_LOCKR_INFO, 
         LOCKR_CD,
         USE_PROD,
         USE_UNIT
@@ -78,7 +78,7 @@ router.get('/:memSno/vouchers', async (req, res) => {
     const formattedVouchers = vouchers.map((voucher, index) => ({
       id: `v${index + 1}`,
       name: voucher.SELL_EVENT_NM,
-      lockerInfo: voucher.CUR_LOCKER_INFO,
+      lockerInfo: voucher.CUR_LOCKR_INFO,
       lockerCode: voucher.LOCKR_CD,
       period: voucher.USE_PROD,
       unit: voucher.USE_UNIT,
