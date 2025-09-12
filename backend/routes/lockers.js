@@ -784,7 +784,7 @@ router.get('/status/all', async (req, res) => {
   try {
     const sql = `
       SELECT 
-        l.LOCKR_ID,
+        l.LOCKR_CD,
         l.LOCKR_NO,
         l.LOCKR_STAT,
         l.MEM_NM,
