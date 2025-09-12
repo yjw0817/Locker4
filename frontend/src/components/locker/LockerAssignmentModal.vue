@@ -4,7 +4,7 @@
       <!-- Header -->
       <div class="modal-header">
         <span class="locker-number">{{ lockerNumber }}번</span>
-        <span class="modal-title">락커배정</span>
+        <span class="modal-title">락커 메모</span>
         <button @click="close" class="close-button">
           <svg width="20" height="20" viewBox="0 0 20 20">
             <path d="M4 4L16 16M16 4L4 16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -14,8 +14,46 @@
 
       <!-- Body -->
       <div class="modal-body">
-        <!-- User Info -->
-        <div class="user-info">
+        <!-- User Info or Search -->
+        <div v-if="!hasAssignedUser" class="member-search-section">
+          <label class="search-label">회원 조회</label>
+          <div class="search-input-wrapper">
+            <input 
+              type="text" 
+              v-model="searchQuery"
+              @input="handleSearch"
+              placeholder="회원명 또는 전화번호로 검색"
+              class="search-input"
+            />
+            <button @click="searchMembers" class="search-button">
+              <svg width="16" height="16" viewBox="0 0 16 16">
+                <circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                <path d="M10 10L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+          
+          <!-- Search Results -->
+          <div v-if="searchResults.length > 0" class="search-results">
+            <div 
+              v-for="member in searchResults" 
+              :key="member.id"
+              @click="selectMember(member)"
+              class="search-result-item"
+            >
+              <div class="member-info">
+                <div class="member-name">{{ member.name }}</div>
+                <div class="member-phone">{{ member.phone }}</div>
+              </div>
+              <div class="member-vouchers">
+                <span class="voucher-count">이용권 {{ member.vouchers?.length || 0 }}개</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Assigned User Info -->
+        <div v-else class="user-info">
           <div class="user-avatar">
             <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
               <circle cx="30" cy="30" r="29" fill="#E5E7EB" stroke="#D1D5DB" stroke-width="2"/>
@@ -24,9 +62,14 @@
             </svg>
           </div>
           <div class="user-details">
-            <div class="user-name">{{ userName || '박민영' }}</div>
-            <div class="user-phone">{{ userPhone || '010-2244-8554' }}</div>
+            <div class="user-name">{{ userName }}</div>
+            <div class="user-phone">{{ userPhone }}</div>
           </div>
+          <button @click="clearMember" class="clear-member-btn">
+            <svg width="14" height="14" viewBox="0 0 14 14">
+              <path d="M2 2L12 12M12 2L2 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </button>
         </div>
 
         <!-- Date Selection -->
@@ -54,13 +97,18 @@
         </div>
 
         <!-- Usage Authority -->
-        <div class="usage-section">
+        <div v-if="hasAssignedUser" class="usage-section">
           <label class="usage-label">연동할 이용권</label>
           <div class="usage-select-wrapper">
-            <select v-model="selectedUsage" class="usage-select">
-              <option value="3months">학기 3개월 &nbsp;&nbsp;→&nbsp;&nbsp; 35번 (남자 락커)</option>
-              <option value="6months">학기 6개월 &nbsp;&nbsp;→&nbsp;&nbsp; 70번 (남자 락커)</option>
-              <option value="1year">연간 이용권 &nbsp;&nbsp;→&nbsp;&nbsp; 140번 (남자 락커)</option>
+            <select v-model="selectedUsage" class="usage-select" :disabled="!memberVouchers.length">
+              <option v-if="!memberVouchers.length" value="">이용권이 없습니다</option>
+              <option 
+                v-for="voucher in memberVouchers" 
+                :key="voucher.id" 
+                :value="voucher.id"
+              >
+                {{ voucher.name }} &nbsp;&nbsp;→&nbsp;&nbsp; {{ voucher.remainingDays }}일 남음
+              </option>
             </select>
             <svg class="select-arrow" width="12" height="12" viewBox="0 0 12 12">
               <path d="M3 5L6 8L9 5" stroke="#6B7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
@@ -68,10 +116,15 @@
           </div>
         </div>
 
-        <!-- Notice -->
-        <div class="notice-box">
-          <div class="notice-title">락커 배정</div>
-          <div class="notice-text">입력된 내용이 없어요.</div>
+        <!-- Memo Section -->
+        <div class="memo-section">
+          <label class="memo-label">메모</label>
+          <textarea 
+            v-model="lockerMemo"
+            placeholder="락커 사용에 대한 메모를 입력하세요"
+            class="memo-textarea"
+            rows="3"
+          ></textarea>
         </div>
       </div>
 
@@ -102,15 +155,41 @@ interface Props {
   lockerData?: any
 }
 
+interface Member {
+  id: string
+  name: string
+  phone: string
+  vouchers?: Voucher[]
+}
+
+interface Voucher {
+  id: string
+  name: string
+  remainingDays: number
+  type: string
+}
+
 const props = defineProps<Props>()
 const emit = defineEmits(['close', 'confirm'])
 
 // Form data
-const userName = ref('박민영')
-const userPhone = ref('010-2244-8554')
-const startDate = ref('2025-07-10')
-const endDate = ref('2025-08-09')
-const selectedUsage = ref('3months')
+const userName = ref('')
+const userPhone = ref('')
+const startDate = ref('')
+const endDate = ref('')
+const selectedUsage = ref('')
+const lockerMemo = ref('')
+
+// Member search
+const searchQuery = ref('')
+const searchResults = ref<Member[]>([])
+const selectedMember = ref<Member | null>(null)
+const memberVouchers = ref<Voucher[]>([])
+
+// Computed
+const hasAssignedUser = computed(() => {
+  return !!userName.value && !!userPhone.value
+})
 
 // Computed
 const todayDate = computed(() => {
@@ -135,7 +214,8 @@ const handleAssign = () => {
     userPhone: userPhone.value,
     startDate: startDate.value,
     endDate: endDate.value,
-    usage: selectedUsage.value
+    usage: selectedUsage.value,
+    memo: lockerMemo.value
   }
   emit('confirm', assignmentData)
   close()
@@ -147,6 +227,62 @@ const handleAssignToRandom = () => {
   close()
 }
 
+// Member search methods
+const handleSearch = () => {
+  // 실시간 검색을 위한 디바운싱 처리 필요
+  if (searchQuery.value.length >= 2) {
+    searchMembers()
+  }
+}
+
+const searchMembers = async () => {
+  // TODO: API 호출로 회원 검색
+  // 임시 목데이터
+  searchResults.value = [
+    {
+      id: '1',
+      name: '김철수',
+      phone: '010-1234-5678',
+      vouchers: [
+        { id: 'v1', name: '3개월 이용권', remainingDays: 90, type: '3months' },
+        { id: 'v2', name: '1개월 이용권', remainingDays: 30, type: '1month' }
+      ]
+    },
+    {
+      id: '2',
+      name: '이영희',
+      phone: '010-9876-5432',
+      vouchers: [
+        { id: 'v3', name: '6개월 이용권', remainingDays: 180, type: '6months' }
+      ]
+    }
+  ]
+}
+
+const selectMember = (member: Member) => {
+  selectedMember.value = member
+  userName.value = member.name
+  userPhone.value = member.phone
+  memberVouchers.value = member.vouchers || []
+  searchResults.value = []
+  searchQuery.value = ''
+  
+  // 이용권이 있으면 첫 번째 이용권 자동 선택
+  if (memberVouchers.value.length > 0) {
+    selectedUsage.value = memberVouchers.value[0].id
+  }
+}
+
+const clearMember = () => {
+  userName.value = ''
+  userPhone.value = ''
+  selectedMember.value = null
+  memberVouchers.value = []
+  selectedUsage.value = ''
+  startDate.value = ''
+  endDate.value = ''
+}
+
 // Watch for locker data changes
 watch(() => props.lockerData, (newData) => {
   if (newData) {
@@ -156,6 +292,19 @@ watch(() => props.lockerData, (newData) => {
     if (newData.startDate) startDate.value = newData.startDate
     if (newData.endDate) endDate.value = newData.endDate
     if (newData.usage) selectedUsage.value = newData.usage
+    if (newData.memo) lockerMemo.value = newData.memo
+    
+    // 회원 정보가 있으면 이용권 조회
+    if (newData.memberId) {
+      // TODO: API로 회원 이용권 조회
+    }
+  } else {
+    // 초기값 설정
+    const today = new Date()
+    startDate.value = today.toISOString().split('T')[0]
+    const endDateCalc = new Date(today)
+    endDateCalc.setMonth(endDateCalc.getMonth() + 1)
+    endDate.value = endDateCalc.toISOString().split('T')[0]
   }
 })
 </script>
@@ -351,24 +500,171 @@ watch(() => props.lockerData, (newData) => {
   pointer-events: none;
 }
 
-/* Notice Box */
-.notice-box {
-  background: #F9FAFB;
-  border: 1px solid #E5E7EB;
-  border-radius: 8px;
-  padding: 12px 16px;
+/* Member Search Section */
+.member-search-section {
   margin-bottom: 20px;
 }
 
-.notice-title {
-  font-size: 13px;
+.search-label {
+  display: block;
+  font-size: 14px;
   font-weight: 500;
-  color: #6B7280;
-  margin-bottom: 4px;
+  color: #374151;
+  margin-bottom: 8px;
 }
 
-.notice-text {
-  font-size: 13px;
+.search-input-wrapper {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.search-input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #111827;
+  background: white;
+  transition: all 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #6366F1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.search-button {
+  padding: 10px 14px;
+  background: #6366F1;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-button:hover {
+  background: #4F46E5;
+}
+
+.search-results {
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  background: white;
+}
+
+.search-result-item {
+  padding: 12px;
+  border-bottom: 1px solid #F3F4F6;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.search-result-item:last-child {
+  border-bottom: none;
+}
+
+.search-result-item:hover {
+  background: #F9FAFB;
+}
+
+.member-info {
+  flex: 1;
+}
+
+.member-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+  margin-bottom: 2px;
+}
+
+.member-phone {
+  font-size: 12px;
+  color: #6B7280;
+}
+
+.member-vouchers {
+  margin-left: 12px;
+}
+
+.voucher-count {
+  font-size: 12px;
+  color: #6366F1;
+  font-weight: 500;
+  background: #EEF2FF;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+/* User Info with Clear Button */
+.user-info {
+  position: relative;
+}
+
+.clear-member-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 4px;
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 4px;
+  color: #6B7280;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.clear-member-btn:hover {
+  background: #FEE2E2;
+  border-color: #FCA5A5;
+  color: #EF4444;
+}
+
+/* Memo Section */
+.memo-section {
+  margin-bottom: 20px;
+}
+
+.memo-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.memo-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #111827;
+  background: white;
+  resize: vertical;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.memo-textarea:focus {
+  outline: none;
+  border-color: #6366F1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.memo-textarea::placeholder {
   color: #9CA3AF;
 }
 
