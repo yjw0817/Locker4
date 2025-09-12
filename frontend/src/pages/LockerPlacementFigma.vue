@@ -4584,7 +4584,7 @@ const findClockwiseStart = (minorGroups: any[][]): any => {
     // Broken chain: For ㄱ shape, select top-left endpoint for clockwise traversal
     console.log('[Clockwise Start] Broken chain detected with', endpoints.length, 'endpoints')
     let bestEndpoint = endpoints[0]
-    /* for (const endpoint of endpoints) {
+     for (const endpoint of endpoints) {
       const center = getGroupCenter(endpoint)
       const bestCenter = getGroupCenter(bestEndpoint)
       
@@ -4597,7 +4597,7 @@ const findClockwiseStart = (minorGroups: any[][]): any => {
           bestEndpoint = endpoint
         }
       }
-    } */ 
+    } 
     console.log('[Clockwise Start] Selected endpoint:', bestEndpoint.map(l => l.number || l.id).join(','))
     return bestEndpoint[0]
   }

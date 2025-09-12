@@ -8299,11 +8299,12 @@ onUnmounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 0;
-  margin: 0;
-  min-height: 792px;
-  overflow: visible;
-  width: 100%;
+  padding: 16px;
+  padding-top: 0; /* padding-top을 0으로 설정 */
+  padding-bottom: 0; /* padding-bottom을 0으로 설정 */
+  min-width: 900px; /* 최소 너비 */
+  height: calc(100% - 16px); /* 100% - 16px 높이 */
+  overflow: auto; /* 필요시 스크롤 */
 }
 
 /* 구역 탭 */
