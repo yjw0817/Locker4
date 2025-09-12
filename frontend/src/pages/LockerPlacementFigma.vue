@@ -315,6 +315,7 @@
               :should-hide-individual-outline="lockersNeedingUnifiedOutline.has(locker.id) && !isDragging"
               :is-dragging="isDragging && selectedLockerIds.has(locker.id)"
               :adjacent-sides="getAdjacentSides(locker.id)"
+              :locker-status="lockerStatuses.get(locker.lockrCd)"
               :view-mode="currentViewMode"
               :is-transitioning-to-floor="isTransitioningToFloor"
               :show-number="true"
@@ -955,6 +956,7 @@ const isLoading = ref(false)
 const isLoadingTypes = ref(true)
 const isLoadingLockers = ref(true)
 const hasLoadedTypes = ref(false)
+const lockerStatuses = ref<Map<string, any>>(new Map())
 const saveError = ref<string | null>(null)
 const loadError = ref<string | null>(null)
 
@@ -969,6 +971,25 @@ const getApiBaseUrl = () => {
 const API_BASE_URL = getApiBaseUrl()
 
 // Data Loading Functions
+// Function to load locker status data
+const loadLockerStatuses = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/lockrs/status/all`)
+    if (response.ok) {
+      const data = await response.json()
+      // Convert array to Map for easy lookup
+      const statusMap = new Map()
+      data.forEach((status: any) => {
+        statusMap.set(status.LOCKR_CD, status)
+      })
+      lockerStatuses.value = statusMap
+      console.log('[LoadStatuses] Loaded status data for', statusMap.size, 'lockers')
+    }
+  } catch (error) {
+    console.error('[LoadStatuses] Failed to load status data:', error)
+  }
+}
+
 const loadZones = async () => {
   try {
     
@@ -1100,6 +1121,9 @@ const loadLockers = async () => {
       
       // Update the store with transformed data
       lockerStore.lockers = transformedLockers
+      
+      // Load status data after loading lockers
+      await loadLockerStatuses()
       
       // DETAILED DEBUG: Store에 저장된 데이터 확인
       

@@ -266,6 +266,48 @@
       {{ props.locker.lockrNo !== undefined && props.locker.lockrNo !== null ? props.locker.lockrNo : (props.locker.lockrLabel || props.locker.number) }}
     </text>
     
+    <!-- 회원 정보 표시 (사용 중인 락커만) -->
+    <g v-if="props.lockerStatus?.MEM_NM && viewMode === 'front'">
+      <!-- 회원 이름 -->
+      <text
+        :x="logicalDimensions.width / 2"
+        :y="logicalDimensions.height / 2 - 10"
+        text-anchor="middle"
+        dominant-baseline="middle"
+        font-size="10"
+        fill="#374151"
+        font-weight="500"
+        style="user-select: none; pointer-events: none;"
+      >
+        {{ props.lockerStatus.MEM_NM }}
+      </text>
+      
+      <!-- 사용 기간 -->
+      <text
+        v-if="props.lockerStatus.LOCKR_USE_S_DATE && props.lockerStatus.LOCKR_USE_E_DATE"
+        :x="logicalDimensions.width / 2"
+        :y="logicalDimensions.height / 2 + 5"
+        text-anchor="middle"
+        dominant-baseline="middle"
+        font-size="8"
+        fill="#6B7280"
+        style="user-select: none; pointer-events: none;"
+      >
+        {{ formatDate(props.lockerStatus.LOCKR_USE_S_DATE) }} ~ {{ formatDate(props.lockerStatus.LOCKR_USE_E_DATE) }}
+      </text>
+    </g>
+    
+    <!-- 메모 아이콘 표시 (메모가 있는 락커만) -->
+    <image
+      v-if="props.lockerStatus?.MEMO && viewMode === 'front'"
+      :x="logicalDimensions.width - 20"
+      :y="5"
+      width="16"
+      height="16"
+      href="/3.png"
+      style="pointer-events: none;"
+    />
+    
     <!-- 회전 핸들 (선택 시만 표시) -->
     <g v-if="isSelected && showRotateHandle" class="rotation-handle">
       <line
@@ -356,6 +398,7 @@ const props = defineProps<{
   zoomLevel?: number  // 현재 줌 레벨
   isManagementPage?: boolean  // LockerManagement 페이지 여부
   childLockers?: Locker[]  // 자식 락커들 (평면배치모드에서 분할 표시용)
+  lockerStatus?: any  // 락커 상태 정보 (color, MEM_NM, dates, MEMO 등)
 }>()
 
 // 뷰 모드에 따라 적절한 좌표 사용
@@ -505,6 +548,11 @@ const lockerFill = computed(() => {
   // LockerManagement 페이지에서는 색상 사용하지 않음 - 투명하게 설정
   if (props.isManagementPage) {
     return 'transparent'
+  }
+  
+  // Use locker status color if available (from database)
+  if (props.lockerStatus?.color) {
+    return props.lockerStatus.color
   }
   
   // Get base color based on locker type or status
@@ -950,6 +998,16 @@ const getChildDisplayNumber = (childLocker: any) => {
     // LockerPlacement: 자식 락커도 레이블(lockrLabel) 표시
     return childLocker.lockrLabel || childLocker.number || ''
   }
+}
+
+// Format date helper function
+const formatDate = (dateString: string) => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}.${month}.${day}`
 }
 
 const handleClick = (e: MouseEvent) => {

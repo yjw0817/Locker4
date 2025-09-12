@@ -685,4 +685,175 @@ router.get('/:lockrCd/children', async (req, res) => {
   }
 });
 
+// 락커 배정 API
+router.put('/:id/assign', async (req, res) => {
+  const { id } = req.params;
+  const { 
+    memberName, 
+    memberSno, 
+    startDate, 
+    endDate, 
+    memo,
+    voucherId 
+  } = req.body;
+  
+  if (!memberName || !memberSno || !startDate || !endDate) {
+    return res.status(400).json({ 
+      error: '필수 정보가 누락되었습니다.' 
+    });
+  }
+  
+  try {
+    const sql = `
+      UPDATE lockrs
+      SET 
+        MEM_NM = ?,
+        MEM_SNO = ?,
+        LOCKR_USE_S_DATE = ?,
+        LOCKR_USE_E_DATE = ?,
+        MEMO = ?,
+        UPDATE_BY = 'SYSTEM',
+        UPDATE_DT = NOW(),
+        LOCKR_STAT = 'I',
+        BUY_EVENT_SNO = ?
+      WHERE LOCKR_ID = ?
+        AND COMP_CD = 'C00001'
+        AND BCOFF_CD = 'B00001'
+    `;
+    
+    await pool.query(sql, [
+      memberName,
+      memberSno,
+      startDate,
+      endDate,
+      memo || null,
+      voucherId || null,
+      id
+    ]);
+    
+    res.json({ 
+      success: true, 
+      message: '락커가 성공적으로 배정되었습니다.' 
+    });
+  } catch (error) {
+    console.error('락커 배정 오류:', error);
+    res.status(500).json({ 
+      error: '락커 배정 중 오류가 발생했습니다.' 
+    });
+  }
+});
+
+// 락커 사용 종료 API
+router.put('/:id/release', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const sql = `
+      UPDATE lockrs
+      SET 
+        MEM_NM = NULL,
+        MEM_SNO = NULL,
+        LOCKR_USE_S_DATE = NULL,
+        LOCKR_USE_E_DATE = NULL,
+        MEMO = NULL,
+        UPDATE_BY = 'SYSTEM',
+        UPDATE_DT = NOW(),
+        LOCKR_STAT = 'E',
+        BUY_EVENT_SNO = NULL
+      WHERE LOCKR_ID = ?
+        AND COMP_CD = 'C00001'
+        AND BCOFF_CD = 'B00001'
+    `;
+    
+    await pool.query(sql, [id]);
+    
+    res.json({ 
+      success: true, 
+      message: '락커 사용이 종료되었습니다.' 
+    });
+  } catch (error) {
+    console.error('락커 사용 종료 오류:', error);
+    res.status(500).json({ 
+      error: '락커 사용 종료 중 오류가 발생했습니다.' 
+    });
+  }
+});
+
+// 락커 상태 조회 API (회원 정보 포함)
+router.get('/status/all', async (req, res) => {
+  try {
+    const sql = `
+      SELECT 
+        l.LOCKR_ID,
+        l.LOCKR_NO,
+        l.LOCKR_STAT,
+        l.MEM_NM,
+        l.MEM_SNO,
+        l.LOCKR_USE_S_DATE,
+        l.LOCKR_USE_E_DATE,
+        l.MEMO,
+        l.BUY_EVENT_SNO
+      FROM lockrs l
+      WHERE l.COMP_CD = 'C00001'
+        AND l.BCOFF_CD = 'B00001'
+    `;
+    
+    const [lockers] = await pool.query(sql);
+    
+    // 상태별 색상 및 만료 체크
+    const now = new Date();
+    const formattedLockers = lockers.map(locker => {
+      let status = locker.LOCKR_STAT || 'E';
+      let statusColor = '#FFFFFF'; // 기본 흰색 (빈 락커)
+      let isExpiringSoon = false;
+      
+      if (status === 'I' && locker.LOCKR_USE_E_DATE) {
+        // 사용중인 락커의 만료일 체크
+        const endDate = new Date(locker.LOCKR_USE_E_DATE);
+        const daysUntilExpiry = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+        
+        if (daysUntilExpiry < 0) {
+          // 만료됨
+          statusColor = '#FFB6C1'; // 연한 분홍색
+          status = 'EXPIRED';
+        } else if (daysUntilExpiry <= 7) {
+          // 만료 임박 (7일 이내)
+          statusColor = '#FFFFE0'; // 연한 노란색
+          isExpiringSoon = true;
+        } else {
+          // 정상 사용중
+          statusColor = '#90EE90'; // 연한 초록색
+        }
+      } else if (status === 'U') {
+        // 사용불가
+        statusColor = '#D3D3D3'; // 회색
+      } else {
+        // 빈 락커 (E)
+        statusColor = '#FFFFFF'; // 흰색
+      }
+      
+      return {
+        id: locker.LOCKR_ID,
+        number: locker.LOCKR_NO,
+        status: status,
+        statusColor: statusColor,
+        memberName: locker.MEM_NM,
+        memberSno: locker.MEM_SNO,
+        startDate: locker.LOCKR_USE_S_DATE,
+        endDate: locker.LOCKR_USE_E_DATE,
+        memo: locker.MEMO,
+        isExpiringSoon: isExpiringSoon,
+        hasMemo: !!locker.MEMO
+      };
+    });
+    
+    res.json(formattedLockers);
+  } catch (error) {
+    console.error('락커 상태 조회 오류:', error);
+    res.status(500).json({ 
+      error: '락커 상태 조회 중 오류가 발생했습니다.' 
+    });
+  }
+});
+
 module.exports = router;

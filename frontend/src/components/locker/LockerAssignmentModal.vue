@@ -80,6 +80,7 @@
               <input 
                 type="date" 
                 v-model="startDate"
+                @change="calculateEndDate"
                 class="date-input"
                 :min="todayDate"
               />
@@ -91,6 +92,8 @@
                 v-model="endDate"
                 class="date-input"
                 :min="startDate || todayDate"
+                readonly
+                :style="{ backgroundColor: '#F9FAFB', cursor: 'not-allowed' }"
               />
             </div>
           </div>
@@ -165,8 +168,12 @@ interface Member {
 interface Voucher {
   id: string
   name: string
+  displayName: string
+  lockerInfo: string | null
+  lockerCode: string | null
+  period: string
+  unit: string
   remainingDays: number
-  type: string
 }
 
 const props = defineProps<Props>()
@@ -175,9 +182,11 @@ const emit = defineEmits(['close', 'confirm'])
 // Form data
 const userName = ref('')
 const userPhone = ref('')
+const memberSno = ref('')  // 회원 번호 추가
 const startDate = ref('')
 const endDate = ref('')
 const selectedUsage = ref('')
+const selectedVoucher = ref<Voucher | null>(null)  // 선택된 이용권 정보
 const lockerMemo = ref('')
 
 // Member search
@@ -212,9 +221,11 @@ const handleAssign = () => {
   const assignmentData = {
     userName: userName.value,
     userPhone: userPhone.value,
+    memberSno: memberSno.value,  // 회원 번호 추가
     startDate: startDate.value,
     endDate: endDate.value,
     usage: selectedUsage.value,
+    voucherId: selectedVoucher.value?.id,  // 이용권 ID
     memo: lockerMemo.value
   }
   emit('confirm', assignmentData)
@@ -263,6 +274,7 @@ const selectMember = async (member: any) => {
   selectedMember.value = member
   userName.value = member.name
   userPhone.value = member.phone
+  memberSno.value = member.id  // 회원 번호 저장
   searchResults.value = []
   searchQuery.value = ''
   
@@ -277,6 +289,11 @@ const selectMember = async (member: any) => {
     // 이용권이 있으면 첫 번째 이용권 자동 선택
     if (memberVouchers.value.length > 0) {
       selectedUsage.value = memberVouchers.value[0].id
+      selectedVoucher.value = memberVouchers.value[0]
+      // 종료일 자동 계산
+      if (startDate.value) {
+        calculateEndDate()
+      }
     }
   } catch (error) {
     console.error('이용권 조회 오류:', error)
@@ -287,12 +304,52 @@ const selectMember = async (member: any) => {
 const clearMember = () => {
   userName.value = ''
   userPhone.value = ''
+  memberSno.value = ''
   selectedMember.value = null
   memberVouchers.value = []
   selectedUsage.value = ''
+  selectedVoucher.value = null
   startDate.value = ''
   endDate.value = ''
 }
+
+// 종료일 자동 계산 함수
+const calculateEndDate = () => {
+  if (!startDate.value || !selectedVoucher.value) {
+    endDate.value = ''
+    return
+  }
+  
+  const start = new Date(startDate.value)
+  const period = parseInt(selectedVoucher.value.period) || 0
+  const unit = selectedVoucher.value.unit
+  
+  let end = new Date(start)
+  
+  if (unit === 'M') {
+    // 개월 단위
+    end.setMonth(end.getMonth() + period)
+  } else if (unit === 'D') {
+    // 일 단위
+    end.setDate(end.getDate() + period)
+  }
+  
+  // 날짜 포맷팅 (YYYY-MM-DD)
+  const year = end.getFullYear()
+  const month = String(end.getMonth() + 1).padStart(2, '0')
+  const day = String(end.getDate()).padStart(2, '0')
+  endDate.value = `${year}-${month}-${day}`
+}
+
+// 이용권 변경 시 종료일 재계산
+watch(selectedUsage, (newValue) => {
+  if (newValue && memberVouchers.value.length > 0) {
+    selectedVoucher.value = memberVouchers.value.find(v => v.id === newValue) || null
+    if (startDate.value) {
+      calculateEndDate()
+    }
+  }
+})
 
 // Watch for locker data changes
 watch(() => props.lockerData, (newData) => {
@@ -300,6 +357,7 @@ watch(() => props.lockerData, (newData) => {
     // Update form with existing locker data if available
     if (newData.userName) userName.value = newData.userName
     if (newData.userPhone) userPhone.value = newData.userPhone
+    if (newData.memberSno) memberSno.value = newData.memberSno
     if (newData.startDate) startDate.value = newData.startDate
     if (newData.endDate) endDate.value = newData.endDate
     if (newData.usage) selectedUsage.value = newData.usage
@@ -310,12 +368,10 @@ watch(() => props.lockerData, (newData) => {
       // TODO: API로 회원 이용권 조회
     }
   } else {
-    // 초기값 설정
+    // 오늘 날짜로 시작일 설정
     const today = new Date()
     startDate.value = today.toISOString().split('T')[0]
-    const endDateCalc = new Date(today)
-    endDateCalc.setMonth(endDateCalc.getMonth() + 1)
-    endDate.value = endDateCalc.toISOString().split('T')[0]
+    // 종료일은 이용권 선택 후 자동 계산
   }
 })
 </script>
