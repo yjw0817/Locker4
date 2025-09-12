@@ -244,89 +244,18 @@
       {{ props.locker.lockrNo !== undefined && props.locker.lockrNo !== null ? props.locker.lockrNo : (props.locker.lockrLabel || props.locker.number) }}
     </text>
     
-    <!-- 빈 락커: 중앙에 고급스럽게 입체감 있게 -->
+    <!-- 빈 락커: 중앙에 깔끔한 도시적 스타일 -->
     <g v-if="viewMode === 'front' && props.locker.lockrNo && !props.lockerStatus?.MEM_NM">
-      <!-- SVG 필터 정의 -->
-      <defs>
-        <!-- 입체감을 위한 필터 -->
-        <filter :id="`inset-${props.locker.id}`" x="-50%" y="-50%" width="200%" height="200%">
-          <!-- 내부 어둠 효과 -->
-          <feOffset in="SourceAlpha" dx="2" dy="2" result="offset1"/>
-          <feGaussianBlur in="offset1" stdDeviation="1.5" result="blur1"/>
-          <feFlood flood-color="#000000" flood-opacity="0.6" result="shadow"/>
-          <feComposite in="shadow" in2="blur1" operator="in" result="innerShadow"/>
-          
-          <!-- 상단 하이라이트 -->
-          <feOffset in="SourceAlpha" dx="-1" dy="-1" result="offset2"/>
-          <feGaussianBlur in="offset2" stdDeviation="0.8" result="blur2"/>
-          <feFlood flood-color="#FFFFFF" flood-opacity="0.2" result="highlight"/>
-          <feComposite in="highlight" in2="blur2" operator="in" result="innerHighlight"/>
-          
-          <!-- 원본 텍스트와 합성 -->
-          <feComposite in="SourceGraphic" in2="innerShadow" operator="over" result="withShadow"/>
-          <feComposite in="withShadow" in2="innerHighlight" operator="over"/>
-        </filter>
-        <!-- 그라데이션 정의 -->
-        <linearGradient :id="`numGradient-${props.locker.id}`" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" style="stop-color:#B0B0B0;stop-opacity:0.6" />
-          <stop offset="50%" style="stop-color:#9A9A9A;stop-opacity:0.5" />
-          <stop offset="100%" style="stop-color:#808080;stop-opacity:0.4" />
-        </linearGradient>
-      </defs>
-      
-      <!-- 깊은 그림자 (더 멀리) -->
-      <text
-        :x="logicalDimensions.width / 2 + 3"
-        :y="logicalDimensions.height / 2 + 3"
-        text-anchor="middle"
-        dominant-baseline="middle"
-        :font-size="fontSize * 2.0"
-        fill="#00000015"
-        font-weight="700"
-        style="user-select: none; pointer-events: none; filter: blur(2px);"
-      >
-        {{ props.locker.lockrNo !== undefined && props.locker.lockrNo !== null ? props.locker.lockrNo : (props.locker.lockrLabel || props.locker.number) }}
-      </text>
-      
-      <!-- 중간 그림자 -->
-      <text
-        :x="logicalDimensions.width / 2 + 1.5"
-        :y="logicalDimensions.height / 2 + 1.5"
-        text-anchor="middle"
-        dominant-baseline="middle"
-        :font-size="fontSize * 2.0"
-        fill="#00000025"
-        font-weight="700"
-        style="user-select: none; pointer-events: none; filter: blur(1px);"
-      >
-        {{ props.locker.lockrNo !== undefined && props.locker.lockrNo !== null ? props.locker.lockrNo : (props.locker.lockrLabel || props.locker.number) }}
-      </text>
-      
-      <!-- 메인 번호 (그라데이션과 필터 적용) -->
+      <!-- 메인 번호 (단순하고 세련된 스타일) -->
       <text
         :x="logicalDimensions.width / 2"
         :y="logicalDimensions.height / 2"
         text-anchor="middle"
         dominant-baseline="middle"
         :font-size="fontSize * 2.0"
-        :fill="`url(#numGradient-${props.locker.id})`"
-        font-weight="700"
-        style="user-select: none; pointer-events: none; font-family: 'Helvetica Neue', Arial, sans-serif; letter-spacing: 1px;"
-      >
-        {{ props.locker.lockrNo !== undefined && props.locker.lockrNo !== null ? props.locker.lockrNo : (props.locker.lockrLabel || props.locker.number) }}
-      </text>
-      
-      <!-- 하이라이트 효과 (상단) -->
-      <text
-        :x="logicalDimensions.width / 2"
-        :y="logicalDimensions.height / 2 - 0.5"
-        text-anchor="middle"
-        dominant-baseline="middle"
-        :font-size="fontSize * 2.0"
-        fill="#FFFFFF"
-        font-weight="700"
-        style="user-select: none; pointer-events: none; opacity: 0.3; font-family: 'Helvetica Neue', Arial, sans-serif; letter-spacing: 1px;"
-        mask="url(#topMask)"
+        fill="#888888"
+        font-weight="400"
+        style="user-select: none; pointer-events: none; font-family: 'Helvetica Neue', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;"
       >
         {{ props.locker.lockrNo !== undefined && props.locker.lockrNo !== null ? props.locker.lockrNo : (props.locker.lockrLabel || props.locker.number) }}
       </text>
