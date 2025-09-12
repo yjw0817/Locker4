@@ -2166,8 +2166,7 @@ const addLocker = async () => {
     if (result && result.lockrCd) {
       // Locker saved successfully, reload to get it from server
       await loadLockers()
-      // Auto-fit zoom to show all lockers
-      autoFitLockers()
+      // autoFitLockers() 제거 - 뷰포트 유지
       // Find the newly created locker
       created = currentLockers.value.find(l => 
         l.x === newLocker.x && 
@@ -2395,8 +2394,7 @@ const addLockerByDoubleClick = async (type: any) => {
       console.log('[DoubleClick] Locker saved successfully, reloading lockers...')
       // Locker saved successfully, it will be loaded via loadLockers
       await loadLockers()
-      // Auto-fit zoom to show all lockers
-      autoFitLockers()
+      // autoFitLockers() 제거 - 뷰포트 유지
       // Find the newly created locker
       created = currentLockers.value.find(l => 
         l.x === newLocker.x && 
@@ -2531,7 +2529,7 @@ const handleDrop = async (event: DragEvent) => {
     if (result && result.lockrCd) {
       console.log('[Drop] Locker saved successfully')
       await loadLockers()
-      autoFitLockers()
+      // autoFitLockers() 제거 - 뷰포트 유지
       
       // 새로 생성된 락커 선택
       const created = currentLockers.value.find(l => 
