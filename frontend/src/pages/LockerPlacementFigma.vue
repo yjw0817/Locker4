@@ -38,7 +38,6 @@
               :class="{ active: selectedType?.id === type.id }"
               draggable="true"
               @click="selectLockerType(type)"
-              @dblclick="() => { console.log('[TEST] Double click detected!', type); addLockerByDoubleClick(type) }"
               @dragstart="handleDragStart($event, type)"
               @contextmenu.prevent="showTypeContextMenuHandler($event, type)"
               style="cursor: move"
@@ -2313,7 +2312,8 @@ const showAddTiersDialog = () => {
   addTiersToSelectedLockers(count)
 }
 
-// Add locker by double-clicking on type card
+// Add locker by double-clicking on type card - DISABLED (더블클릭 추가 기능 비활성화)
+/*
 const addLockerByDoubleClick = async (type: any) => {
   console.log('[DoubleClick] Adding new locker, type:', type)
   console.log('[DoubleClick] Current view mode:', currentViewMode.value)
@@ -2430,6 +2430,7 @@ const addLockerByDoubleClick = async (type: any) => {
   
   console.log('[DoubleClick] Locker added successfully')
 }
+*/
 
 // 드래그 중인 락커 타입을 저장할 변수
 let draggedType = null
