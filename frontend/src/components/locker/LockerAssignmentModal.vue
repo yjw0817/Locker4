@@ -4,7 +4,7 @@
       <!-- Header -->
       <div class="modal-header">
         <span class="locker-number">{{ lockerNumber }}번</span>
-        <span class="modal-title">락커 메모</span>
+        <span class="modal-title">락커배정</span>
         <button @click="close" class="close-button">
           <svg width="20" height="20" viewBox="0 0 20 20">
             <path d="M4 4L16 16M16 4L4 16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
