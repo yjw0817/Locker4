@@ -833,7 +833,7 @@ router.get('/status/all', async (req, res) => {
       }
       
       return {
-        id: locker.LOCKR_ID,
+        id: locker.LOCKR_CD,
         number: locker.LOCKR_NO,
         status: status,
         statusColor: statusColor,
