@@ -226,29 +226,6 @@
     </g>
     
     
-    <!-- 세로배치 모드에서 하단 라벨 배경 -->
-    <path
-      v-if="viewMode === 'front' && showNumber !== false && getDisplayNumber()"
-      :d="labelBackgroundPath"
-      :fill="labelBackgroundColor"
-      shape-rendering="crispEdges"
-    />
-    
-    <!-- 락커 레이블 (하단 중앙) -->
-    <text
-      v-if="showNumber !== false && getDisplayNumber() && !(isManagementPage && viewMode === 'floor')"
-      :x="logicalDimensions.width / 2"
-      :y="viewMode === 'front' ? (logicalDimensions.height - (3 * LOCKER_VISUAL_SCALE)) : (logicalDimensions.height / 2)"
-      text-anchor="middle"
-      :dominant-baseline="viewMode === 'front' ? 'middle' : 'middle'"
-      :font-size="fontSize"
-      :fill="viewMode === 'front' ? '#ffffff' : textColor"
-      font-weight="600"
-      class="locker-number"
-      style="user-select: none; pointer-events: none;"
-    >
-      {{ getDisplayNumber() }}
-    </text>
     
     <!-- 락커 번호 (좌측 상단 - 세로모드에서만) -->
     <text
@@ -257,9 +234,9 @@
       :y="6 * LOCKER_VISUAL_SCALE"
       text-anchor="start"
       dominant-baseline="middle"
-      :font-size="fontSize"
-      fill="#374151"
-      font-weight="600"
+      :font-size="fontSize * 1.2"
+      fill="#1F2937"
+      font-weight="700"
       class="locker-number-top"
       style="user-select: none; pointer-events: none;"
     >
@@ -271,29 +248,45 @@
       <!-- 회원 이름 -->
       <text
         :x="logicalDimensions.width / 2"
-        :y="logicalDimensions.height / 2 - 10"
+        :y="logicalDimensions.height / 2 - 15"
         text-anchor="middle"
         dominant-baseline="middle"
-        font-size="10"
-        fill="#374151"
-        font-weight="500"
+        font-size="11"
+        fill="#1F2937"
+        font-weight="600"
         style="user-select: none; pointer-events: none;"
       >
         {{ props.lockerStatus.MEM_NM }}
       </text>
       
-      <!-- 사용 기간 -->
+      <!-- 사용 시작일 -->
       <text
-        v-if="props.lockerStatus.LOCKR_USE_S_DATE && props.lockerStatus.LOCKR_USE_E_DATE"
+        v-if="props.lockerStatus.LOCKR_USE_S_DATE"
         :x="logicalDimensions.width / 2"
-        :y="logicalDimensions.height / 2 + 5"
+        :y="logicalDimensions.height / 2"
         text-anchor="middle"
         dominant-baseline="middle"
-        font-size="8"
-        fill="#6B7280"
+        font-size="9"
+        fill="#059669"
+        font-weight="500"
         style="user-select: none; pointer-events: none;"
       >
-        {{ formatDate(props.lockerStatus.LOCKR_USE_S_DATE) }} ~ {{ formatDate(props.lockerStatus.LOCKR_USE_E_DATE) }}
+        시작: {{ formatDate(props.lockerStatus.LOCKR_USE_S_DATE) }}
+      </text>
+      
+      <!-- 사용 종료일 -->
+      <text
+        v-if="props.lockerStatus.LOCKR_USE_E_DATE"
+        :x="logicalDimensions.width / 2"
+        :y="logicalDimensions.height / 2 + 15"
+        text-anchor="middle"
+        dominant-baseline="middle"
+        font-size="9"
+        :fill="isExpiringSoon() ? '#DC2626' : '#6B7280'"
+        font-weight="500"
+        style="user-select: none; pointer-events: none;"
+      >
+        종료: {{ formatDate(props.lockerStatus.LOCKR_USE_E_DATE) }}
       </text>
     </g>
     
@@ -1008,6 +1001,17 @@ const formatDate = (dateString: string) => {
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   return `${year}.${month}.${day}`
+}
+
+// 만료 임박 여부 확인 함수
+const isExpiringSoon = () => {
+  if (!props.lockerStatus?.LOCKR_USE_E_DATE) return false
+  
+  const now = new Date()
+  const endDate = new Date(props.lockerStatus.LOCKR_USE_E_DATE)
+  const daysUntilExpiry = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+  
+  return daysUntilExpiry <= 7 && daysUntilExpiry >= 0
 }
 
 const handleClick = (e: MouseEvent) => {
