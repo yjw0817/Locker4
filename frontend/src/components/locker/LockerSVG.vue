@@ -253,9 +253,9 @@
         text-anchor="middle"
         dominant-baseline="middle"
         :font-size="fontSize * 2.0"
-        fill="#888888"
-        font-weight="400"
-        style="user-select: none; pointer-events: none; font-family: 'Helvetica Neue', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;"
+        fill="#AAAAAA"
+        font-weight="500"
+        style="user-select: none; pointer-events: none; font-family: 'Open Sans', sans-serif;"
       >
         {{ props.locker.lockrNo !== undefined && props.locker.lockrNo !== null ? props.locker.lockrNo : (props.locker.lockrLabel || props.locker.number) }}
       </text>
