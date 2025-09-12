@@ -46,7 +46,7 @@
                 <div class="member-phone">{{ member.phone }}</div>
               </div>
               <div class="member-vouchers">
-                <span class="voucher-count">이용권 {{ member.vouchers?.length || 0 }}개</span>
+                <span class="member-id">{{ member.memberId }}</span>
               </div>
             </div>
           </div>
@@ -107,7 +107,7 @@
                 :key="voucher.id" 
                 :value="voucher.id"
               >
-                {{ voucher.name }} &nbsp;&nbsp;→&nbsp;&nbsp; {{ voucher.remainingDays }}일 남음
+                {{ voucher.displayName }} &nbsp;&nbsp;→&nbsp;&nbsp; {{ voucher.remainingDays }}일 남음
               </option>
             </select>
             <svg class="select-arrow" width="12" height="12" viewBox="0 0 12 12">
@@ -236,40 +236,51 @@ const handleSearch = () => {
 }
 
 const searchMembers = async () => {
-  // TODO: API 호출로 회원 검색
-  // 임시 목데이터
-  searchResults.value = [
-    {
-      id: '1',
-      name: '김철수',
-      phone: '010-1234-5678',
-      vouchers: [
-        { id: 'v1', name: '3개월 이용권', remainingDays: 90, type: '3months' },
-        { id: 'v2', name: '1개월 이용권', remainingDays: 30, type: '1month' }
-      ]
-    },
-    {
-      id: '2',
-      name: '이영희',
-      phone: '010-9876-5432',
-      vouchers: [
-        { id: 'v3', name: '6개월 이용권', remainingDays: 180, type: '6months' }
-      ]
-    }
-  ]
+  if (!searchQuery.value || searchQuery.value.length < 2) {
+    searchResults.value = []
+    return
+  }
+  
+  try {
+    const response = await fetch(`http://localhost:3333/api/members/search?query=${encodeURIComponent(searchQuery.value)}`)
+    if (!response.ok) throw new Error('검색 실패')
+    
+    const members = await response.json()
+    searchResults.value = members.map(member => ({
+      id: member.id,
+      memberId: member.memberId,
+      name: member.name,
+      phone: member.phone,
+      gender: member.gender
+    }))
+  } catch (error) {
+    console.error('회원 검색 오류:', error)
+    searchResults.value = []
+  }
 }
 
-const selectMember = (member: Member) => {
+const selectMember = async (member: any) => {
   selectedMember.value = member
   userName.value = member.name
   userPhone.value = member.phone
-  memberVouchers.value = member.vouchers || []
   searchResults.value = []
   searchQuery.value = ''
   
-  // 이용권이 있으면 첫 번째 이용권 자동 선택
-  if (memberVouchers.value.length > 0) {
-    selectedUsage.value = memberVouchers.value[0].id
+  // 선택된 회원의 이용권 조회
+  try {
+    const response = await fetch(`http://localhost:3333/api/members/${member.id}/vouchers`)
+    if (!response.ok) throw new Error('이용권 조회 실패')
+    
+    const vouchers = await response.json()
+    memberVouchers.value = vouchers
+    
+    // 이용권이 있으면 첫 번째 이용권 자동 선택
+    if (memberVouchers.value.length > 0) {
+      selectedUsage.value = memberVouchers.value[0].id
+    }
+  } catch (error) {
+    console.error('이용권 조회 오류:', error)
+    memberVouchers.value = []
   }
 }
 
@@ -604,6 +615,14 @@ watch(() => props.lockerData, (newData) => {
   color: #6366F1;
   font-weight: 500;
   background: #EEF2FF;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.member-id {
+  font-size: 12px;
+  color: #6B7280;
+  background: #F3F4F6;
   padding: 4px 8px;
   border-radius: 4px;
 }
