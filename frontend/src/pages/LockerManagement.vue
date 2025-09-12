@@ -2488,11 +2488,7 @@ const handleWheel = (event: WheelEvent) => {
     return
   }
   
-  // Ctrl 키가 눌려있을 때만 줌
-  if (!event.ctrlKey) {
-    return
-  }
-  
+  // Ctrl 키 체크 제거 - 스크롤만으로 줌 가능
   event.preventDefault()
   
   // SVG 요소와 현재 뷰포트 크기 가져오기
