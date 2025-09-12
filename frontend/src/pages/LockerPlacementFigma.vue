@@ -851,7 +851,7 @@ const getCanvasDisplayWidth = () => {
 const DISPLAY_SCALE = 1.0
 
 // Floor line position for front view (logical units)
-const FLOOR_Y = 1250  // 바닥선 Y 위치 (캔버스 높이 1440의 약 87% 위치, 150px 아래로 이동)
+const FLOOR_Y = 1650  // 바닥선 Y 위치 (더 아래로 이동)
 
 // Log scale configuration removed - was causing syntax error
 
@@ -2312,7 +2312,9 @@ const showAddTiersDialog = () => {
 
 // Add locker by double-clicking on type card
 const addLockerByDoubleClick = async (type: any) => {
-  // Adding new locker
+  console.log('[DoubleClick] Adding new locker, type:', type)
+  console.log('[DoubleClick] Current view mode:', currentViewMode.value)
+  console.log('[DoubleClick] Selected zone:', selectedZone.value)
   
   // Check if in floor mode
   if (currentViewMode.value !== 'floor') {
@@ -2327,6 +2329,7 @@ const addLockerByDoubleClick = async (type: any) => {
   
   // Set the selected type
   selectedType.value = type
+  console.log('[DoubleClick] Selected type set:', selectedType.value)
   
   // Calculate default position
   const defaultX = 100
@@ -2366,7 +2369,7 @@ const addLockerByDoubleClick = async (type: any) => {
     zoneId: selectedZone.value.id
   }
   
-  // Creating locker with properties
+  console.log('[DoubleClick] Creating locker with properties:', newLocker)
   
   // Save to database first (this will also add to store via loadLockers)
   let created = null
@@ -2381,8 +2384,11 @@ const addLockerByDoubleClick = async (type: any) => {
       LOCKR_STAT: '00' // available status
     }
     
+    console.log('[DoubleClick] Saving to database with data:', saveData)
     const result = await saveLocker(saveData)
+    console.log('[DoubleClick] Save result:', result)
     if (result && result.lockrCd) {
+      console.log('[DoubleClick] Locker saved successfully, reloading lockers...')
       // Locker saved successfully, it will be loaded via loadLockers
       await loadLockers()
       // Auto-fit zoom to show all lockers
@@ -2393,9 +2399,10 @@ const addLockerByDoubleClick = async (type: any) => {
         l.y === newLocker.y && 
         l.number === newLocker.number
       )
+      console.log('[DoubleClick] Found created locker:', created)
     }
   } catch (error) {
-    console.error('[Database] Failed to save locker:', error)
+    console.error('[DoubleClick] Failed to save locker:', error)
     // If save fails, add locally only
     created = lockerStore.addLocker(newLocker)
   }
@@ -2419,7 +2426,7 @@ const addLockerByDoubleClick = async (type: any) => {
     setTimeout(() => card.classList.remove('pulse-animation'), 300)
   }
   
-  // Locker added successfully
+  console.log('[DoubleClick] Locker added successfully')
 }
 
 // Restore deleted locker type
