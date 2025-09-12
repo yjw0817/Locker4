@@ -7943,7 +7943,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   background-color: var(--background-main);
-  min-width: 1890px; /* 사이드바(280+32) + 캔버스(1550+32) = 1890px 최소 너비 */
+  min-width: 0; /* 반응형을 위해 최소 너비 제거 */
 }
 
 /* 헤더 */
@@ -7977,7 +7977,7 @@ onUnmounted(() => {
   height: 100% !important; /* 높이 100% 추가 */
   width: 100% !important; /* 너비 100% 강제 */
   overflow: visible !important; /* 윈도우 레벨 스크롤 허용 */
-  min-width: 1890px !important; /* 컨테이너도 최소 너비 보장 */
+  min-width: 0 !important; /* 반응형을 위해 최소 너비 제거 */
   margin-left: 0px !important;
   margin-top: 0 !important;
   padding-left: 0 !important;
@@ -8302,7 +8302,7 @@ onUnmounted(() => {
   padding: 16px;
   padding-top: 0; /* padding-top을 0으로 설정 */
   padding-bottom: 0; /* padding-bottom을 0으로 설정 */
-  min-width: 900px; /* 최소 너비 */
+  min-width: 0; /* 반응형을 위해 최소 너비 제거 */
   height: calc(100% - 16px); /* 100% - 16px 높이 */
   overflow: auto; /* 필요시 스크롤 */
 }
