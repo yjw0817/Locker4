@@ -37,7 +37,7 @@
               class="locker-type-item"
               :class="{ active: selectedType?.id === type.id }"
               @click="selectLockerType(type)"
-              @dblclick="addLockerByDoubleClick(type)"
+              @dblclick="() => { console.log('[TEST] Double click detected!', type); addLockerByDoubleClick(type) }"
               @contextmenu.prevent="showTypeContextMenuHandler($event, type)"
               style="cursor: pointer"
             >
