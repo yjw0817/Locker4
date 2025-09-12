@@ -99,8 +99,8 @@ router.get('/:lockrCd', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const {
-      COMP_CD = '001',
-      BCOFF_CD = '001',
+      COMP_CD = 'C0001',
+      BCOFF_CD = 'C0001F0020',
       LOCKR_KND,
       LOCKR_TYPE_CD,
       X,
