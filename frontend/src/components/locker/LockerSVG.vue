@@ -280,16 +280,16 @@
       {{ props.locker.lockrNo !== undefined && props.locker.lockrNo !== null ? props.locker.lockrNo : (props.locker.lockrLabel || props.locker.number) }}
     </text>
 
-    <!-- LockerManagement 페이지의 빈 락커: 중앙에 깔끔한 도시적 스타일 -->
+    <!-- LockerManagement 페이지의 빈 락커: 중앙에 번호 표시 -->
     <g v-if="props.isManagementPage && viewMode === 'front' && props.locker.lockrNo && !props.lockerStatus?.memberName">
-      <!-- 메인 번호 (단순하고 세련된 스타일) -->
+      <!-- 메인 번호 -->
       <text
         :x="logicalDimensions.width / 2"
         :y="logicalDimensions.height / 2"
         text-anchor="middle"
         dominant-baseline="middle"
-        :font-size="fontSize * 2.8"
-        fill="#9CA3AF"
+        :font-size="fontSize * 2.5"
+        fill="#6B7280"
         font-weight="600"
         style="user-select: none; pointer-events: none;"
       >
@@ -299,28 +299,28 @@
 
     <!-- LockerManagement 페이지의 회원 정보 표시 (사용 중인 락커만) -->
     <g v-if="props.isManagementPage && props.lockerStatus?.memberName && viewMode === 'front'">
-      <!-- 하단 날짜 영역 배경 (하단 모서리만 둥글게, 5px 아래로) -->
+      <!-- 하단 날짜 영역 배경 (LockerPlacement와 동일한 크기) -->
       <path
         v-if="props.lockerStatus.startDate && props.lockerStatus.endDate"
         :d="`
-          M 0 ${logicalDimensions.height - 12 * LOCKER_VISUAL_SCALE}
-          L ${logicalDimensions.width} ${logicalDimensions.height - 12 * LOCKER_VISUAL_SCALE}
+          M 0 ${logicalDimensions.height - 7 * LOCKER_VISUAL_SCALE}
+          L ${logicalDimensions.width} ${logicalDimensions.height - 7 * LOCKER_VISUAL_SCALE}
           L ${logicalDimensions.width} ${logicalDimensions.height - cornerRadius}
           Q ${logicalDimensions.width} ${logicalDimensions.height} ${logicalDimensions.width - cornerRadius} ${logicalDimensions.height}
           L ${cornerRadius} ${logicalDimensions.height}
           Q 0 ${logicalDimensions.height} 0 ${logicalDimensions.height - cornerRadius}
           Z
         `"
-        :fill="isExpiringSoon() ? '#DC2626' : '#0EA5E9'"
+        :fill="getDateAreaColor()"
       />
 
-      <!-- 회원 이름 (중앙에 크게 표시, 1px 아래로) -->
+      <!-- 회원 이름 (중앙에 표시) -->
       <text
         :x="logicalDimensions.width / 2"
-        :y="logicalDimensions.height / 2 - 4"
+        :y="logicalDimensions.height / 2"
         text-anchor="middle"
         dominant-baseline="middle"
-        :font-size="fontSize * 1.6"
+        :font-size="fontSize * 1.8"
         fill="#111827"
         font-weight="700"
         style="user-select: none; pointer-events: none;"
@@ -328,14 +328,14 @@
         {{ props.lockerStatus.memberName }}
       </text>
 
-      <!-- 사용 기간 (하단에 표시, 작은 글씨) -->
+      <!-- 사용 기간 (하단에 표시, LockerPlacement와 동일) -->
       <text
         v-if="props.lockerStatus.startDate && props.lockerStatus.endDate"
         :x="logicalDimensions.width / 2"
-        :y="logicalDimensions.height - 6 * LOCKER_VISUAL_SCALE"
+        :y="logicalDimensions.height - 3 * LOCKER_VISUAL_SCALE"
         text-anchor="middle"
         dominant-baseline="middle"
-        :font-size="fontSize * 0.75"
+        :font-size="fontSize"
         fill="#FFFFFF"
         font-weight="600"
         style="user-select: none; pointer-events: none;"
@@ -596,15 +596,27 @@ const lockerFill = computed(() => {
   if (props.isManagementPage && props.viewMode === 'front') {
     // 사용 중인 락커
     if (props.lockerStatus?.memberName) {
+      // 만료됨 (종료일이 지난 경우)
+      if (props.lockerStatus?.endDate) {
+        const endDate = new Date(props.lockerStatus.endDate)
+        const now = new Date()
+        if (endDate < now) {
+          return '#FCE7F3' // 연한 분홍색 (만료)
+        }
+      }
       // 만료 임박 (7일 이내)
       if (isExpiringSoon()) {
-        return '#FEE2E2' // 연한 빨간색
+        return '#FFF4E6' // 연한 오렌지색 (만료 예정)
       }
       // 정상 사용 중
-      return '#E0F2FE' // 연한 파란색
+      return '#E0F2FE' // 연한 하늘색 (사용중)
     }
-    // 빈 락커
-    return '#F3F4F6' // 연한 회색
+    // 사용불가 락커 (lockrStat이 '02'인 경우)
+    if (props.lockerStatus?.lockrStat === '02') {
+      return '#F3F4F6' // 연한 회색 (사용불가)
+    }
+    // 미사용 락커
+    return '#FFFFFF' // 흰색 (미사용)
   }
 
   // LockerManagement 페이지의 평면배치 모드에서는 투명
@@ -1086,8 +1098,19 @@ const isExpiringSoon = () => {
   const now = new Date()
   const endDate = new Date(props.lockerStatus.endDate)
   const daysUntilExpiry = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-  
+
   return daysUntilExpiry <= 7 && daysUntilExpiry >= 0
+}
+
+const getDateAreaColor = () => {
+  // Date area background color based on locker status
+  if (props.lockerStatus?.endDate) {
+    const endDate = new Date(props.lockerStatus.endDate)
+    const now = new Date()
+    if (endDate < now) return '#EC4899' // expired - darker pink
+  }
+  if (isExpiringSoon()) return '#FB923C' // expiring - darker orange
+  return '#0EA5E9' // normal occupied - darker blue
 }
 
 const handleClick = (e: MouseEvent) => {
