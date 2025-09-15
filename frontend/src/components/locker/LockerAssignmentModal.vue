@@ -225,7 +225,7 @@ const handleAssign = () => {
     startDate: startDate.value,
     endDate: endDate.value,
     usage: selectedUsage.value,
-    voucherId: selectedVoucher.value?.id,  // 이용권 ID
+    voucherId: selectedVoucher.value?.name,  // 이용권 이름(SELL_EVENT_NM) - BUY_EVENT_SNO에 저장될 값
     memo: lockerMemo.value
   }
   emit('confirm', assignmentData)

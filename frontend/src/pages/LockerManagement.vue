@@ -7881,14 +7881,16 @@ const handleAssignmentConfirm = async (data: any) => {
     // 모달 닫기
     closeAssignmentModal()
 
-    // 락커 목록 새로고침 - 이렇게 하면 서버에서 최신 락커 정보(색상, 회원명, 기간, 메모 등)를 가져옴
-    await loadLockers()
+    // 짧은 지연 후 락커 목록 새로고침 - 백엔드가 업데이트할 시간을 줌
+    setTimeout(async () => {
+      await loadLockers()
 
-    // 정면배치 모드에서는 뷰 업데이트도 필요할 수 있음
-    if (currentViewMode.value === 'front') {
-      // Force re-render by triggering a small change
-      await nextTick()
-    }
+      // 정면배치 모드에서는 뷰 업데이트도 필요할 수 있음
+      if (currentViewMode.value === 'front') {
+        // Force re-render by triggering a small change
+        await nextTick()
+      }
+    }, 200)
 
   } catch (error) {
     console.error('락커 배정 실패:', error)
