@@ -317,7 +317,7 @@
       <!-- 회원 이름 (중앙에 표시) -->
       <text
         :x="logicalDimensions.width / 2"
-        :y="logicalDimensions.height / 2"
+        :y="logicalDimensions.height / 2 + 1"
         text-anchor="middle"
         dominant-baseline="middle"
         :font-size="fontSize * 1.8"
