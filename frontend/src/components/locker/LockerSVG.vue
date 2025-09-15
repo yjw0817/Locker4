@@ -601,22 +601,22 @@ const lockerFill = computed(() => {
         const endDate = new Date(props.lockerStatus.endDate)
         const now = new Date()
         if (endDate < now) {
-          return '#FCE7F3' // 연한 분홍색 (만료)
+          return '#FEE2E2' // 기존 프로젝트 만료 배경색 (CSS: --locker-expired-bg)
         }
       }
-      // 만료 임박 (7일 이내)
+      // 만료 임박 (7일 이내) - 사용중과 동일한 색상 사용
       if (isExpiringSoon()) {
-        return '#FFF4E6' // 연한 오렌지색 (만료 예정)
+        return '#FEF3C7' // 기존 프로젝트 사용중 배경색 (CSS: --locker-occupied-bg)
       }
       // 정상 사용 중
-      return '#E0F2FE' // 연한 하늘색 (사용중)
+      return '#FEF3C7' // 기존 프로젝트 사용중 배경색 (CSS: --locker-occupied-bg)
     }
     // 사용불가 락커 (lockrStat이 '02'인 경우)
     if (props.lockerStatus?.lockrStat === '02') {
-      return '#F3F4F6' // 연한 회색 (사용불가)
+      return '#F3F4F6' // 기존 프로젝트 정비중 배경색 (CSS: --locker-maintenance-bg)
     }
     // 미사용 락커
-    return '#FFFFFF' // 흰색 (미사용)
+    return '#D9D9D9' // 기존 프로젝트 사용가능 배경색 (CSS: --locker-available-bg)
   }
 
   // LockerManagement 페이지의 평면배치 모드에서는 투명
@@ -1103,15 +1103,14 @@ const isExpiringSoon = () => {
 }
 
 const getDateAreaColor = () => {
-  // Date area background color - darker shade like door color
-  // This matches LockerPlacement style where label has darker background
+  // Date area background color - 기존 프로젝트 진한 색상 사용
   if (props.lockerStatus?.endDate) {
     const endDate = new Date(props.lockerStatus.endDate)
     const now = new Date()
-    if (endDate < now) return '#EC4899' // expired - darker pink
+    if (endDate < now) return '#EF4444' // 기존 프로젝트 만료 색상 (CSS: --locker-expired)
   }
-  if (isExpiringSoon()) return '#FB923C' // expiring - darker orange
-  return '#0EA5E9' // occupied - darker blue
+  if (isExpiringSoon()) return '#F59E0B' // 기존 프로젝트 사용중 색상 (CSS: --locker-occupied)
+  return '#F59E0B' // 기존 프로젝트 사용중 색상 (CSS: --locker-occupied)
 }
 
 const handleClick = (e: MouseEvent) => {
