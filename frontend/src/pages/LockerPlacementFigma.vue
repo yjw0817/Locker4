@@ -8118,7 +8118,7 @@ onUnmounted(() => {
 
 .locker-placement {
   width: 100%;
-  height: calc(100% - 60px); /* 높이를 100% - 60px로 설정 */
+  height: 100%; /* 전체 높이 사용 */
   display: flex;
   flex-direction: column;
   background-color: var(--background-main);
