@@ -31,7 +31,9 @@ router.get('/', async (req, res) => {
         l.*,
         u.MEM_NM,
         u.MEM_SNO,
-        u.BUY_EVENT_SNO
+        u.MEM_TELNO,
+        u.BUY_EVENT_SNO,
+        u.SELL_EVENT_NM
       FROM lockrs l
       LEFT JOIN cur_available_locker_user u ON l.LOCKR_CD = u.LOCKR_CD
       WHERE l.COMP_CD = ? AND l.BCOFF_CD = ?

@@ -1144,10 +1144,12 @@ const loadLockers = async () => {
           // Member assignment information
           memberName: locker.MEM_NM,
           memberSno: locker.MEM_SNO,
+          userPhone: locker.MEM_TELNO,
           startDate: locker.LOCKR_USE_S_DATE,
           endDate: locker.LOCKR_USE_E_DATE,
           memo: locker.MEMO,
-          buyEventSno: locker.BUY_EVENT_SNO
+          buyEventSno: locker.BUY_EVENT_SNO,
+          voucherName: locker.SELL_EVENT_NM
         }
         
         // CRITICAL DEBUG: Verify actualHeight is in the transformed object

@@ -232,10 +232,22 @@ const loadMemberVouchers = async (memSno: string) => {
 
     memberVouchers.value = vouchers
 
-    // 첫 번째 이용권을 기본 선택
+    // 현재 락커에 할당된 이용권이 있다면 해당 이용권을 선택, 없으면 첫 번째 이용권 선택
     if (vouchers.length > 0) {
-      selectedVoucher.value = vouchers[0]
-      console.log('[LockerAssignmentModal] 기본 이용권 선택:', vouchers[0])
+      let defaultVoucher = vouchers[0] // 기본값: 첫 번째 이용권
+
+      // 현재 락커 데이터에 이용권 정보가 있으면 매칭 시도
+      if (props.lockerData?.voucherName) {
+        const matchingVoucher = vouchers.find(v => v.name === props.lockerData.voucherName)
+        if (matchingVoucher) {
+          defaultVoucher = matchingVoucher
+          console.log('[LockerAssignmentModal] 기존 이용권 매칭됨:', matchingVoucher.name)
+        }
+      }
+
+      selectedVoucher.value = defaultVoucher
+      selectedUsage.value = defaultVoucher.id
+      console.log('[LockerAssignmentModal] 기본 이용권 선택:', defaultVoucher)
     }
   } catch (error) {
     console.error('[LockerAssignmentModal] 이용권 조회 실패:', error)
