@@ -872,11 +872,8 @@ const minZoom = Math.max(
   INITIAL_VIEWPORT_WIDTH / ACTUAL_CANVAS_WIDTH,
   INITIAL_VIEWPORT_HEIGHT / ACTUAL_CANVAS_HEIGHT
 )  // 0.5 (50%) - 빈 공간이 보이지 않는 최소 줌
-// 최대 줌은 캔버스 실제 크기까지만 (뷰포트 크기 대비)
-const maxZoom = Math.min(
-  ACTUAL_CANVAS_WIDTH / INITIAL_VIEWPORT_WIDTH,
-  ACTUAL_CANVAS_HEIGHT / INITIAL_VIEWPORT_HEIGHT
-)  // 3100/1550 = 2, 1440/720 = 2 → 최대 2배
+// 최대 줌은 300%까지 허용
+const maxZoom = 3.0  // 최대 3배 (300%)
 const panOffset = ref({ x: 0, y: 0 })  // 팬 오프셋
 const isPanning = ref(false)  // 팬 진행 중인지
 const panStartPoint = ref({ x: 0, y: 0 })  // 팬 시작 지점
