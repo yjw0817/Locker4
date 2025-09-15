@@ -616,7 +616,7 @@ const lockerFill = computed(() => {
       return '#F3F4F6' // 기존 프로젝트 정비중 배경색 (CSS: --locker-maintenance-bg)
     }
     // 미사용 락커
-    return '#D9D9D9' // 기존 프로젝트 사용가능 배경색 (CSS: --locker-available-bg)
+    return '#FFFFFF' // 흰색
   }
 
   // LockerManagement 페이지의 평면배치 모드에서는 투명
