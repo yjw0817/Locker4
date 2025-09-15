@@ -179,6 +179,12 @@ interface Voucher {
 const props = defineProps<Props>()
 const emit = defineEmits(['close', 'confirm'])
 
+// API 설정
+const getApiBaseUrl = () => {
+  return 'http://localhost:3333/api'
+}
+const API_BASE_URL = getApiBaseUrl()
+
 // Form data
 const userName = ref('')
 const userPhone = ref('')
@@ -209,6 +215,33 @@ const todayDate = computed(() => {
 // Methods
 const close = () => {
   emit('close')
+}
+
+// 회원 이용권 조회
+const loadMemberVouchers = async (memSno: string) => {
+  try {
+    console.log('[LockerAssignmentModal] 회원 이용권 조회 시작:', memSno)
+    const response = await fetch(`${API_BASE_URL}/members/${memSno}/vouchers`)
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+
+    const vouchers = await response.json()
+    console.log('[LockerAssignmentModal] 이용권 데이터:', vouchers)
+
+    memberVouchers.value = vouchers
+
+    // 첫 번째 이용권을 기본 선택
+    if (vouchers.length > 0) {
+      selectedVoucher.value = vouchers[0]
+      console.log('[LockerAssignmentModal] 기본 이용권 선택:', vouchers[0])
+    }
+  } catch (error) {
+    console.error('[LockerAssignmentModal] 이용권 조회 실패:', error)
+    memberVouchers.value = []
+    selectedVoucher.value = null
+  }
 }
 
 const handleOverlayClick = (e: MouseEvent) => {
@@ -397,8 +430,9 @@ watch(() => props.lockerData, (newData) => {
     console.log('  lockerMemo:', lockerMemo.value)
 
     // 회원 정보가 있으면 이용권 조회
-    if (newData.memberId) {
-      // TODO: API로 회원 이용권 조회
+    if (newData.memberSno) {
+      console.log('[LockerAssignmentModal] 회원번호로 이용권 조회:', newData.memberSno)
+      loadMemberVouchers(newData.memberSno)
     }
   } else {
     console.log('[LockerAssignmentModal] 새 데이터 - 기본값 설정')

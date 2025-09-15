@@ -7913,7 +7913,8 @@ const handleLockerClick = (locker: any) => {
       userPhone: locker.userPhone || '',  // 전화번호는 상태 API에서 제공하지 않으므로 향후 추가 필요
       startDate: statusData?.startDate || locker.startDate || '',
       endDate: statusData?.endDate || locker.endDate || '',
-      usage: statusData?.memo || locker.memo || ''
+      usage: statusData?.memo || locker.memo || '',
+      memberSno: statusData?.memberSno || locker.memberSno || ''  // 회원번호 추가
     }
 
     console.log('[DEBUG] 최종 selectedLockerData:', selectedLockerData.value)
