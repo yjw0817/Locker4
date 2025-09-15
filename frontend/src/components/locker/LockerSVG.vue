@@ -225,8 +225,23 @@
       </text>
     </g>
 
-    <!-- LockerPlacement 평면배치에서 기존 락커레이블 영역 표시 (하단) -->
-    <g v-if="!props.isManagementPage && viewMode === 'floor'">
+    <!-- LockerPlacement 평면배치에서 락커 레이블 중앙 표시 -->
+    <text
+      v-if="!props.isManagementPage && viewMode === 'floor'"
+      :x="logicalDimensions.width / 2"
+      :y="logicalDimensions.height / 2"
+      text-anchor="middle"
+      dominant-baseline="middle"
+      :font-size="12"
+      fill="#374151"
+      font-weight="600"
+      style="user-select: none; pointer-events: none;"
+    >
+      {{ getDisplayNumber() }}
+    </text>
+
+    <!-- LockerPlacement 정면배치에서 기존 락커레이블 영역 표시 (하단) -->
+    <g v-if="!props.isManagementPage && viewMode === 'front'">
       <!-- 기존 락커레이블 영역 박스 -->
       <rect
         :x="0"
@@ -252,10 +267,10 @@
       </text>
     </g>
 
-    <!-- 락커 번호 표시 -->
+    <!-- LockerManagement 페이지의 락커 번호 표시 -->
     <!-- 사용중인 락커: 왼쪽 상단에 작게 -->
     <text
-      v-if="viewMode === 'front' && props.locker.lockrNo && props.lockerStatus?.MEM_NM"
+      v-if="props.isManagementPage && viewMode === 'front' && props.locker.lockrNo && props.lockerStatus?.MEM_NM"
       :x="4 * LOCKER_VISUAL_SCALE"
       :y="6 * LOCKER_VISUAL_SCALE"
       text-anchor="start"
@@ -268,9 +283,9 @@
     >
       {{ props.locker.lockrNo !== undefined && props.locker.lockrNo !== null ? props.locker.lockrNo : (props.locker.lockrLabel || props.locker.number) }}
     </text>
-    
-    <!-- 빈 락커: 중앙에 깔끔한 도시적 스타일 -->
-    <g v-if="viewMode === 'front' && props.locker.lockrNo && !props.lockerStatus?.MEM_NM">
+
+    <!-- LockerManagement 페이지의 빈 락커: 중앙에 깔끔한 도시적 스타일 -->
+    <g v-if="props.isManagementPage && viewMode === 'front' && props.locker.lockrNo && !props.lockerStatus?.MEM_NM">
       <!-- 메인 번호 (단순하고 세련된 스타일) -->
       <text
         :x="logicalDimensions.width / 2"
@@ -286,8 +301,8 @@
       </text>
     </g>
     
-    <!-- 회원 정보 표시 (사용 중인 락커만) -->
-    <g v-if="props.lockerStatus?.MEM_NM && viewMode === 'front'">
+    <!-- LockerManagement 페이지의 회원 정보 표시 (사용 중인 락커만) -->
+    <g v-if="props.isManagementPage && props.lockerStatus?.MEM_NM && viewMode === 'front'">
       <!-- 회원 이름 (중앙에 표시) -->
       <text
         :x="logicalDimensions.width / 2"
@@ -333,9 +348,9 @@
       </text>
     </g>
     
-    <!-- 메모 아이콘 표시 (메모가 있는 락커만) -->
+    <!-- LockerManagement 페이지의 메모 아이콘 표시 (메모가 있는 락커만) -->
     <image
-      v-if="props.lockerStatus?.MEMO && viewMode === 'front'"
+      v-if="props.isManagementPage && props.lockerStatus?.MEMO && viewMode === 'front'"
       :x="logicalDimensions.width - 20"
       :y="5"
       width="16"
