@@ -224,9 +224,65 @@
         {{ tooltipData.displayNumber }}
       </text>
     </g>
-    
-    
-    
+
+    <!-- LockerPlacement 평면배치에서 락커 레이블 영역 및 텍스트 표시 (하단) -->
+    <g v-if="!props.isManagementPage && viewMode === 'floor'">
+      <!-- 레이블 영역 박스 -->
+      <rect
+        :x="1"
+        :y="logicalDimensions.height + 6"
+        :width="logicalDimensions.width - 2"
+        :height="18"
+        fill="white"
+        stroke="#d1d5db"
+        stroke-width="1"
+        rx="2"
+        ry="2"
+      />
+      <!-- 레이블 텍스트 -->
+      <text
+        :x="logicalDimensions.width / 2"
+        :y="logicalDimensions.height + 15"
+        text-anchor="middle"
+        dominant-baseline="middle"
+        :font-size="10"
+        fill="#374151"
+        font-weight="600"
+        style="user-select: none; pointer-events: none;"
+      >
+        {{ getDisplayNumber() }}
+      </text>
+    </g>
+
+    <!-- LockerPlacement 정면배치에서 락커 레이블 영역 및 텍스트 표시 (하단) -->
+    <g v-if="!props.isManagementPage && viewMode === 'front'">
+      <!-- 레이블 영역 박스 -->
+      <rect
+        :x="1"
+        :y="logicalDimensions.height + 6"
+        :width="logicalDimensions.width - 2"
+        :height="18"
+        fill="white"
+        stroke="#d1d5db"
+        stroke-width="1"
+        rx="2"
+        ry="2"
+      />
+      <!-- 레이블 텍스트 -->
+      <text
+        :x="logicalDimensions.width / 2"
+        :y="logicalDimensions.height + 15"
+        text-anchor="middle"
+        dominant-baseline="middle"
+        :font-size="10"
+        fill="#374151"
+        font-weight="600"
+        style="user-select: none; pointer-events: none;"
+      >
+        {{ getDisplayNumber() }}
+      </text>
+    </g>
+
     <!-- 락커 번호 표시 -->
     <!-- 사용중인 락커: 왼쪽 상단에 작게 -->
     <text
