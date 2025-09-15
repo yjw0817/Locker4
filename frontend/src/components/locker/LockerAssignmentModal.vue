@@ -360,9 +360,10 @@ watch(() => props.lockerData, (newData) => {
     if (newData.memberSno) memberSno.value = newData.memberSno
     if (newData.startDate) startDate.value = newData.startDate
     if (newData.endDate) endDate.value = newData.endDate
-    if (newData.usage) selectedUsage.value = newData.usage
+    // usage는 메모 데이터를 받아서 lockerMemo에 설정
+    if (newData.usage) lockerMemo.value = newData.usage
     if (newData.memo) lockerMemo.value = newData.memo
-    
+
     // 회원 정보가 있으면 이용권 조회
     if (newData.memberId) {
       // TODO: API로 회원 이용권 조회
@@ -373,7 +374,7 @@ watch(() => props.lockerData, (newData) => {
     startDate.value = today.toISOString().split('T')[0]
     // 종료일은 이용권 선택 후 자동 계산
   }
-})
+}, { immediate: true })
 </script>
 
 <style scoped>

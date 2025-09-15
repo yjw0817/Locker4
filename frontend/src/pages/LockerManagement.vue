@@ -7879,17 +7879,21 @@ const handleLockerClick = (locker: any) => {
   if (currentViewMode.value === 'front') {
     // selectedLocker 설정 - API 호출 시 필요
     selectedLocker.value = locker
-    
+
     // LockerSVG 컴포넌트와 동일한 로직으로 락커 번호 가져오기
-    selectedLockerNumber.value = locker.lockrNo !== undefined && locker.lockrNo !== null 
-      ? locker.lockrNo 
+    selectedLockerNumber.value = locker.lockrNo !== undefined && locker.lockrNo !== null
+      ? locker.lockrNo
       : (locker.lockrLabel || locker.number || '')
+
+    // 락커 상태 데이터 가져오기
+    const statusData = lockerStatuses.value.get(locker.lockrCd)
+
     selectedLockerData.value = {
-      userName: locker.userName || '',
-      userPhone: locker.userPhone || '',
-      startDate: locker.startDate || '',
-      endDate: locker.endDate || '',
-      usage: locker.usage || ''
+      userName: statusData?.memberName || locker.memberName || '',
+      userPhone: locker.userPhone || '',  // 전화번호는 상태 API에서 제공하지 않으므로 향후 추가 필요
+      startDate: statusData?.startDate || locker.startDate || '',
+      endDate: statusData?.endDate || locker.endDate || '',
+      usage: statusData?.memo || locker.memo || ''
     }
     showAssignmentModal.value = true
   }
