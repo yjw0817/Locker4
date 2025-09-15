@@ -671,15 +671,15 @@ const lockerFill = computed(() => {
 const lockerStroke = computed(() => {
   // 에러가 있는 락커는 빨간색 테두리
   if (props.hasError || props.locker.hasError) return '#ef4444'
-  
+
   // LockerManagement 페이지에서는 색상 사용하지 않음 - 회색 테두리
   if (props.isManagementPage) {
-    return '#9ca3af'  // gray-400 (정면배치모드와 동일한 회색)
+    return '#d1d5db'  // gray-300 (더 연한 회색)
   }
-  
+
   // 세로모드에서는 더 진한 회색 테두리
   if (props.viewMode === 'front') {
-    return '#9ca3af'  // gray-400 (더 진한 회색)
+    return '#d1d5db'  // gray-300 (더 연한 회색)
   }
   
   // Get base stroke color
