@@ -240,6 +240,14 @@
       {{ getDisplayNumber() }}
     </text>
 
+    <!-- LockerPlacement 정면배치에서 하단 라벨 배경 -->
+    <path
+      v-if="!props.isManagementPage && viewMode === 'front' && getDisplayNumber()"
+      :d="labelBackgroundPath"
+      :fill="labelBackgroundColor"
+      shape-rendering="crispEdges"
+    />
+
     <!-- LockerPlacement 정면배치에서 락커 레이블 (하단 중앙) -->
     <text
       v-if="!props.isManagementPage && viewMode === 'front'"
@@ -702,14 +710,21 @@ const fontSize = computed(() => {
 
 // 라벨 배경색 (세로배치 모드)
 const labelBackgroundColor = computed(() => {
+  // LockerPlacement 페이지에서는 락커 색상 사용
+  if (!props.isManagementPage) {
+    // 락커 색상이 있으면 사용, 없으면 기본 파란색
+    return props.locker.color || '#1e40af'
+  }
+
+  // LockerManagement 페이지의 기존 로직
   // 에러가 있는 락커는 빨간색
   if (props.hasError || props.locker.hasError) return '#dc2626'
-  
+
   // 락커 타입 색상 사용 (진한 색)
   if (props.locker.color) {
     return props.locker.color
   }
-  
+
   // 상태별 색상
   switch (props.locker.status) {
     case 'available': return '#6b7280'  // gray-500
