@@ -7912,11 +7912,12 @@ const handleLockerClick = (locker: any) => {
 
     selectedLockerData.value = {
       userName: statusData?.memberName || locker.memberName || '',
-      userPhone: locker.userPhone || '',  // 전화번호는 상태 API에서 제공하지 않으므로 향후 추가 필요
+      userPhone: statusData?.userPhone || locker.userPhone || '',
       startDate: statusData?.startDate || locker.startDate || '',
       endDate: statusData?.endDate || locker.endDate || '',
       usage: statusData?.memo || locker.memo || '',
-      memberSno: statusData?.memberSno || locker.memberSno || ''  // 회원번호 추가
+      memberSno: statusData?.memberSno || locker.memberSno || '',
+      voucherName: statusData?.voucherName || locker.voucherName || ''  // 이용권 정보 추가
     }
 
     console.log('[DEBUG] 최종 selectedLockerData:', selectedLockerData.value)
