@@ -31,10 +31,7 @@ router.get('/', async (req, res) => {
         l.*,
         u.MEM_NM,
         u.MEM_SNO,
-        u.BUY_EVENT_SNO,
-        u.LOCKR_USE_S_DATE,
-        u.LOCKR_USE_E_DATE,
-        u.MEMO
+        u.BUY_EVENT_SNO
       FROM lockrs l
       LEFT JOIN cur_available_locker_user u ON l.LOCKR_CD = u.LOCKR_CD
       WHERE l.COMP_CD = ? AND l.BCOFF_CD = ?
