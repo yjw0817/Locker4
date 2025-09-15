@@ -203,7 +203,7 @@ const memberVouchers = ref<Voucher[]>([])
 
 // Computed
 const hasAssignedUser = computed(() => {
-  return !!userName.value && !!userPhone.value
+  return !!userName.value || !!memberSno.value
 })
 
 // Computed
