@@ -64,6 +64,7 @@ router.get('/:memSno/vouchers', async (req, res) => {
     const sql = `
       SELECT 
         SELL_EVENT_NM, 
+        BUY_EVENT_SNO,
         CUR_LOCKR_INFO, 
         LOCKR_CD,
         USE_PROD,
@@ -75,8 +76,8 @@ router.get('/:memSno/vouchers', async (req, res) => {
     const vouchers = await db.query(sql, [memSno]);
     
     // 이용권 정보 포맷팅
-    const formattedVouchers = vouchers.map((voucher, index) => ({
-      id: `v${index + 1}`,
+    const formattedVouchers = vouchers.map(voucher => ({
+      id: voucher.BUY_EVENT_SNO,  // BUY_EVENT_SNO를 id로 사용
       name: voucher.SELL_EVENT_NM,
       lockerInfo: voucher.CUR_LOCKR_INFO,
       lockerCode: voucher.LOCKR_CD,

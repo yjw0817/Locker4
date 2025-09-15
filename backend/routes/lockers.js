@@ -23,44 +23,57 @@ const statusMapReverse = {
 router.get('/', async (req, res) => {
   try {
     const { COMP_CD = 'C0001', BCOFF_CD = 'C0001F0020', parentOnly } = req.query;
-    
+
     // Build dynamic query based on parentOnly parameter
-    let query = 'SELECT * FROM lockrs WHERE COMP_CD = ? AND BCOFF_CD = ?';
+    // Join with cur_available_locker_user to get member information
+    let query = `
+      SELECT
+        l.*,
+        u.MEM_NM,
+        u.MEM_SNO,
+        u.BUY_EVENT_SNO,
+        u.LOCKR_USE_S_DATE,
+        u.LOCKR_USE_E_DATE,
+        u.MEMO
+      FROM lockrs l
+      LEFT JOIN cur_available_locker_user u ON l.LOCKR_CD = u.LOCKR_CD
+      WHERE l.COMP_CD = ? AND l.BCOFF_CD = ?
+    `;
     const params = [COMP_CD, BCOFF_CD];
     if (parentOnly === 'true') {
-      query += ' AND PARENT_LOCKR_CD IS NULL';
+      query += ' AND l.PARENT_LOCKR_CD IS NULL';
       console.log('[API] Filtering for parent lockers only (PARENT_LOCKR_CD IS NULL)');
     }
-    
-    query += ' ORDER BY LOCKR_CD';
-    
+
+    query += ' ORDER BY l.LOCKR_CD';
+
     const [rows] = await pool.query(query, params);
-    
+
     console.log(`[API] Found ${rows.length} lockers for COMP_CD=${COMP_CD}, BCOFF_CD=${BCOFF_CD}`);
 
     // Add this debug line:
-    console.log('[API Debug] All PARENT_LOCKR_CD values:', rows.map(r => ({ 
-      label: r.LOCKR_LABEL, 
-      parent: r.PARENT_LOCKR_CD 
+    console.log('[API Debug] All PARENT_LOCKR_CD values:', rows.map(r => ({
+      label: r.LOCKR_LABEL,
+      parent: r.PARENT_LOCKR_CD
     })));
-    
+
     // Ensure type codes are strings for consistency
     const processedRows = rows.map(row => ({
       ...row,
       LOCKR_TYPE_CD: row.LOCKR_TYPE_CD ? String(row.LOCKR_TYPE_CD) : '1'
     }));
-    
-    res.json({ 
+
+    res.json({
       success: true,
       lockers: processedRows,
-      count: processedRows.length 
+      count: processedRows.length
     });
   } catch (error) {
     console.error('[API] Error fetching lockers:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       error: 'Failed to fetch lockers',
-      details: error.message 
+      details: error.message
     });
   }
 });

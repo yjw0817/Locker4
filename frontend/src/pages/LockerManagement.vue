@@ -318,6 +318,7 @@
               :zoom-level="zoomLevel"
               :is-management-page="true"
               :child-lockers="lockersWithChildren[locker.id] || []"
+              :locker-status="locker"
               @click="handleLockerClick(locker)"
             />
             
