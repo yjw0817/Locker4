@@ -299,12 +299,12 @@
 
     <!-- LockerManagement 페이지의 회원 정보 표시 (사용 중인 락커만) -->
     <g v-if="props.isManagementPage && props.lockerStatus?.memberName && viewMode === 'front'">
-      <!-- 하단 날짜 영역 배경 (하단 모서리만 둥글게) -->
+      <!-- 하단 날짜 영역 배경 (하단 모서리만 둥글게, 5px 아래로) -->
       <path
         v-if="props.lockerStatus.startDate && props.lockerStatus.endDate"
         :d="`
-          M 0 ${logicalDimensions.height - 14 * LOCKER_VISUAL_SCALE}
-          L ${logicalDimensions.width} ${logicalDimensions.height - 14 * LOCKER_VISUAL_SCALE}
+          M 0 ${logicalDimensions.height - 12 * LOCKER_VISUAL_SCALE}
+          L ${logicalDimensions.width} ${logicalDimensions.height - 12 * LOCKER_VISUAL_SCALE}
           L ${logicalDimensions.width} ${logicalDimensions.height - cornerRadius}
           Q ${logicalDimensions.width} ${logicalDimensions.height} ${logicalDimensions.width - cornerRadius} ${logicalDimensions.height}
           L ${cornerRadius} ${logicalDimensions.height}
@@ -314,13 +314,13 @@
         :fill="isExpiringSoon() ? '#DC2626' : '#0EA5E9'"
       />
 
-      <!-- 회원 이름 (중앙에 크게 표시) -->
+      <!-- 회원 이름 (중앙에 크게 표시, 1px 아래로) -->
       <text
         :x="logicalDimensions.width / 2"
-        :y="logicalDimensions.height / 2 - 5"
+        :y="logicalDimensions.height / 2 - 4"
         text-anchor="middle"
         dominant-baseline="middle"
-        :font-size="fontSize * 1.8"
+        :font-size="fontSize * 1.6"
         fill="#111827"
         font-weight="700"
         style="user-select: none; pointer-events: none;"
@@ -328,14 +328,14 @@
         {{ props.lockerStatus.memberName }}
       </text>
 
-      <!-- 사용 기간 (하단에 표시) -->
+      <!-- 사용 기간 (하단에 표시, 작은 글씨) -->
       <text
         v-if="props.lockerStatus.startDate && props.lockerStatus.endDate"
         :x="logicalDimensions.width / 2"
-        :y="logicalDimensions.height - 7 * LOCKER_VISUAL_SCALE"
+        :y="logicalDimensions.height - 6 * LOCKER_VISUAL_SCALE"
         text-anchor="middle"
         dominant-baseline="middle"
-        :font-size="fontSize * 0.9"
+        :font-size="fontSize * 0.75"
         fill="#FFFFFF"
         font-weight="600"
         style="user-select: none; pointer-events: none;"
