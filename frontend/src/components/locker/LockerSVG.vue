@@ -335,7 +335,7 @@
         :y="logicalDimensions.height - 3 * LOCKER_VISUAL_SCALE"
         text-anchor="middle"
         dominant-baseline="middle"
-        :font-size="fontSize"
+        :font-size="fontSize * 0.8"
         fill="#FFFFFF"
         font-weight="600"
         style="user-select: none; pointer-events: none;"
@@ -1103,14 +1103,15 @@ const isExpiringSoon = () => {
 }
 
 const getDateAreaColor = () => {
-  // Date area background color based on locker status
+  // Date area background color - same as locker fill color for consistency
+  // This matches LockerPlacement style where label background = locker color
   if (props.lockerStatus?.endDate) {
     const endDate = new Date(props.lockerStatus.endDate)
     const now = new Date()
-    if (endDate < now) return '#EC4899' // expired - darker pink
+    if (endDate < now) return '#FCE7F3' // expired - light pink (same as locker)
   }
-  if (isExpiringSoon()) return '#FB923C' // expiring - darker orange
-  return '#0EA5E9' // normal occupied - darker blue
+  if (isExpiringSoon()) return '#FFF4E6' // expiring - light orange (same as locker)
+  return '#E0F2FE' // occupied - light blue (same as locker)
 }
 
 const handleClick = (e: MouseEvent) => {
