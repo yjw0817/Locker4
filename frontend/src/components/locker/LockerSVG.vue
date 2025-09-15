@@ -240,27 +240,29 @@
       {{ getDisplayNumber() }}
     </text>
 
-    <!-- LockerPlacement 정면배치에서 기존 락커레이블 영역 표시 (하단) -->
+    <!-- LockerPlacement 정면배치에서 락커 내부 하단에 레이블 영역 표시 -->
     <g v-if="!props.isManagementPage && viewMode === 'front'">
-      <!-- 기존 락커레이블 영역 박스 -->
+      <!-- 락커 내부 하단 레이블 영역 (색칠된 영역) -->
       <rect
-        :x="0"
-        :y="logicalDimensions.height + 4"
-        :width="logicalDimensions.width"
+        :x="2"
+        :y="logicalDimensions.height - 22"
+        :width="logicalDimensions.width - 4"
         :height="20"
-        fill="#f9fafb"
-        stroke="#e5e7eb"
+        :fill="props.locker.lockrStat === 'OCCUPIED' ? '#fef3c7' : '#e0f2fe'"
+        stroke="#d1d5db"
         stroke-width="0.5"
+        rx="2"
+        ry="2"
       />
-      <!-- 락커 레이블 텍스트 -->
+      <!-- 락커 내부 하단 레이블 텍스트 -->
       <text
         :x="logicalDimensions.width / 2"
-        :y="logicalDimensions.height + 14"
+        :y="logicalDimensions.height - 12"
         text-anchor="middle"
         dominant-baseline="middle"
-        :font-size="9"
-        fill="#4b5563"
-        font-weight="500"
+        :font-size="10"
+        fill="#374151"
+        font-weight="600"
         style="user-select: none; pointer-events: none;"
       >
         {{ getDisplayNumber() }}
