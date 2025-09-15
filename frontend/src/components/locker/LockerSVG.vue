@@ -285,11 +285,11 @@
       <!-- 메인 번호 -->
       <text
         :x="logicalDimensions.width / 2"
-        :y="logicalDimensions.height / 2"
+        :y="logicalDimensions.height / 2 + 1"
         text-anchor="middle"
         dominant-baseline="middle"
         :font-size="fontSize * 1.8"
-        fill="#374151"
+        fill="#9CA3AF"
         font-weight="600"
         style="user-select: none; pointer-events: none;"
       >
