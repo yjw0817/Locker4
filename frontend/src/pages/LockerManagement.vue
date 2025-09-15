@@ -318,7 +318,7 @@
               :zoom-level="zoomLevel"
               :is-management-page="true"
               :child-lockers="lockersWithChildren[locker.id] || []"
-              :locker-status="locker"
+              :locker-status="lockerStatuses.get(locker.lockrCd) || locker"
               @click="handleLockerClick(locker)"
             />
             
@@ -846,6 +846,9 @@ const DISPLAY_SCALE = 1.0
 // Floor line position for front view (logical units)
 const FLOOR_Y = 1250  // 바닥선 Y 위치 (캔버스 높이 1440의 약 87% 위치, 150px 아래로 이동)
 
+// Locker status data
+const lockerStatuses = ref<Map<string, any>>(new Map())
+
 // Log scale configuration removed - was causing syntax error
 
 // 캔버스 크기 (동적으로 조정)
@@ -996,6 +999,59 @@ const loadZones = async () => {
   }
 }
 
+const loadLockerStatuses = async () => {
+  try {
+    console.log('[loadLockerStatuses] Loading locker statuses...')
+    const response = await fetch(`${API_BASE_URL}/lockrs/status`)
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+
+    const data = await response.json()
+
+    if (data.success && data.statuses) {
+      // Clear existing statuses
+      lockerStatuses.value.clear()
+
+      // Store status data by locker code
+      data.statuses.forEach(status => {
+        lockerStatuses.value.set(status.LOCKR_CD, {
+          lockrCd: status.LOCKR_CD,
+          lockrStat: status.LOCKR_STAT,
+          memberName: status.MEM_NM,
+          memberSno: status.MEM_SNO,
+          startDate: status.LOCKR_USE_S_DATE,
+          endDate: status.LOCKR_USE_E_DATE,
+          memo: status.MEMO,
+          buyEventSno: status.BUY_EVENT_SNO
+        })
+      })
+
+      console.log(`[loadLockerStatuses] Loaded ${lockerStatuses.value.size} locker statuses`)
+
+      // Update locker objects with status data
+      lockerStore.lockers.forEach(locker => {
+        const statusData = lockerStatuses.value.get(locker.lockrCd)
+        if (statusData) {
+          // Update locker with real-time status
+          locker.lockrStat = statusData.lockrStat
+          locker.status = statusData.lockrStat === '01' ? 'occupied' : 'available'
+          locker.memberName = statusData.memberName
+          locker.memberSno = statusData.memberSno
+          locker.startDate = statusData.startDate
+          locker.endDate = statusData.endDate
+          locker.memo = statusData.memo
+          locker.buyEventSno = statusData.buyEventSno
+        }
+      })
+    }
+  } catch (error) {
+    console.error('[loadLockerStatuses] Failed to load locker statuses:', error.message)
+    // Don't throw error - just continue with existing data
+  }
+}
+
 const loadLockers = async () => {
   try {
     // Build API URL based on view mode
@@ -1094,7 +1150,10 @@ const loadLockers = async () => {
       
       // Update the store with transformed data
       lockerStore.lockers = transformedLockers
-      
+
+      // Load locker statuses for real-time data
+      await loadLockerStatuses()
+
       // DETAILED DEBUG: Store에 저장된 데이터 확인
       
       lockerStore.lockers.forEach(locker => {
@@ -1154,7 +1213,10 @@ const loadLockers = async () => {
       })
       
       lockerStore.lockers = transformedLockers
-      
+
+      // Load locker statuses for real-time data
+      await loadLockerStatuses()
+
     } else {
       console.warn('[API] No lockers data in response:', data)
       lockerStore.lockers = []
