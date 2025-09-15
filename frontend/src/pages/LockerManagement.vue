@@ -996,52 +996,66 @@ const loadZones = async () => {
 const loadLockerStatuses = async () => {
   try {
     console.log('[loadLockerStatuses] Loading locker statuses...')
-    const response = await fetch(`${API_BASE_URL}/lockrs/status`)
+    console.log('[loadLockerStatuses] API URL:', `${API_BASE_URL}/api/lockrs/status/all`)
+
+    const response = await fetch(`${API_BASE_URL}/api/lockrs/status/all`)
+    console.log('[loadLockerStatuses] Response status:', response.status)
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`)
     }
 
     const data = await response.json()
+    console.log('[loadLockerStatuses] Raw API response:', data)
+    console.log('[loadLockerStatuses] Status data found:', data.length, 'records')
 
-    if (data.success && data.statuses) {
-      // Clear existing statuses
-      lockerStatuses.value.clear()
+    // Clear existing statuses
+    lockerStatuses.value.clear()
 
-      // Store status data by locker code
-      data.statuses.forEach(status => {
-        lockerStatuses.value.set(status.LOCKR_CD, {
-          lockrCd: status.LOCKR_CD,
-          lockrStat: status.LOCKR_STAT,
-          memberName: status.MEM_NM,
-          memberSno: status.MEM_SNO,
-          startDate: status.LOCKR_USE_S_DATE,
-          endDate: status.LOCKR_USE_E_DATE,
-          memo: status.MEMO,
-          buyEventSno: status.BUY_EVENT_SNO
-        })
-      })
+    // Store status data by locker code - data is now a direct array
+    data.forEach((status, index) => {
+      console.log(`[loadLockerStatuses] Processing status ${index}:`, status)
 
-      console.log(`[loadLockerStatuses] Loaded ${lockerStatuses.value.size} locker statuses`)
+      const statusObj = {
+        lockrCd: status.id,
+        lockrStat: status.status,
+        memberName: status.memberName,
+        memberSno: status.memberSno,
+        startDate: status.startDate,
+        endDate: status.endDate,
+        memo: status.memo,
+        statusColor: status.statusColor,
+        isExpiringSoon: status.isExpiringSoon,
+        hasMemo: status.hasMemo
+      }
 
-      // Update locker objects with status data
-      lockerStore.lockers.forEach(locker => {
-        const statusData = lockerStatuses.value.get(locker.lockrCd)
-        if (statusData) {
-          // Update locker with real-time status
-          locker.lockrStat = statusData.lockrStat
-          locker.status = statusData.lockrStat === '01' ? 'occupied' : 'available'
-          locker.memberName = statusData.memberName
-          locker.memberSno = statusData.memberSno
-          locker.startDate = statusData.startDate
-          locker.endDate = statusData.endDate
-          locker.memo = statusData.memo
-          locker.buyEventSno = statusData.buyEventSno
-        }
-      })
-    }
+      console.log(`[loadLockerStatuses] Storing for key ${status.id}:`, statusObj)
+      lockerStatuses.value.set(status.id, statusObj)
+    })
+
+    console.log(`[loadLockerStatuses] Loaded ${lockerStatuses.value.size} locker statuses`)
+    console.log('[loadLockerStatuses] Final lockerStatuses Map keys:', Array.from(lockerStatuses.value.keys()))
+
+    // Update locker objects with status data
+    lockerStore.lockers.forEach(locker => {
+      const statusData = lockerStatuses.value.get(locker.lockrCd)
+      if (statusData) {
+        console.log(`[loadLockerStatuses] Updating locker ${locker.lockrCd} with status data:`, statusData)
+        // Update locker with real-time status
+        locker.lockrStat = statusData.lockrStat
+        locker.status = statusData.lockrStat === 'I' ? 'occupied' : 'available'
+        locker.memberName = statusData.memberName
+        locker.memberSno = statusData.memberSno
+        locker.startDate = statusData.startDate
+        locker.endDate = statusData.endDate
+        locker.memo = statusData.memo
+      } else {
+        console.log(`[loadLockerStatuses] No status data found for locker ${locker.lockrCd}`)
+      }
+    })
   } catch (error) {
     console.error('[loadLockerStatuses] Failed to load locker statuses:', error.message)
+    console.error('[loadLockerStatuses] Full error:', error)
     // Don't throw error - just continue with existing data
   }
 }
@@ -7877,6 +7891,11 @@ const handleKeyUp = (event: KeyboardEvent) => {
 const handleLockerClick = (locker: any) => {
   // 정면배치모드일 때만 팝업 표시
   if (currentViewMode.value === 'front') {
+    console.log('[DEBUG] 락커 클릭됨:', locker)
+    console.log('[DEBUG] 락커 코드:', locker.lockrCd)
+    console.log('[DEBUG] lockerStatuses 크기:', lockerStatuses.value.size)
+    console.log('[DEBUG] lockerStatuses 전체:', Array.from(lockerStatuses.value.entries()))
+
     // selectedLocker 설정 - API 호출 시 필요
     selectedLocker.value = locker
 
@@ -7887,6 +7906,7 @@ const handleLockerClick = (locker: any) => {
 
     // 락커 상태 데이터 가져오기
     const statusData = lockerStatuses.value.get(locker.lockrCd)
+    console.log('[DEBUG] 상태 데이터:', statusData)
 
     selectedLockerData.value = {
       userName: statusData?.memberName || locker.memberName || '',
@@ -7895,6 +7915,8 @@ const handleLockerClick = (locker: any) => {
       endDate: statusData?.endDate || locker.endDate || '',
       usage: statusData?.memo || locker.memo || ''
     }
+
+    console.log('[DEBUG] 최종 selectedLockerData:', selectedLockerData.value)
     showAssignmentModal.value = true
   }
 }

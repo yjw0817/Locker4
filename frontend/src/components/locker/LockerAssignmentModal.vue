@@ -353,22 +353,55 @@ watch(selectedUsage, (newValue) => {
 
 // Watch for locker data changes
 watch(() => props.lockerData, (newData) => {
+  console.log('[LockerAssignmentModal] watch 트리거됨, newData:', newData)
+
   if (newData) {
+    console.log('[LockerAssignmentModal] 데이터 설정 시작')
+
     // Update form with existing locker data if available
-    if (newData.userName) userName.value = newData.userName
-    if (newData.userPhone) userPhone.value = newData.userPhone
-    if (newData.memberSno) memberSno.value = newData.memberSno
-    if (newData.startDate) startDate.value = newData.startDate
-    if (newData.endDate) endDate.value = newData.endDate
+    if (newData.userName) {
+      userName.value = newData.userName
+      console.log('[LockerAssignmentModal] userName 설정:', newData.userName)
+    }
+    if (newData.userPhone) {
+      userPhone.value = newData.userPhone
+      console.log('[LockerAssignmentModal] userPhone 설정:', newData.userPhone)
+    }
+    if (newData.memberSno) {
+      memberSno.value = newData.memberSno
+      console.log('[LockerAssignmentModal] memberSno 설정:', newData.memberSno)
+    }
+    if (newData.startDate) {
+      startDate.value = newData.startDate
+      console.log('[LockerAssignmentModal] startDate 설정:', newData.startDate)
+    }
+    if (newData.endDate) {
+      endDate.value = newData.endDate
+      console.log('[LockerAssignmentModal] endDate 설정:', newData.endDate)
+    }
     // usage는 메모 데이터를 받아서 lockerMemo에 설정
-    if (newData.usage) lockerMemo.value = newData.usage
-    if (newData.memo) lockerMemo.value = newData.memo
+    if (newData.usage) {
+      lockerMemo.value = newData.usage
+      console.log('[LockerAssignmentModal] lockerMemo(usage) 설정:', newData.usage)
+    }
+    if (newData.memo) {
+      lockerMemo.value = newData.memo
+      console.log('[LockerAssignmentModal] lockerMemo(memo) 설정:', newData.memo)
+    }
+
+    console.log('[LockerAssignmentModal] 최종 폼 값들:')
+    console.log('  userName:', userName.value)
+    console.log('  userPhone:', userPhone.value)
+    console.log('  startDate:', startDate.value)
+    console.log('  endDate:', endDate.value)
+    console.log('  lockerMemo:', lockerMemo.value)
 
     // 회원 정보가 있으면 이용권 조회
     if (newData.memberId) {
       // TODO: API로 회원 이용권 조회
     }
   } else {
+    console.log('[LockerAssignmentModal] 새 데이터 - 기본값 설정')
     // 오늘 날짜로 시작일 설정
     const today = new Date()
     startDate.value = today.toISOString().split('T')[0]
