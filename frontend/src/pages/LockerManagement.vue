@@ -1054,7 +1054,7 @@ const loadLockers = async () => {
           height: typeDepth,  // Floor view에서는 depth를 height로 사용
           depth: typeDepth,
           actualHeight: typeHeight,  // 실제 높이를 별도로 저장 (세로배치용)
-          status: 'available',
+          status: locker.LOCKR_STAT === '01' ? 'occupied' : 'available',
           rotation: locker.ROTATION || 0,
           zoneId: locker.LOCKR_KND,
           typeId: locker.LOCKR_TYPE_CD,
@@ -1075,7 +1075,14 @@ const loadLockers = async () => {
           parentLockerId: parentLockerId,  // THIS WAS MISSING!
           parentLockrCd: locker.PARENT_LOCKR_CD,
           tierLevel: locker.TIER_LEVEL,
-          lockrStat: locker.LOCKR_STAT
+          lockrStat: locker.LOCKR_STAT,
+          // Member assignment information
+          memberName: locker.MEM_NM,
+          memberSno: locker.MEM_SNO,
+          startDate: locker.LOCKR_USE_S_DATE,
+          endDate: locker.LOCKR_USE_E_DATE,
+          memo: locker.MEMO,
+          buyEventSno: locker.BUY_EVENT_SNO
         }
         
         // CRITICAL DEBUG: Verify actualHeight is in the transformed object
