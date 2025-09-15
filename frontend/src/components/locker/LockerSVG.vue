@@ -288,8 +288,8 @@
         :y="logicalDimensions.height / 2"
         text-anchor="middle"
         dominant-baseline="middle"
-        :font-size="fontSize * 2.5"
-        fill="#6B7280"
+        :font-size="fontSize * 1.8"
+        fill="#374151"
         font-weight="600"
         style="user-select: none; pointer-events: none;"
       >
@@ -303,8 +303,8 @@
       <path
         v-if="props.lockerStatus.startDate && props.lockerStatus.endDate"
         :d="`
-          M 0 ${logicalDimensions.height - 7 * LOCKER_VISUAL_SCALE}
-          L ${logicalDimensions.width} ${logicalDimensions.height - 7 * LOCKER_VISUAL_SCALE}
+          M 0 ${logicalDimensions.height - 8 * LOCKER_VISUAL_SCALE}
+          L ${logicalDimensions.width} ${logicalDimensions.height - 8 * LOCKER_VISUAL_SCALE}
           L ${logicalDimensions.width} ${logicalDimensions.height - cornerRadius}
           Q ${logicalDimensions.width} ${logicalDimensions.height} ${logicalDimensions.width - cornerRadius} ${logicalDimensions.height}
           L ${cornerRadius} ${logicalDimensions.height}
@@ -601,19 +601,19 @@ const lockerFill = computed(() => {
         const endDate = new Date(props.lockerStatus.endDate)
         const now = new Date()
         if (endDate < now) {
-          return '#FEE2E2' // 기존 프로젝트 만료 배경색 (CSS: --locker-expired-bg)
+          return '#FCA5A5' // 진한 빨간색 배경 (만료)
         }
       }
-      // 만료 임박 (7일 이내) - 사용중과 동일한 색상 사용
+      // 만료 임박 (7일 이내)
       if (isExpiringSoon()) {
-        return '#FEF3C7' // 기존 프로젝트 사용중 배경색 (CSS: --locker-occupied-bg)
+        return '#FDBA74' // 진한 주황색 배경 (만료 임박)
       }
       // 정상 사용 중
-      return '#FEF3C7' // 기존 프로젝트 사용중 배경색 (CSS: --locker-occupied-bg)
+      return '#FDE047' // 진한 노란색 배경 (사용중)
     }
     // 사용불가 락커 (lockrStat이 '02'인 경우)
     if (props.lockerStatus?.lockrStat === '02') {
-      return '#F3F4F6' // 기존 프로젝트 정비중 배경색 (CSS: --locker-maintenance-bg)
+      return '#D1D5DB' // 진한 회색 배경 (정비중)
     }
     // 미사용 락커
     return '#FFFFFF' // 흰색
@@ -1103,14 +1103,14 @@ const isExpiringSoon = () => {
 }
 
 const getDateAreaColor = () => {
-  // Date area background color - 기존 프로젝트 진한 색상 사용
+  // Date area background color - 더 진하고 선명한 색상 사용
   if (props.lockerStatus?.endDate) {
     const endDate = new Date(props.lockerStatus.endDate)
     const now = new Date()
-    if (endDate < now) return '#EF4444' // 기존 프로젝트 만료 색상 (CSS: --locker-expired)
+    if (endDate < now) return '#DC2626' // 진한 빨간색 (만료)
   }
-  if (isExpiringSoon()) return '#F59E0B' // 기존 프로젝트 사용중 색상 (CSS: --locker-occupied)
-  return '#F59E0B' // 기존 프로젝트 사용중 색상 (CSS: --locker-occupied)
+  if (isExpiringSoon()) return '#EA580C' // 진한 주황색 (만료 임박)
+  return '#D97706' // 진한 노란색 (사용중)
 }
 
 const handleClick = (e: MouseEvent) => {
