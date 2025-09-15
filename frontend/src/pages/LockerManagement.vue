@@ -996,9 +996,9 @@ const loadZones = async () => {
 const loadLockerStatuses = async () => {
   try {
     console.log('[loadLockerStatuses] Loading locker statuses...')
-    console.log('[loadLockerStatuses] API URL:', `${API_BASE_URL}/api/lockrs/status/all`)
+    console.log('[loadLockerStatuses] API URL:', `${API_BASE_URL}/lockrs/status/all`)
 
-    const response = await fetch(`${API_BASE_URL}/api/lockrs/status/all`)
+    const response = await fetch(`${API_BASE_URL}/lockrs/status/all`)
     console.log('[loadLockerStatuses] Response status:', response.status)
 
     if (!response.ok) {
