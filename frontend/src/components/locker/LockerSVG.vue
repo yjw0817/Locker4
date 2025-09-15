@@ -266,14 +266,14 @@
     <!-- LockerManagement 페이지의 락커 번호 표시 -->
     <!-- 사용중인 락커: 왼쪽 상단에 작게 -->
     <text
-      v-if="props.isManagementPage && viewMode === 'front' && props.locker.lockrNo && props.lockerStatus?.MEM_NM"
-      :x="4 * LOCKER_VISUAL_SCALE"
-      :y="6 * LOCKER_VISUAL_SCALE"
+      v-if="props.isManagementPage && viewMode === 'front' && props.locker.lockrNo && props.lockerStatus?.memberName"
+      :x="3 * LOCKER_VISUAL_SCALE"
+      :y="5 * LOCKER_VISUAL_SCALE"
       text-anchor="start"
       dominant-baseline="middle"
-      :font-size="fontSize * 1.2"
-      fill="#1F2937"
-      font-weight="700"
+      :font-size="fontSize * 0.8"
+      fill="#6B7280"
+      font-weight="600"
       class="locker-number-top"
       style="user-select: none; pointer-events: none;"
     >
@@ -281,72 +281,57 @@
     </text>
 
     <!-- LockerManagement 페이지의 빈 락커: 중앙에 깔끔한 도시적 스타일 -->
-    <g v-if="props.isManagementPage && viewMode === 'front' && props.locker.lockrNo && !props.lockerStatus?.MEM_NM">
+    <g v-if="props.isManagementPage && viewMode === 'front' && props.locker.lockrNo && !props.lockerStatus?.memberName">
       <!-- 메인 번호 (단순하고 세련된 스타일) -->
       <text
         :x="logicalDimensions.width / 2"
         :y="logicalDimensions.height / 2"
         text-anchor="middle"
         dominant-baseline="middle"
-        :font-size="fontSize * 2.0"
-        fill="#AAAAAA"
-        font-weight="500"
-        style="user-select: none; pointer-events: none; font-family: 'Open Sans', sans-serif;"
+        :font-size="fontSize * 2.8"
+        fill="#9CA3AF"
+        font-weight="600"
+        style="user-select: none; pointer-events: none;"
       >
         {{ props.locker.lockrNo !== undefined && props.locker.lockrNo !== null ? props.locker.lockrNo : (props.locker.lockrLabel || props.locker.number) }}
       </text>
     </g>
-    
+
     <!-- LockerManagement 페이지의 회원 정보 표시 (사용 중인 락커만) -->
-    <g v-if="props.isManagementPage && props.lockerStatus?.MEM_NM && viewMode === 'front'">
-      <!-- 회원 이름 (중앙에 표시) -->
+    <g v-if="props.isManagementPage && props.lockerStatus?.memberName && viewMode === 'front'">
+      <!-- 회원 이름 (중앙에 크게 표시) -->
       <text
-        :x="logicalDimensions.width / 2"
-        :y="logicalDimensions.height / 2 - 15"
-        text-anchor="middle"
-        dominant-baseline="middle"
-        :font-size="fontSize * 1.1"
-        fill="#1F2937"
-        font-weight="700"
-        style="user-select: none; pointer-events: none;"
-      >
-        {{ props.lockerStatus.MEM_NM }}
-      </text>
-      
-      <!-- 사용 시작일 -->
-      <text
-        v-if="props.lockerStatus.LOCKR_USE_S_DATE"
         :x="logicalDimensions.width / 2"
         :y="logicalDimensions.height / 2"
         text-anchor="middle"
         dominant-baseline="middle"
-        font-size="9"
-        fill="#059669"
-        font-weight="500"
+        :font-size="fontSize * 1.8"
+        fill="#111827"
+        font-weight="700"
         style="user-select: none; pointer-events: none;"
       >
-        시작: {{ formatDate(props.lockerStatus.LOCKR_USE_S_DATE) }}
+        {{ props.lockerStatus.memberName }}
       </text>
-      
-      <!-- 사용 종료일 -->
+
+      <!-- 사용 기간 (하단에 표시) -->
       <text
-        v-if="props.lockerStatus.LOCKR_USE_E_DATE"
+        v-if="props.lockerStatus.startDate && props.lockerStatus.endDate"
         :x="logicalDimensions.width / 2"
-        :y="logicalDimensions.height / 2 + 15"
+        :y="logicalDimensions.height - 8 * LOCKER_VISUAL_SCALE"
         text-anchor="middle"
         dominant-baseline="middle"
-        font-size="9"
-        :fill="isExpiringSoon() ? '#DC2626' : '#6B7280'"
+        :font-size="fontSize * 0.85"
+        :fill="isExpiringSoon() ? '#DC2626' : '#4B5563'"
         font-weight="500"
         style="user-select: none; pointer-events: none;"
       >
-        종료: {{ formatDate(props.lockerStatus.LOCKR_USE_E_DATE) }}
+        {{ formatDate(props.lockerStatus.startDate) }} ~ {{ formatDate(props.lockerStatus.endDate) }}
       </text>
     </g>
     
     <!-- LockerManagement 페이지의 메모 아이콘 표시 (메모가 있는 락커만) -->
     <image
-      v-if="props.isManagementPage && props.lockerStatus?.MEMO && viewMode === 'front'"
+      v-if="props.isManagementPage && props.lockerStatus?.memo && viewMode === 'front'"
       :x="logicalDimensions.width - 20"
       :y="5"
       width="16"
@@ -591,20 +576,35 @@ const cornerRadius = computed(() => {
 const lockerFill = computed(() => {
   // 에러가 있는 락커는 빨간색 배경
   if (props.hasError || props.locker.hasError) return '#fee2e2'
-  
-  // LockerManagement 페이지에서는 색상 사용하지 않음 - 투명하게 설정
+
+  // LockerManagement 페이지에서 정면배치 모드일 때 상태별 색상 표시
+  if (props.isManagementPage && props.viewMode === 'front') {
+    // 사용 중인 락커
+    if (props.lockerStatus?.memberName) {
+      // 만료 임박 (7일 이내)
+      if (isExpiringSoon()) {
+        return '#FEE2E2' // 연한 빨간색
+      }
+      // 정상 사용 중
+      return '#E0F2FE' // 연한 파란색
+    }
+    // 빈 락커
+    return '#F3F4F6' // 연한 회색
+  }
+
+  // LockerManagement 페이지의 평면배치 모드에서는 투명
   if (props.isManagementPage) {
     return 'transparent'
   }
-  
+
   // Use locker status color if available (from database)
   if (props.lockerStatus?.color) {
     return props.lockerStatus.color
   }
-  
+
   // Get base color based on locker type or status
   let baseColor = '#FFFFFF'
-  
+
   if (props.locker.color) {
     // Use locker type color with opacity
     baseColor = props.locker.color + '20' // 20 is hex for ~12% opacity
@@ -618,7 +618,7 @@ const lockerFill = computed(() => {
       default: baseColor = '#FFFFFF'
     }
   }
-  
+
   // Apply hover/selection effects while preserving base color
   if (props.isSelected) {
     // For selection, slightly lighten the base color or add blue tint
@@ -629,7 +629,7 @@ const lockerFill = computed(() => {
     // For status-based colors, add a slight blue tint
     return baseColor === '#FFFFFF' ? '#E6F4FF' : baseColor
   }
-  
+
   if (isHovered.value) {
     // For hover, similar approach
     if (props.locker.color) {
@@ -637,7 +637,7 @@ const lockerFill = computed(() => {
     }
     return baseColor === '#FFFFFF' ? '#F0F8FF' : baseColor
   }
-  
+
   return baseColor
 })
 
@@ -1066,10 +1066,10 @@ const formatDate = (dateString: string) => {
 
 // 만료 임박 여부 확인 함수
 const isExpiringSoon = () => {
-  if (!props.lockerStatus?.LOCKR_USE_E_DATE) return false
-  
+  if (!props.lockerStatus?.endDate) return false
+
   const now = new Date()
-  const endDate = new Date(props.lockerStatus.LOCKR_USE_E_DATE)
+  const endDate = new Date(props.lockerStatus.endDate)
   const daysUntilExpiry = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
   
   return daysUntilExpiry <= 7 && daysUntilExpiry >= 0
