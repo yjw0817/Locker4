@@ -867,11 +867,8 @@ const dynamicCanvasHeight = ref(700)
 
 // 줌 및 팬 관련 상태
 const zoomLevel = ref(1)  // 현재 줌 레벨 (1 = 100%)
-// 최소 줌: 뷰포트가 항상 캔버스로 채워지도록 계산
-const minZoom = Math.max(
-  INITIAL_VIEWPORT_WIDTH / ACTUAL_CANVAS_WIDTH,
-  INITIAL_VIEWPORT_HEIGHT / ACTUAL_CANVAS_HEIGHT
-)  // 0.5 (50%) - 빈 공간이 보이지 않는 최소 줌
+// 최소 줌을 100%로 제한
+const minZoom = 1.0  // 최소 1배 (100%) - 줌아웃 불가
 // 최대 줌은 500%까지 허용
 const maxZoom = 5.0  // 최대 5배 (500%)
 const panOffset = ref({ x: 0, y: 0 })  // 팬 오프셋
