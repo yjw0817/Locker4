@@ -267,11 +267,11 @@
     <!-- 사용중인 락커: 왼쪽 상단에 작게 -->
     <text
       v-if="props.isManagementPage && viewMode === 'front' && props.locker.lockrNo && props.lockerStatus?.memberName"
-      :x="3 * LOCKER_VISUAL_SCALE"
-      :y="5 * LOCKER_VISUAL_SCALE"
+      :x="5 * LOCKER_VISUAL_SCALE"
+      :y="7 * LOCKER_VISUAL_SCALE"
       text-anchor="start"
       dominant-baseline="middle"
-      :font-size="fontSize * 0.8"
+      :font-size="fontSize * 1.1"
       fill="#6B7280"
       font-weight="600"
       class="locker-number-top"
@@ -299,10 +299,25 @@
 
     <!-- LockerManagement 페이지의 회원 정보 표시 (사용 중인 락커만) -->
     <g v-if="props.isManagementPage && props.lockerStatus?.memberName && viewMode === 'front'">
+      <!-- 하단 날짜 영역 배경 (하단 모서리만 둥글게) -->
+      <path
+        v-if="props.lockerStatus.startDate && props.lockerStatus.endDate"
+        :d="`
+          M 0 ${logicalDimensions.height - 14 * LOCKER_VISUAL_SCALE}
+          L ${logicalDimensions.width} ${logicalDimensions.height - 14 * LOCKER_VISUAL_SCALE}
+          L ${logicalDimensions.width} ${logicalDimensions.height - cornerRadius}
+          Q ${logicalDimensions.width} ${logicalDimensions.height} ${logicalDimensions.width - cornerRadius} ${logicalDimensions.height}
+          L ${cornerRadius} ${logicalDimensions.height}
+          Q 0 ${logicalDimensions.height} 0 ${logicalDimensions.height - cornerRadius}
+          Z
+        `"
+        :fill="isExpiringSoon() ? '#DC2626' : '#0EA5E9'"
+      />
+
       <!-- 회원 이름 (중앙에 크게 표시) -->
       <text
         :x="logicalDimensions.width / 2"
-        :y="logicalDimensions.height / 2"
+        :y="logicalDimensions.height / 2 - 5"
         text-anchor="middle"
         dominant-baseline="middle"
         :font-size="fontSize * 1.8"
@@ -317,12 +332,12 @@
       <text
         v-if="props.lockerStatus.startDate && props.lockerStatus.endDate"
         :x="logicalDimensions.width / 2"
-        :y="logicalDimensions.height - 8 * LOCKER_VISUAL_SCALE"
+        :y="logicalDimensions.height - 7 * LOCKER_VISUAL_SCALE"
         text-anchor="middle"
         dominant-baseline="middle"
-        :font-size="fontSize * 0.85"
-        :fill="isExpiringSoon() ? '#DC2626' : '#4B5563'"
-        font-weight="500"
+        :font-size="fontSize * 0.9"
+        fill="#FFFFFF"
+        font-weight="600"
         style="user-select: none; pointer-events: none;"
       >
         {{ formatDate(props.lockerStatus.startDate) }} ~ {{ formatDate(props.lockerStatus.endDate) }}
@@ -1058,7 +1073,7 @@ const getChildDisplayNumber = (childLocker: any) => {
 const formatDate = (dateString: string) => {
   if (!dateString) return ''
   const date = new Date(dateString)
-  const year = date.getFullYear()
+  const year = String(date.getFullYear()).slice(-2) // 마지막 2자리만 (YY)
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   return `${year}.${month}.${day}`
