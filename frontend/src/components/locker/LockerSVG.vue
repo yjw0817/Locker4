@@ -322,7 +322,7 @@
         dominant-baseline="middle"
         :font-size="fontSize * 1.1"
         fill="#374151"
-        font-weight="300"
+        font-weight="normal"
         style="user-select: none; pointer-events: none;"
       >
         {{ props.lockerStatus.memberName }}
@@ -332,7 +332,7 @@
       <text
         v-if="props.lockerStatus.startDate && props.lockerStatus.endDate"
         :x="logicalDimensions.width / 2"
-        :y="logicalDimensions.height - 3 * LOCKER_VISUAL_SCALE - 2"
+        :y="logicalDimensions.height - 3 * LOCKER_VISUAL_SCALE - 4"
         text-anchor="middle"
         dominant-baseline="middle"
         :font-size="fontSize * 0.7"
