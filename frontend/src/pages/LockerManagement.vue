@@ -7910,14 +7910,28 @@ const handleLockerClick = (locker: any) => {
     const statusData = lockerStatuses.value.get(locker.lockrCd)
     console.log('[DEBUG] 상태 데이터:', statusData)
 
-    selectedLockerData.value = {
-      userName: statusData?.memberName || locker.memberName || '',
-      userPhone: statusData?.userPhone || locker.userPhone || '',
-      startDate: statusData?.startDate || locker.startDate || '',
-      endDate: statusData?.endDate || locker.endDate || '',
-      usage: statusData?.memo || locker.memo || '',
-      memberSno: statusData?.memberSno || locker.memberSno || '',
-      voucherName: statusData?.voucherName || locker.voucherName || ''  // 이용권 정보 추가
+    // statusData가 없고 locker 자체에도 회원 정보가 없는 경우 모든 필드를 초기화
+    if (!statusData && !locker.memberName && !locker.memberSno) {
+      selectedLockerData.value = {
+        userName: '',
+        userPhone: '',
+        startDate: '',
+        endDate: '',
+        usage: '',
+        memberSno: '',
+        voucherName: ''
+      }
+    } else {
+      // 기존 데이터가 있는 경우 해당 데이터 사용
+      selectedLockerData.value = {
+        userName: statusData?.memberName || locker.memberName || '',
+        userPhone: statusData?.userPhone || locker.userPhone || '',
+        startDate: statusData?.startDate || locker.startDate || '',
+        endDate: statusData?.endDate || locker.endDate || '',
+        usage: statusData?.memo || locker.memo || '',
+        memberSno: statusData?.memberSno || locker.memberSno || '',
+        voucherName: statusData?.voucherName || locker.voucherName || ''  // 이용권 정보 추가
+      }
     }
 
     console.log('[DEBUG] 최종 selectedLockerData:', selectedLockerData.value)
