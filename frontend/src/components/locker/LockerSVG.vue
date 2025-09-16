@@ -272,8 +272,8 @@
       text-anchor="start"
       dominant-baseline="middle"
       :font-size="fontSize * 1.1"
-      fill="#6B7280"
-      font-weight="600"
+      fill="#374151"
+      font-weight="700"
       class="locker-number-top"
       style="user-select: none; pointer-events: none;"
     >
@@ -321,7 +321,7 @@
         text-anchor="middle"
         dominant-baseline="middle"
         :font-size="fontSize * 1.5"
-        fill="#6B7280"
+        fill="#374151"
         font-weight="700"
         style="user-select: none; pointer-events: none;"
       >
