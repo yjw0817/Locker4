@@ -792,7 +792,6 @@ router.put('/:lockrCd/assign', async (req, res) => {
       SET
         MEM_NM = ?,
         MEM_SNO = ?,
-        MEM_TELNO = ?,
         LOCKR_USE_S_DATE = ?,
         LOCKR_USE_E_DATE = ?,
         MEMO = ?,
@@ -806,7 +805,6 @@ router.put('/:lockrCd/assign', async (req, res) => {
     const [result] = await connection.query(sql, [
       userName,
       memberSno,
-      userPhone || null,
       startDate,
       endDate,
       memo || null,
