@@ -322,7 +322,7 @@
         dominant-baseline="middle"
         :font-size="fontSize * 1.1"
         fill="#374151"
-        font-weight="700"
+        font-weight="600"
         style="user-select: none; pointer-events: none;"
       >
         {{ props.lockerStatus.memberName }}
