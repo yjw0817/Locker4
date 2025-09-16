@@ -7168,7 +7168,13 @@ const countCloseCornerPairs = (locker1: any, locker2: any, threshold: number): n
       }
     }
   }
-  
+
+  // Debug: Log count for L18-L19
+  if ((locker1.number === 'L18' && locker2.number === 'L19') ||
+      (locker1.number === 'L19' && locker2.number === 'L18')) {
+    console.log(`[DEBUG] L18-L19 close corner pairs count: ${count}`)
+  }
+
   return count
 }
 
@@ -7188,9 +7194,19 @@ const isAdjacent = (locker1: any, locker2: any): boolean => {
 // Connected = 1+ corner pair < 43px OR (2+ corner pairs < 43px AND different direction)
 const isConnected = (locker1: any, locker2: any): boolean => {
   const closeCornerPairs = countCloseCornerPairs(locker1, locker2, CORNER_THRESHOLD)
-  
+
+  // Debug: Log isConnected result for L18-L19
+  if ((locker1.number === 'L18' && locker2.number === 'L19') ||
+      (locker1.number === 'L19' && locker2.number === 'L18')) {
+    console.log(`[DEBUG] isConnected(L18-L19): closeCornerPairs=${closeCornerPairs}`)
+  }
+
   if (closeCornerPairs >= 1) {
     // Connected if at least 1 corner pair is close
+    if ((locker1.number === 'L18' && locker2.number === 'L19') ||
+        (locker1.number === 'L19' && locker2.number === 'L18')) {
+      console.log(`[DEBUG] L18-L19 connected: TRUE (${closeCornerPairs} >= 1)`)
+    }
     return true
   }
   
@@ -7237,7 +7253,14 @@ const groupNearbyLockers = (lockersToGroup?: any[]) => {
         const adjacent = isAdjacent(current, other)
         const connected = isConnected(current, other)
         const shouldGroup = adjacent || connected
-        
+
+        // Debug: Log L18-L19 grouping decisions
+        if ((current.number === 'L18' && other.number === 'L19') ||
+            (current.number === 'L19' && other.number === 'L18')) {
+          console.log(`[DEBUG] Grouping check: ${current.number} vs ${other.number}`)
+          console.log(`[DEBUG] - adjacent: ${adjacent}, connected: ${connected}, shouldGroup: ${shouldGroup}`)
+        }
+
         // Checking if lockers should group
         
         if (shouldGroup) {
