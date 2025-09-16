@@ -320,7 +320,7 @@
         :y="logicalDimensions.height / 2 + 1 - 12"
         text-anchor="middle"
         dominant-baseline="middle"
-        :font-size="fontSize * 1.3"
+        :font-size="fontSize * 1.1"
         fill="#374151"
         font-weight="700"
         style="user-select: none; pointer-events: none;"
