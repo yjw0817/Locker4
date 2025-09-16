@@ -1,5 +1,5 @@
 <template>
-  <div v-if="isOpen" class="modal-overlay" @click="handleOverlayClick">
+  <div v-if="isOpen" class="modal-overlay">
     <div class="modal-container" @click.stop>
       <!-- Header -->
       <div class="modal-header">
@@ -256,11 +256,12 @@ const loadMemberVouchers = async (memSno: string) => {
   }
 }
 
-const handleOverlayClick = (e: MouseEvent) => {
-  if (e.target === e.currentTarget) {
-    close()
-  }
-}
+// 오버레이 클릭으로 닫기 비활성화됨
+// const handleOverlayClick = (e: MouseEvent) => {
+//   if (e.target === e.currentTarget) {
+//     close()
+//   }
+// }
 
 const handleAssign = () => {
   const assignmentData = {
