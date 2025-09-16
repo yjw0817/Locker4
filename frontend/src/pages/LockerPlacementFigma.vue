@@ -7078,7 +7078,7 @@ const testGroupingWithKnownData = () => {
 // ==========================================
 
 // ✅ CORNER-BASED THRESHOLD - New grouping definition
-const CORNER_THRESHOLD = 60 // pixels - threshold for corner proximity (updated from 43px)
+const CORNER_THRESHOLD = 60 // pixels - threshold for corner proximity
 
 // Type definition for points
 interface Point {
@@ -7140,10 +7140,10 @@ const countCloseCornerPairs = (locker1: any, locker2: any, threshold: number): n
   for (const c1 of corners1) {
     for (const c2 of corners2) {
       const distance = Math.sqrt(
-        Math.pow(c1.x - c2.x, 2) + 
+        Math.pow(c1.x - c2.x, 2) +
         Math.pow(c1.y - c2.y, 2)
       )
-      if (distance < threshold) {
+      if (distance <= threshold) {
         count++
       }
     }
