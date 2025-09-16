@@ -274,6 +274,7 @@
       :font-size="fontSize * 1.1"
       fill="#374151"
       font-weight="800"
+      font-family="Pretendard, 'Noto Sans KR', sans-serif"
       class="locker-number-top"
       style="user-select: none; pointer-events: none;"
     >
@@ -337,7 +338,7 @@
         dominant-baseline="middle"
         :font-size="fontSize * 0.7"
         fill="#FFFFFF"
-        font-weight="450"
+        font-weight="normal"
         style="user-select: none; pointer-events: none;"
       >
         {{ formatDate(props.lockerStatus.startDate) }} ~ {{ formatDate(props.lockerStatus.endDate) }}
