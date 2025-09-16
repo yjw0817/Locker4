@@ -494,11 +494,11 @@ watch(() => props.lockerData, (newData) => {
   color: #4C1D95;
   padding: 4px 12px;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 13px;  /* 14px에서 13px로 작게 */
   font-weight: 700;
   margin-right: 12px;
   position: relative;
-  top: -2px;  /* 2px 위로 */
+  top: -3px;  /* 2px에서 3px로 더 위로 */
   left: -1px; /* 1px 좌측으로 */
 }
 
@@ -506,6 +506,8 @@ watch(() => props.lockerData, (newData) => {
   font-size: 18px;
   font-weight: 600;
   color: #111827;
+  flex: 1;  /* 남은 공간 차지 */
+  text-align: center;  /* 중앙 정렬 */
 }
 
 .close-button {
@@ -620,7 +622,7 @@ watch(() => props.lockerData, (newData) => {
   color: #374151;
   margin-bottom: 8px;
   position: relative;
-  top: 1px;  /* 1px 아래로 */
+  top: 2px;  /* 1px에서 2px로 더 아래로 */
 }
 
 .usage-select-wrapper {
