@@ -332,12 +332,12 @@
       <text
         v-if="props.lockerStatus.startDate && props.lockerStatus.endDate"
         :x="logicalDimensions.width / 2"
-        :y="logicalDimensions.height - 3 * LOCKER_VISUAL_SCALE + 2"
+        :y="logicalDimensions.height - 3 * LOCKER_VISUAL_SCALE - 1"
         text-anchor="middle"
         dominant-baseline="middle"
         :font-size="fontSize * 0.7"
         fill="#FFFFFF"
-        font-weight="600"
+        font-weight="450"
         style="user-select: none; pointer-events: none;"
       >
         {{ formatDate(props.lockerStatus.startDate) }} ~ {{ formatDate(props.lockerStatus.endDate) }}
