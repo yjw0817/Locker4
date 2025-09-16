@@ -7078,7 +7078,7 @@ const testGroupingWithKnownData = () => {
 // ==========================================
 
 // ✅ CORNER-BASED THRESHOLD - New grouping definition
-const CORNER_THRESHOLD = 55 // pixels - threshold for corner proximity (updated from 43px)
+const CORNER_THRESHOLD = 60 // pixels - threshold for corner proximity (updated from 43px)
 
 // Type definition for points
 interface Point {
