@@ -271,7 +271,7 @@
       :y="5 * LOCKER_VISUAL_SCALE - 1"
       text-anchor="start"
       dominant-baseline="middle"
-      :font-size="fontSize * 1.1"
+      :font-size="fontSize * 1.0"
       fill="#374151"
       font-weight="800"
       font-family="Pretendard, 'Noto Sans KR', sans-serif"
@@ -318,10 +318,10 @@
       <!-- 회원 이름 (중앙에 표시) -->
       <text
         :x="logicalDimensions.width / 2"
-        :y="logicalDimensions.height / 2 + 1 - 12 + 3 + 1 + 1 + 1"
+        :y="logicalDimensions.height / 2 + 1 - 12 + 3 + 1 + 1 + 1 + 1"
         text-anchor="middle"
         dominant-baseline="middle"
-        :font-size="fontSize * 1.1"
+        :font-size="fontSize * 1.0"
         fill="#374151"
         font-weight="normal"
         style="user-select: none; pointer-events: none;"
