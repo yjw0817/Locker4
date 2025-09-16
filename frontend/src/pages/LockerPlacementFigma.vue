@@ -7133,8 +7133,23 @@ const getMinCornerDistance = (locker1: any, locker2: any): number => {
 
 // Count corner pairs within threshold distance
 const countCloseCornerPairs = (locker1: any, locker2: any, threshold: number): number => {
+  // Debug: Log when L18 or L19 are being compared
+  if ((locker1.number === 'L18' || locker1.number === 'L19') ||
+      (locker2.number === 'L18' || locker2.number === 'L19')) {
+    console.log(`[DEBUG] Comparing ${locker1.number} vs ${locker2.number}`)
+  }
+
   const corners1 = getLockerCorners(locker1)
   const corners2 = getLockerCorners(locker2)
+
+  // Debug: Check if corners are being calculated correctly for L18/L19
+  if (locker1.number === 'L18' || locker1.number === 'L19') {
+    console.log(`[DEBUG] ${locker1.number} corners:`, corners1)
+  }
+  if (locker2.number === 'L18' || locker2.number === 'L19') {
+    console.log(`[DEBUG] ${locker2.number} corners:`, corners2)
+  }
+
   let count = 0
   
   for (const c1 of corners1) {
@@ -7143,6 +7158,11 @@ const countCloseCornerPairs = (locker1: any, locker2: any, threshold: number): n
         Math.pow(c1.x - c2.x, 2) +
         Math.pow(c1.y - c2.y, 2)
       )
+      // Debug: Log distances for L18 and L19
+      if ((locker1.number === 'L18' && locker2.number === 'L19') ||
+          (locker1.number === 'L19' && locker2.number === 'L18')) {
+        console.log(`[DEBUG] Distance between L18-L19 corners: ${distance.toFixed(2)}px (threshold: ${threshold}px)`)
+      }
       if (distance <= threshold) {
         count++
       }
