@@ -7889,10 +7889,10 @@ const handleKeyUp = (event: KeyboardEvent) => {
   // }
 }
 
-// 락커 클릭 이벤트 핸들러 - 정면배치모드에서 팝업 표시
+// 락커 클릭 이벤트 핸들러 - 모든 모드에서 팝업 표시
 const handleLockerClick = (locker: any) => {
-  // 정면배치모드일 때만 팝업 표시
-  if (currentViewMode.value === 'front') {
+  // 모든 뷰 모드에서 팝업 표시 (관리 페이지이므로)
+  if (true) {
     console.log('[DEBUG] 락커 클릭됨:', locker)
     console.log('[DEBUG] 락커 코드:', locker.lockrCd)
     console.log('[DEBUG] lockerStatuses 크기:', lockerStatuses.value.size)
