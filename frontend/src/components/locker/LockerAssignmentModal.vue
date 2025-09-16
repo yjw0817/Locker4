@@ -493,7 +493,7 @@ watch(() => props.lockerData, (newData) => {
   padding: 4px 12px;
   border-radius: 6px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   margin-right: 12px;
 }
 
@@ -548,7 +548,7 @@ watch(() => props.lockerData, (newData) => {
 
 .user-name {
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   color: #111827;
   margin-bottom: 4px;
 }
