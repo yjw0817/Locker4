@@ -267,8 +267,8 @@
     <!-- 사용중인 락커: 왼쪽 상단에 작게 -->
     <text
       v-if="props.isManagementPage && viewMode === 'front' && props.locker.lockrNo && props.lockerStatus?.memberName"
-      :x="5 * LOCKER_VISUAL_SCALE"
-      :y="5 * LOCKER_VISUAL_SCALE"
+      :x="5 * LOCKER_VISUAL_SCALE - 2"
+      :y="5 * LOCKER_VISUAL_SCALE - 1"
       text-anchor="start"
       dominant-baseline="middle"
       :font-size="fontSize * 1.1"
