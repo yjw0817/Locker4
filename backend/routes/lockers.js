@@ -32,7 +32,7 @@ router.get('/', async (req, res) => {
         l.*,
         COALESCE(u.MEM_NM, l.MEM_NM) as MEM_NM,
         COALESCE(u.MEM_SNO, l.MEM_SNO) as MEM_SNO,
-        COALESCE(u.MEM_TELNO, l.MEM_TELNO) as MEM_TELNO,
+        u.MEM_TELNO as MEM_TELNO,
         COALESCE(u.BUY_EVENT_SNO, l.BUY_EVENT_SNO) as BUY_EVENT_SNO,
         u.SELL_EVENT_NM
       FROM lockrs l
