@@ -25,14 +25,15 @@ router.get('/', async (req, res) => {
     const { COMP_CD = 'C0001', BCOFF_CD = 'C0001F0020', parentOnly } = req.query;
 
     // Build dynamic query based on parentOnly parameter
-    // Join with cur_available_locker_user to get member information
+    // Get member information directly from lockrs table
+    // Only use cur_available_locker_user for additional member details if available
     let query = `
       SELECT
         l.*,
-        u.MEM_NM,
-        u.MEM_SNO,
-        u.MEM_TELNO,
-        u.BUY_EVENT_SNO,
+        COALESCE(u.MEM_NM, l.MEM_NM) as MEM_NM,
+        COALESCE(u.MEM_SNO, l.MEM_SNO) as MEM_SNO,
+        COALESCE(u.MEM_TELNO, l.MEM_TELNO) as MEM_TELNO,
+        COALESCE(u.BUY_EVENT_SNO, l.BUY_EVENT_SNO) as BUY_EVENT_SNO,
         u.SELL_EVENT_NM
       FROM lockrs l
       LEFT JOIN cur_available_locker_user u ON l.LOCKR_CD = u.LOCKR_CD
@@ -56,6 +57,15 @@ router.get('/', async (req, res) => {
       parent: r.PARENT_LOCKR_CD
     })));
 
+    // Debug: Show member data for each locker
+    console.log('[API Debug] Locker member data:');
+    rows.forEach(row => {
+      if (row.MEM_NM || row.MEM_SNO || row.BUY_EVENT_SNO) {
+        console.log(`  - Locker ${row.LOCKR_CD} (${row.LOCKR_LABEL}): Member=${row.MEM_NM}, SNO=${row.MEM_SNO}, BuyEventSNO=${row.BUY_EVENT_SNO}, SellEventNm=${row.SELL_EVENT_NM}`);
+      }
+    });
+    console.log(`[API Debug] Total lockers with member data: ${rows.filter(r => r.MEM_NM).length}`);
+
     // Ensure type codes are strings for consistency
     const processedRows = rows.map(row => ({
       ...row,
@@ -74,6 +84,43 @@ router.get('/', async (req, res) => {
       error: 'Failed to fetch lockers',
       details: error.message
     });
+  }
+});
+
+// Debug endpoint to check cur_available_locker_user
+router.get('/debug/member-data', async (req, res) => {
+  try {
+    const { COMP_CD = 'C0001', BCOFF_CD = 'C0001F0020' } = req.query;
+
+    // Check what's in cur_available_locker_user
+    const [userRows] = await pool.query(
+      'SELECT * FROM cur_available_locker_user WHERE LOCKR_CD IS NOT NULL ORDER BY LOCKR_CD',
+      []
+    );
+
+    console.log('[DEBUG] cur_available_locker_user data:');
+    userRows.forEach(row => {
+      console.log(`  - LOCKR_CD: ${row.LOCKR_CD}, MEM_NM: ${row.MEM_NM}, BUY_EVENT_SNO: ${row.BUY_EVENT_SNO}`);
+    });
+
+    // Also check lockrs table data
+    const [lockerRows] = await pool.query(
+      'SELECT LOCKR_CD, LOCKR_LABEL, LOCKR_STAT, MEM_SNO, LOCKR_USE_S_DATE, LOCKR_USE_E_DATE, BUY_EVENT_SNO FROM lockrs WHERE COMP_CD = ? AND BCOFF_CD = ? AND MEM_SNO IS NOT NULL',
+      [COMP_CD, BCOFF_CD]
+    );
+
+    console.log('[DEBUG] lockrs table member data:');
+    lockerRows.forEach(row => {
+      console.log(`  - LOCKR_CD: ${row.LOCKR_CD}, MEM_SNO: ${row.MEM_SNO}, BUY_EVENT_SNO: ${row.BUY_EVENT_SNO}, STAT: ${row.LOCKR_STAT}`);
+    });
+
+    res.json({
+      cur_available_locker_user: userRows,
+      lockrs_with_members: lockerRows
+    });
+  } catch (error) {
+    console.error('[DEBUG] Error checking member data:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -719,12 +766,33 @@ router.put('/:lockrCd/assign', async (req, res) => {
     });
   }
   
+  const connection = await pool.getConnection();
+
   try {
+    await connection.beginTransaction();
+
+    // 1. 락커 번호 조회
+    const [lockerInfo] = await connection.query(
+      'SELECT LOCKR_NO FROM lockrs WHERE LOCKR_CD = ?',
+      [lockrCd]
+    );
+
+    if (!lockerInfo.length) {
+      await connection.rollback();
+      return res.status(404).json({
+        error: '해당 락커를 찾을 수 없습니다.'
+      });
+    }
+
+    const lockerNo = lockerInfo[0].LOCKR_NO;
+
+    // 2. lockrs 테이블 업데이트
     const sql = `
       UPDATE lockrs
-      SET 
+      SET
         MEM_NM = ?,
         MEM_SNO = ?,
+        MEM_TELNO = ?,
         LOCKR_USE_S_DATE = ?,
         LOCKR_USE_E_DATE = ?,
         MEMO = ?,
@@ -734,30 +802,52 @@ router.put('/:lockrCd/assign', async (req, res) => {
         BUY_EVENT_SNO = ?
       WHERE LOCKR_CD = ?
     `;
-    
-    const [result] = await pool.query(sql, [
+
+    const [result] = await connection.query(sql, [
       userName,
       memberSno,
+      userPhone || null,
       startDate,
       endDate,
       memo || null,
       voucherId || usage || null,
       lockrCd
     ]);
-    
+
     console.log(`[API] 락커 배정 결과: ${result.affectedRows}개 업데이트됨`);
-    
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ 
-        error: '해당 락커를 찾을 수 없습니다.' 
-      });
+
+    // 3. BUY_EVENT_MGMT_TBL 업데이트 (voucherId가 있을 경우에만)
+    if (voucherId) {
+      const updateBuyEventSql = `
+        UPDATE BUY_EVENT_MGMT_TBL
+        SET
+          LOCKR_NO = ?,
+          EXR_S_DATE = ?,
+          EXR_E_DATE = ?,
+          MOD_ID = 'SYSTEM',
+          MOD_DATETM = NOW(),
+          EVENT_STAT = '00'
+        WHERE BUY_EVENT_SNO = ?
+      `;
+
+      const [buyEventResult] = await connection.query(updateBuyEventSql, [
+        lockerNo,
+        startDate,
+        endDate,
+        voucherId
+      ]);
+
+      console.log(`[API] BUY_EVENT_MGMT_TBL 업데이트: ${buyEventResult.affectedRows}개, BUY_EVENT_SNO=${voucherId}`);
     }
-    
-    res.json({ 
-      success: true, 
-      message: '락커가 성공적으로 배정되었습니다.' 
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      message: '락커가 성공적으로 배정되었습니다.'
     });
   } catch (error) {
+    await connection.rollback();
     console.error('[API] 락커 배정 오류:', error);
     res.status(500).json({ 
       error: '락커 배정 중 오류가 발생했습니다.',
