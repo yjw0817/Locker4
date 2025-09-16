@@ -273,7 +273,7 @@
       dominant-baseline="middle"
       :font-size="fontSize * 1.1"
       fill="#374151"
-      font-weight="700"
+      font-weight="800"
       class="locker-number-top"
       style="user-select: none; pointer-events: none;"
     >
@@ -317,12 +317,12 @@
       <!-- 회원 이름 (중앙에 표시) -->
       <text
         :x="logicalDimensions.width / 2"
-        :y="logicalDimensions.height / 2 + 1 - 12"
+        :y="logicalDimensions.height / 2 + 1 - 12 + 3"
         text-anchor="middle"
         dominant-baseline="middle"
         :font-size="fontSize * 1.1"
         fill="#374151"
-        font-weight="normal"
+        font-weight="700"
         style="user-select: none; pointer-events: none;"
       >
         {{ props.lockerStatus.memberName }}
@@ -332,7 +332,7 @@
       <text
         v-if="props.lockerStatus.startDate && props.lockerStatus.endDate"
         :x="logicalDimensions.width / 2"
-        :y="logicalDimensions.height - 3 * LOCKER_VISUAL_SCALE - 4"
+        :y="logicalDimensions.height - 3 * LOCKER_VISUAL_SCALE + 2"
         text-anchor="middle"
         dominant-baseline="middle"
         :font-size="fontSize * 0.7"
