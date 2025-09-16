@@ -304,8 +304,8 @@
       <path
         v-if="props.lockerStatus.startDate && props.lockerStatus.endDate"
         :d="`
-          M 0 ${logicalDimensions.height - 7 * LOCKER_VISUAL_SCALE}
-          L ${logicalDimensions.width} ${logicalDimensions.height - 7 * LOCKER_VISUAL_SCALE}
+          M 0 ${logicalDimensions.height - 7 * LOCKER_VISUAL_SCALE + 1}
+          L ${logicalDimensions.width} ${logicalDimensions.height - 7 * LOCKER_VISUAL_SCALE + 1}
           L ${logicalDimensions.width} ${logicalDimensions.height - cornerRadius}
           Q ${logicalDimensions.width} ${logicalDimensions.height} ${logicalDimensions.width - cornerRadius} ${logicalDimensions.height}
           L ${cornerRadius} ${logicalDimensions.height}
@@ -318,7 +318,7 @@
       <!-- 회원 이름 (중앙에 표시) -->
       <text
         :x="logicalDimensions.width / 2"
-        :y="logicalDimensions.height / 2 + 1 - 12 + 3"
+        :y="logicalDimensions.height / 2 + 1 - 12 + 3 + 1"
         text-anchor="middle"
         dominant-baseline="middle"
         :font-size="fontSize * 1.1"
