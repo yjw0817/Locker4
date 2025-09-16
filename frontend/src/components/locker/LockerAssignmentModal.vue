@@ -287,13 +287,13 @@ const handleAssignToRandom = () => {
 // Member search methods
 const handleSearch = () => {
   // 실시간 검색을 위한 디바운싱 처리 필요
-  if (searchQuery.value.length >= 2) {
+  if (searchQuery.value.length >= 1) {  // 1글자부터 검색 가능
     searchMembers()
   }
 }
 
 const searchMembers = async () => {
-  if (!searchQuery.value || searchQuery.value.length < 2) {
+  if (!searchQuery.value || searchQuery.value.length < 1) {  // 1글자부터 검색 가능
     searchResults.value = []
     return
   }
@@ -497,6 +497,9 @@ watch(() => props.lockerData, (newData) => {
   font-size: 14px;
   font-weight: 700;
   margin-right: 12px;
+  position: relative;
+  top: -2px;  /* 2px 위로 */
+  left: -1px; /* 1px 좌측으로 */
 }
 
 .modal-title {
@@ -607,7 +610,7 @@ watch(() => props.lockerData, (newData) => {
 
 /* Usage Section */
 .usage-section {
-  margin-bottom: 20px;
+  margin-bottom: 19px;  /* 1px 줄임 */
 }
 
 .usage-label {
@@ -616,6 +619,8 @@ watch(() => props.lockerData, (newData) => {
   font-weight: 500;
   color: #374151;
   margin-bottom: 8px;
+  position: relative;
+  top: 1px;  /* 1px 아래로 */
 }
 
 .usage-select-wrapper {
