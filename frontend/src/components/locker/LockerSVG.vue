@@ -268,7 +268,7 @@
     <text
       v-if="props.isManagementPage && viewMode === 'front' && props.locker.lockrNo && props.lockerStatus?.memberName"
       :x="5 * LOCKER_VISUAL_SCALE"
-      :y="7 * LOCKER_VISUAL_SCALE"
+      :y="5 * LOCKER_VISUAL_SCALE"
       text-anchor="start"
       dominant-baseline="middle"
       :font-size="fontSize * 1.1"
@@ -320,7 +320,7 @@
         :y="logicalDimensions.height / 2 + 1"
         text-anchor="middle"
         dominant-baseline="middle"
-        :font-size="fontSize * 1.5"
+        :font-size="fontSize * 1.3"
         fill="#374151"
         font-weight="700"
         style="user-select: none; pointer-events: none;"
@@ -332,7 +332,7 @@
       <text
         v-if="props.lockerStatus.startDate && props.lockerStatus.endDate"
         :x="logicalDimensions.width / 2"
-        :y="logicalDimensions.height - 3 * LOCKER_VISUAL_SCALE - 1"
+        :y="logicalDimensions.height - 3 * LOCKER_VISUAL_SCALE - 2"
         text-anchor="middle"
         dominant-baseline="middle"
         :font-size="fontSize * 0.7"
