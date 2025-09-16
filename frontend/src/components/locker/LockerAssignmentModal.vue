@@ -404,32 +404,33 @@ watch(() => props.lockerData, (newData) => {
     console.log('[LockerAssignmentModal] 데이터 설정 시작')
 
     // Update form with existing locker data if available
-    if (newData.userName) {
+    // undefined가 아닌 경우 모두 설정 (빈 문자열도 포함)
+    if (newData.userName !== undefined) {
       userName.value = newData.userName
       console.log('[LockerAssignmentModal] userName 설정:', newData.userName)
     }
-    if (newData.userPhone) {
+    if (newData.userPhone !== undefined) {
       userPhone.value = newData.userPhone
       console.log('[LockerAssignmentModal] userPhone 설정:', newData.userPhone)
     }
-    if (newData.memberSno) {
+    if (newData.memberSno !== undefined) {
       memberSno.value = newData.memberSno
       console.log('[LockerAssignmentModal] memberSno 설정:', newData.memberSno)
     }
-    if (newData.startDate) {
+    if (newData.startDate !== undefined) {
       startDate.value = newData.startDate
       console.log('[LockerAssignmentModal] startDate 설정:', newData.startDate)
     }
-    if (newData.endDate) {
+    if (newData.endDate !== undefined) {
       endDate.value = newData.endDate
       console.log('[LockerAssignmentModal] endDate 설정:', newData.endDate)
     }
     // usage는 메모 데이터를 받아서 lockerMemo에 설정
-    if (newData.usage) {
+    if (newData.usage !== undefined) {
       lockerMemo.value = newData.usage
       console.log('[LockerAssignmentModal] lockerMemo(usage) 설정:', newData.usage)
     }
-    if (newData.memo) {
+    if (newData.memo !== undefined) {
       lockerMemo.value = newData.memo
       console.log('[LockerAssignmentModal] lockerMemo(memo) 설정:', newData.memo)
     }
