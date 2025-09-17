@@ -957,6 +957,12 @@ const isLoadingTypes = ref(true)
 const isLoadingLockers = ref(true)
 const hasLoadedTypes = ref(false)
 const lockerStatuses = ref<Map<string, any>>(new Map())
+const markChildrenDirty = () => {
+  if (currentViewMode.value === 'floor') {
+    needsFrontChildUpdate.value = true
+  }
+}
+const needsFrontChildUpdate = ref(false)
 const saveError = ref<string | null>(null)
 const loadError = ref<string | null>(null)
 
@@ -1270,6 +1276,7 @@ const saveLocker = async (lockerData: any) => {
     
     if (result.success) {
       await loadLockers() // Refresh lockers
+      markChildrenDirty()
       
       return result
     }
@@ -1296,6 +1303,7 @@ const updateLockerPlacement = async (lockerId: string, placementData: any) => {
     const result = await response.json()
     
     if (result.success) {
+      markChildrenDirty()
       return result
     }
   } catch (error) {
@@ -1384,6 +1392,7 @@ const saveMultipleLockerPositions = async (positions: Array<{ id: string, x: num
     })
     
     await Promise.all(savePromises)
+    markChildrenDirty()
     
   } catch (error) {
     console.error('[API] Failed to save some locker positions:', error)
@@ -3596,6 +3605,9 @@ const saveLockerRotation = async (lockerId: string, rotation: number) => {
       // 회전 중일 때는 로컬만 업데이트, 종료 시에만 DB 업데이트
       const skipDB = isRotating.value
       await lockerStore.updateLocker(lockerId, { rotation: normalizedRotation }, skipDB)
+      if (!skipDB) {
+        markChildrenDirty()
+      }
       // Locker rotation saved
     }
   } catch (error) {
@@ -5060,12 +5072,69 @@ const transformToFrontViewNew = () => {
     item.frontViewX += centerOffset
   })
   
+  const parentPositionMap = new Map<number | string, { frontViewX: number; frontViewY: number; actualHeight: number; typeId?: string }>()
+  renderData.forEach(item => {
+    const key = item.lockrCd ?? extractDbId(item.id)
+    if (key !== null && key !== undefined) {
+      parentPositionMap.set(key, {
+        frontViewX: item.frontViewX,
+        frontViewY: item.frontViewY,
+        actualHeight: item.actualHeight || item.height || 60,
+        typeId: item.lockrTypeCd || item.typeId || item.type
+      })
+    }
+  })
+
+  const boundaryRenderData: any[] = [...renderData]
+  const zoneId = selectedZone.value?.id
+  const zoneChildLockers = zoneId
+    ? lockerStore.lockers.filter(l => l.zoneId === zoneId && (l.parentLockrCd || l.parentLockerId))
+    : []
+
+  const childBatchUpdates: Array<{ id: string; updates: any }> = []
+  const shouldRecomputeChildren = zoneChildLockers.length > 0 && (
+    needsFrontChildUpdate.value ||
+    zoneChildLockers.some(child => child.frontViewX === undefined || child.frontViewX === null || child.frontViewY === undefined || child.frontViewY === null)
+  )
+
+  if (zoneChildLockers.length > 0) {
+    zoneChildLockers.forEach(child => {
+      const parentKey = child.parentLockrCd ?? extractDbId(child.parentLockerId || '')
+      const parentPosition = parentPositionMap.get(parentKey)
+      if (!parentPosition) return
+
+      const tierLevel = child.tierLevel && child.tierLevel > 0 ? child.tierLevel : 1
+      const tierHeight = child.actualHeight || child.height || child.depth || 30
+      const scaledTierHeight = tierHeight * LOCKER_VISUAL_SCALE
+      const childFrontViewX = parentPosition.frontViewX
+      const childFrontViewY = parentPosition.frontViewY - (scaledTierHeight * tierLevel)
+
+      if (shouldRecomputeChildren) {
+        childBatchUpdates.push({
+          id: child.id,
+          updates: {
+            frontViewX: childFrontViewX,
+            frontViewY: childFrontViewY,
+            frontViewRotation: 0
+          }
+        })
+      }
+
+      boundaryRenderData.push({
+        ...child,
+        frontViewX: childFrontViewX,
+        frontViewY: childFrontViewY,
+        actualHeight: tierHeight
+      })
+    })
+  }
+
   // 8. 화면 위쪽 경계를 넘어가는 락커 감지 및 삭제
   const lockersToDelete = []
   const canvasTopY = 0  // 캔버스 상단 Y 좌표
   
   // renderData를 기준으로 경계 체크 (계산된 좌표를 사용)
-  renderData.forEach(renderItem => {
+  boundaryRenderData.forEach(renderItem => {
     const height = (renderItem.actualHeight || renderItem.height || 0) * 2.0  // LOCKER_VISUAL_SCALE 적용
     const lockerTopEdge = renderItem.frontViewY  // renderData에서 계산된 Y 좌표
     
@@ -5147,6 +5216,7 @@ const transformToFrontViewNew = () => {
       }
     })
   })
+  childBatchUpdates.forEach(update => batchUpdates.push(update))
   
   // 8.5.1 자식 락커는 처리하지 않음 - 이미 DB에 정확한 FRONT_VIEW 좌표를 가지고 있음
   // 번호부여가 정상 작동하는 이유: 자식 락커 위치를 전혀 건드리지 않기 때문
@@ -5156,6 +5226,9 @@ const transformToFrontViewNew = () => {
   // 이렇게 하면 Vue의 반응성 시스템이 한 번만 트리거되어
   // 모든 자식 락커가 동시에 fade-in 애니메이션을 시작합니다
   lockerStore.batchUpdateLockers(batchUpdates)
+  if (shouldRecomputeChildren || needsFrontChildUpdate.value) {
+    needsFrontChildUpdate.value = false
+  }
   console.log(`[Batch Update] Updated ${batchUpdates.length} lockers simultaneously`)
   
   // 8.6. DB에 front view 좌표 저장 (비동기로 처리)
@@ -5461,6 +5534,7 @@ const deleteSelectedLockersOriginal = async () => {
   selectedLockerIds.value.clear()
   selectedLocker.value = null
   console.log('[Delete] Deleted lockers:', lockersToDelete)
+  markChildrenDirty()
 }
 
 // Context menu and number management functions
