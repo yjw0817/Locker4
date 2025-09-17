@@ -4137,135 +4137,9 @@ const updateViewMode = () => {
 // BACKUP: 기존 transformToFrontView 로직 (2025-08-22)
 // =================================
 const transformToFrontView_BACKUP = () => {
-  // Starting front view transformation
-  
-  const lockers = currentLockers.value
-  
-  if (lockers.length === 0) {
-    // No lockers to transform
-    return
-  }
-  
-  // Simple approach: Detect U-shape by checking if lockers form 3 sides
-  const bounds = {
-    minX: Math.min(...lockers.map(l => l.x)),
-    maxX: Math.max(...lockers.map(l => l.x + l.width)),
-    minY: Math.min(...lockers.map(l => l.y)),
-    maxY: Math.max(...lockers.map(l => l.y + (l.depth || l.height)))
-  }
-  
-  // Categorize lockers by position
-  const topRow = []
-  const rightColumn = []
-  const bottomRow = []
-  const leftColumn = []
-  const middle = []
-  
-  lockers.forEach(locker => {
-    const isTop = Math.abs(locker.y - bounds.minY) < 30
-    const isBottom = Math.abs(locker.y + (locker.depth || locker.height) - bounds.maxY) < 30
-    const isLeft = Math.abs(locker.x - bounds.minX) < 30
-    const isRight = Math.abs(locker.x + locker.width - bounds.maxX) < 30
-    
-    if (isTop && !isLeft && !isRight) {
-      topRow.push(locker)
-    } else if (isBottom && !isLeft && !isRight) {
-      bottomRow.push(locker)
-    } else if (isRight && !isTop && !isBottom) {
-      rightColumn.push(locker)
-    } else if (isLeft && !isTop && !isBottom) {
-      leftColumn.push(locker)
-    } else if (isTop && isRight) {
-      // Top-right corner
-      rightColumn.push(locker) // Include in right column
-    } else if (isBottom && isRight) {
-      // Bottom-right corner
-      rightColumn.push(locker) // Include in right column
-    } else if (isTop && isLeft) {
-      // Top-left corner
-      topRow.push(locker) // Include in top row
-    } else if (isBottom && isLeft) {
-      // Bottom-left corner
-      bottomRow.push(locker) // Include in bottom row
-    } else {
-      middle.push(locker)
-    }
-  })
-  
-  // Sort each group
-  topRow.sort((a, b) => a.x - b.x) // Left to right
-  rightColumn.sort((a, b) => a.y - b.y) // Top to bottom
-  bottomRow.sort((a, b) => b.x - a.x) // Right to left
-  leftColumn.sort((a, b) => b.y - a.y) // Bottom to top
-  
-  // Build unfolded sequence based on detected shape
-  let unfoldedSequence = []
-  
-  // U-shape (ㄷ) pattern
-  if (topRow.length > 0 && rightColumn.length > 0 && bottomRow.length > 0) {
-    console.log('[U-Shape] Detected ㄷ pattern')
-    unfoldedSequence = [...topRow, ...rightColumn, ...bottomRow]
-    
-    console.log('[U-Shape] Walking order:', {
-      top: topRow.map(l => `L${l.number}`).join('→'),
-      right: rightColumn.map(l => `L${l.number}`).join('→'),
-      bottom: bottomRow.map(l => `L${l.number}`).join('→'),
-      total: unfoldedSequence.map(l => `L${l.number}`).join('→')
-    })
-  }
-  // Back-to-back columns
-  else if (leftColumn.length > 0 && rightColumn.length > 0) {
-    console.log('[Back-to-Back] Detected two columns')
-    leftColumn.sort((a, b) => a.y - b.y) // Top to bottom for left
-    rightColumn.sort((a, b) => b.y - a.y) // Bottom to top for right (opposite approach)
-    unfoldedSequence = [...leftColumn, ...rightColumn]
-  }
-  // Simple row
-  else {
-    console.log('[Simple Row] Single line of lockers')
-    unfoldedSequence = [...lockers].sort((a, b) => a.x - b.x)
-  }
-  
-  // Add any left column lockers (for complete U or ㅁ shape)
-  if (leftColumn.length > 0 && unfoldedSequence.indexOf(leftColumn[0]) === -1) {
-    console.log('[Left Column] Adding left side lockers')
-    unfoldedSequence.push(...leftColumn)
-  }
-  
-  // Add any middle lockers not categorized
-  if (middle.length > 0) {
-    console.log('[Middle] Adding uncategorized lockers:', middle.length)
-    unfoldedSequence.push(...middle)
-  }
-  
-  // Verify all lockers are included
-  const originalCount = lockers.length
-  const unfoldedCount = unfoldedSequence.length
-  
-  if (originalCount !== unfoldedCount) {
-    console.error('[Transform] Locker count mismatch!', {
-      original: originalCount,
-      unfolded: unfoldedCount
-    })
-    
-    // Find missing lockers
-    const unfoldedIds = new Set(unfoldedSequence.map(l => l.id))
-    const missing = lockers.filter(l => !unfoldedIds.has(l.id))
-    console.log('[Missing] Lockers not included:', missing.map(l => `L${l.number}`))
-    
-    // Add missing lockers at the end
-    unfoldedSequence.push(...missing)
-  }
-  
-  // Store the sequence for front view positioning
-  // Positions will be calculated dynamically in displayLockers
-  frontViewSequence.value = unfoldedSequence
-  
-  console.log('[Front View] Transformation complete:', {
-    totalLockers: unfoldedSequence.length,
-    sequence: unfoldedSequence.map(l => l.number || l.id).join(' -> ')
-  })
+  console.warn('[LockerManagement] transformToFrontView_BACKUP is disabled; using stored coordinates.')
 }
+
 
 // =================================
 // ==========================================
@@ -4764,30 +4638,29 @@ const getGroupSpacingForFrontView = (prevLocker: any, currentLocker: any, minorG
 
 // 새로운 Front View 변환 함수
 const transformToFrontViewNew = () => {
-  // LockerManagement: use existing front-view coordinates without recomputation
   const lockers = currentLockers.value
   if (!lockers || lockers.length === 0) {
     frontViewSequence.value = []
     return
   }
 
-  const isParentLocker = (locker: any) => {
+  const isParentLocker = (locker) => {
     return !locker.parentLockrCd && !locker.parentLockerId && (!locker.tierLevel || locker.tierLevel === 0)
   }
 
-  const compareByStoredFrontPosition = (a: any, b: any) => {
-    const ax = (a.frontViewX ?? a.x ?? 0)
-    const bx = (b.frontViewX ?? b.x ?? 0)
+  const compareByStoredFrontPosition = (a, b) => {
+    const ax = a.frontViewX ?? a.x ?? 0
+    const bx = b.frontViewX ?? b.x ?? 0
     if (Math.abs(ax - bx) > 1e-3) {
       return ax - bx
     }
-    const ay = (a.frontViewY ?? a.y ?? 0)
-    const by = (b.frontViewY ?? b.y ?? 0)
+    const ay = a.frontViewY ?? a.y ?? 0
+    const by = b.frontViewY ?? b.y ?? 0
     return ay - by
   }
 
   const parents = lockers.filter(isParentLocker).sort(compareByStoredFrontPosition)
-  const sequence: any[] = []
+  const sequence = []
 
   parents.forEach(parent => {
     sequence.push(parent)
@@ -4807,69 +4680,14 @@ const transformToFrontViewNew = () => {
   frontViewSequence.value = sequence
 }
 
+
 }
 
 // 프론트 뷰에서 락커 위치 지정 - 중앙 정렬 및 간격 없음
-const positionLockersInFrontView = (lockerSequence) => {
-  // Apply the same visual scale as getLockerDimensions
-  const LOCKER_VISUAL_SCALE = 2.0
-  
-  // 전체 락커 너비 계산 (스케일 적용, 간격 없이)
-  const totalLockersWidth = lockerSequence.reduce((total, locker) => {
-    return total + (locker.width || 40) * LOCKER_VISUAL_SCALE;
-  }, 0);
-  
-  // 캔버스 너비 사용 (ref 변수이므로 .value 사용)
-  const availableWidth = canvasWidth.value;
-  
-  // 중앙 정렬을 위한 시작 X 계산
-  const startX = (availableWidth - totalLockersWidth) / 2;
-  
-  let currentX = startX;
-  
-  lockerSequence.forEach((locker, index) => {
-    // In front view, all lockers face forward (no rotation)
-    // Apply same scale as getLockerDimensions for consistency
-    const scaledHeight = (locker.actualHeight || locker.height || 60) * LOCKER_VISUAL_SCALE
-    const scaledWidth = (locker.width || 40) * LOCKER_VISUAL_SCALE
-    
-    // CRITICAL: Check height for L3 and L4
-    if (locker.number === 'L3' || locker.number === 'L4') {
-      console.log(`[CRITICAL] ${locker.number} HEIGHT CHECK:`, {
-        actualHeight: locker.actualHeight,
-        shouldBe90: locker.actualHeight === 90,
-        typeId: locker.typeId,
-        scaledHeight: scaledHeight
-      })
-    }
-    
-    // Update via store to maintain reactivity and preserve actualHeight
-    // Y position should place the bottom of locker on the floor line (scaled coordinates)
-    lockerStore.updateLocker(locker.id, {
-      frontViewX: currentX,  // Scaled X coordinate
-      frontViewY: FLOOR_Y - scaledHeight,  // Floor line minus scaled height
-      frontViewRotation: 0  // All lockers face forward
-    })
-    
-    currentX += scaledWidth // Move by scaled width
-    
-    console.log(`[TransformToFront] ${locker.number}:`, {
-      actualHeight: locker.actualHeight,
-      scaledHeight: scaledHeight,
-      yPosition: FLOOR_Y - scaledHeight,
-      floorY: FLOOR_Y,
-      calculatedY: `${FLOOR_Y} - ${scaledHeight} = ${FLOOR_Y - scaledHeight}`
-    })
-  })
-  
-  console.log('[Front View] All lockers facing forward (user perspective)')
-  console.log('[Front View] Transformation complete:', {
-    totalLockers: lockerSequence.length,
-    totalWidth: totalLockersWidth,
-    startX: startX,
-    canvasWidth: availableWidth
-  })
+const positionLockersInFrontView = () => {
+  // Disabled in LockerManagement to avoid coordinate recomputation
 }
+
 
 // Note: Old complex detection functions removed - now using simplified approach in transformToFrontView
 // The new approach directly categorizes lockers by position (top/right/bottom/left) 
