@@ -3605,9 +3605,7 @@ const saveLockerRotation = async (lockerId: string, rotation: number) => {
       // 회전 중일 때는 로컬만 업데이트, 종료 시에만 DB 업데이트
       const skipDB = isRotating.value
       await lockerStore.updateLocker(lockerId, { rotation: normalizedRotation }, skipDB)
-      if (!skipDB) {
-        markChildrenDirty()
-      }
+      markChildrenDirty()
       // Locker rotation saved
     }
   } catch (error) {
@@ -4707,48 +4705,141 @@ const findNextConnectedGroup = (currentGroup: any[], visitedGroups: Set<any[]>, 
 }
 
 // 소그룹 시계방향 순회 정렬
-const sortMinorGroups = (minorGroups: any[][]): any[][] => {
+const MINOR_GROUP_ANGLE_ORDER = [-180, -135, -90, -45, 0, 45, 90, 135, 180]
+const WRAP_AROUND_LEADING_ANGLES = [180, 135]
+const WRAP_AROUND_TRAILING_ANGLES = [-135, -90]
+const ANGLE_MATCH_TOLERANCE = 1e-6
+
+const getSignedGroupRotation = (rotation: number): number => {
+  if (rotation === null || rotation === undefined) return Number.NaN
+  const numericRotation = Number(rotation)
+  if (Number.isNaN(numericRotation)) return Number.NaN
+
+  let normalized = normalizeRotation(numericRotation)
+  if (normalized > 180) {
+    normalized -= 360
+  }
+  return normalized
+}
+
+const getMinorGroupAngle = (minorGroup: any[]): number => {
+  if (!minorGroup || minorGroup.length === 0) {
+    return Number.NaN
+  }
+  const baseLocker = minorGroup[0]
+  const baseRotation = baseLocker?.rotation ?? 0
+  return getSignedGroupRotation(baseRotation)
+}
+
+const getAnglePriority = (angle: number): number => {
+  if (Number.isNaN(angle)) {
+    return Number.POSITIVE_INFINITY
+  }
+
+  const tolerance = ANGLE_MATCH_TOLERANCE
+  const matchedIndex = MINOR_GROUP_ANGLE_ORDER.findIndex(target => Math.abs(target - angle) < tolerance)
+  if (matchedIndex !== -1) {
+    return matchedIndex
+  }
+
+  const normalized = (angle + 360) % 360
+  return MINOR_GROUP_ANGLE_ORDER.length + normalized
+}
+
+const sortMinorGroupsLegacy = (minorGroups: any[][]): any[][] => {
   if (minorGroups.length <= 1) return minorGroups
-  
+
   const sortedGroups: any[][] = []
   const visitedGroups = new Set<any[]>()
-  
-  // Find starting point (bottom-most locker)
+
   const startLocker = findClockwiseStart(minorGroups)
   const startGroup = getMinorGroupContaining(startLocker, minorGroups)
-  
+
   if (!startGroup) {
-    // Fallback to original sorting if no valid start
     return minorGroups.sort((a, b) => {
       const aTopLeft = getTopLeftLocker(a)
       const bTopLeft = getTopLeftLocker(b)
-      
+
       if (Math.abs(aTopLeft.y - bTopLeft.y) > 1) {
         return aTopLeft.y - bTopLeft.y
       }
       return aTopLeft.x - bTopLeft.x
     })
   }
-  
-  // Start clockwise traversal
+
   let currentGroup: any[] | null = startGroup
   while (currentGroup && !visitedGroups.has(currentGroup)) {
     sortedGroups.push(currentGroup)
     visitedGroups.add(currentGroup)
-    
-    // Find next connected group in clockwise direction
+
     currentGroup = findNextConnectedGroup(currentGroup, visitedGroups, minorGroups)
   }
-  
-  // Add any remaining unvisited groups (isolated groups)
+
   for (const group of minorGroups) {
     if (!visitedGroups.has(group)) {
       sortedGroups.push(group)
     }
   }
-  
+
   return sortedGroups
 }
+
+const sortMinorGroups = (minorGroups: any[][]): any[][] => {
+  if (minorGroups.length <= 1) return minorGroups
+
+  const groupsWithMeta = minorGroups.map(group => {
+    const angle = getMinorGroupAngle(group)
+    const priority = getAnglePriority(angle)
+    const center = getGroupCenter(group)
+
+    return {
+      group,
+      angle,
+      priority,
+      center,
+      hasAngle: !Number.isNaN(angle) && Number.isFinite(priority)
+    }
+  })
+
+  const allHaveAngles = groupsWithMeta.every(meta => meta.hasAngle)
+
+  if (!allHaveAngles) {
+    return sortMinorGroupsLegacy(minorGroups)
+  }
+
+  const isAngleMatch = (angle: number, candidates: number[]): boolean => {
+    return candidates.some(target => Math.abs(target - angle) < ANGLE_MATCH_TOLERANCE)
+  }
+
+  groupsWithMeta.sort((a, b) => {
+    const aHasAngle = !Number.isNaN(a.angle)
+    const bHasAngle = !Number.isNaN(b.angle)
+
+    if (aHasAngle && bHasAngle) {
+      const aLeads = isAngleMatch(a.angle, WRAP_AROUND_LEADING_ANGLES)
+      const bLeads = isAngleMatch(b.angle, WRAP_AROUND_LEADING_ANGLES)
+      const aTrails = isAngleMatch(a.angle, WRAP_AROUND_TRAILING_ANGLES)
+      const bTrails = isAngleMatch(b.angle, WRAP_AROUND_TRAILING_ANGLES)
+
+      if (aLeads && bTrails) return -1
+      if (aTrails && bLeads) return 1
+    }
+
+    if (a.priority !== b.priority) {
+      return a.priority - b.priority
+    }
+
+    const deltaX = a.center.x - b.center.x
+    if (Math.abs(deltaX) > 1) {
+      return deltaX
+    }
+
+    return a.center.y - b.center.y
+  })
+
+  return groupsWithMeta.map(meta => meta.group)
+}
+
 
 // 소그룹에 회전 처리 적용 및 순서 조정
 const applyRotationToMinorGroup = (minorGroup: any[]): any[] => {
@@ -5226,8 +5317,10 @@ const transformToFrontViewNew = () => {
   // 이렇게 하면 Vue의 반응성 시스템이 한 번만 트리거되어
   // 모든 자식 락커가 동시에 fade-in 애니메이션을 시작합니다
   lockerStore.batchUpdateLockers(batchUpdates)
-  if (shouldRecomputeChildren || needsFrontChildUpdate.value) {
+  if (shouldRecomputeChildren) {
     needsFrontChildUpdate.value = false
+  } else if (needsFrontChildUpdate.value && zoneChildLockers.length === 0) {
+    console.log('[Transform] Child lockers not yet loaded; retaining dirty flag for next pass')
   }
   console.log(`[Batch Update] Updated ${batchUpdates.length} lockers simultaneously`)
   

@@ -240,6 +240,21 @@
       {{ getDisplayNumber() }}
     </text>
 
+    <!-- LockerPlacement 정면배치에서 락커 번호 중앙 표시 -->
+    <text
+      v-if="!props.isManagementPage && viewMode === 'front' && getFrontDisplayNumber()"
+      :x="logicalDimensions.width / 2"
+      :y="logicalDimensions.height / 2 - 0.5"
+      text-anchor="middle"
+      dominant-baseline="middle"
+      :font-size="8 * LOCKER_VISUAL_SCALE"
+      fill="#1f2937"
+      font-weight="700"
+      style="user-select: none; pointer-events: none;"
+    >
+      {{ getFrontDisplayNumber() }}
+    </text>
+
     <!-- LockerPlacement 정면배치에서 하단 라벨 배경 -->
     <path
       v-if="!props.isManagementPage && viewMode === 'front' && getDisplayNumber()"
@@ -1021,17 +1036,26 @@ if (props.isManagementPage && props.viewMode === 'floor' && props.childLockers) 
 // Get locker number (LOCKR_NO)
 const getLockrNo = () => {
   if (!props.locker) return ''
-  
-  // Return LOCKR_NO with proper null checking (0 is a valid number)
-  return props.locker.lockrNo !== undefined && props.locker.lockrNo !== null 
-    ? String(props.locker.lockrNo)
-    : ''
+
+  // Normalize LOCKR_NO and fall back to legacy uppercase column
+  const rawValue = props.locker.lockrNo ?? (props.locker as any).LOCKR_NO
+  if (rawValue === undefined || rawValue === null || rawValue === '') {
+    return ''
+  }
+
+  const numericValue = Number(rawValue)
+  if (!Number.isNaN(numericValue) && numericValue > 0) {
+    return String(numericValue)
+  }
+
+  // Preserve non-numeric values (e.g., custom labels) as-is
+  return typeof rawValue === 'string' ? rawValue.trim() : ''
 }
 
 // Get locker label (LOCKR_LABEL)
 const getLockrLabel = () => {
   if (!props.locker) return ''
-  
+
   // Return LOCKR_LABEL or fallback values
   return props.locker.lockrLabel || props.locker.frontViewNumber || props.locker.number || ''
 }
@@ -1039,7 +1063,7 @@ const getLockrLabel = () => {
 // LockerManagement 페이지용 번호 반환
 const getManagementPageNumber = () => {
   if (!props.locker) return ''
-  
+
   if (props.viewMode === 'floor') {
     // 평면배치에서는 모든 락커 실제 번호 표시 (부모, 자식 모두)
     return getLockrNo()
@@ -1049,17 +1073,12 @@ const getManagementPageNumber = () => {
   }
 }
 
-// LockerPlacement 페이지용 번호 반환  
+// LockerPlacement 페이지용 번호 반환
 const getPlacementPageNumber = () => {
   if (!props.locker) return ''
-  
-  if (props.viewMode === 'floor') {
-    // 평면배치에서는 모든 락커 레이블 표시 (부모, 자식 모두)
-    return getLockrLabel()
-  } else {
-    // 정면배치에서는 모든 락커 레이블 표시 (부모, 자식 모두)
-    return getLockrLabel()
-  }
+
+  // Placement view always surfaces the locker label.
+  return getLockrLabel()
 }
 
 // 메인 디스플레이 번호 라우터 함수
@@ -1067,13 +1086,19 @@ const getDisplayNumber = () => {
   return props.isManagementPage ? getManagementPageNumber() : getPlacementPageNumber()
 }
 
+const getFrontDisplayNumber = () => {
+  if (!props.locker || props.viewMode !== 'front') return ''
+  if (props.isManagementPage) return ''
+  return getLockrNo()
+}
+
 // 자식 락커 번호 표시용 함수
 const getChildDisplayNumber = (childLocker: any) => {
   if (!childLocker) return ''
-  
+
   if (props.isManagementPage) {
     // LockerManagement: 자식 락커도 실제 번호(lockrNo) 표시
-    return childLocker.lockrNo !== undefined && childLocker.lockrNo !== null 
+    return childLocker.lockrNo !== undefined && childLocker.lockrNo !== null
       ? String(childLocker.lockrNo)
       : (childLocker.lockrLabel || childLocker.number || '')
   } else {
@@ -1399,3 +1424,7 @@ const handleRotateStart = (e: MouseEvent) => {
   }
 }
 </style>
+
+
+
+
