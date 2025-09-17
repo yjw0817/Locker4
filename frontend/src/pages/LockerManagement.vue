@@ -4764,329 +4764,49 @@ const getGroupSpacingForFrontView = (prevLocker: any, currentLocker: any, minorG
 
 // 새로운 Front View 변환 함수
 const transformToFrontViewNew = () => {
-  // === Front view transformation start ===
-  // Starting NEW transformation algorithm
-  // === Front view transformation start ===
-  console.trace('Called from:')
-  
-  // Filter out child lockers - only parent lockers should participate in grouping
-  const lockers = currentLockers.value.filter(locker => {
-    // A locker is a parent if it has no parent references AND tierLevel is 0 or undefined
-    const isParent = !locker.parentLockrCd && 
-                     !locker.parentLockerId && 
-                     (!locker.tierLevel || locker.tierLevel === 0)
-    return isParent
-  })
-  console.log(`[Transform] Processing ${lockers.length} parent lockers (${currentLockers.value.length - lockers.length} child lockers excluded from grouping)`)
-  
-  if (lockers.length === 0) {
-    // No parent lockers to transform
+  // LockerManagement: use existing front-view coordinates without recomputation
+  const lockers = currentLockers.value
+  if (!lockers || lockers.length === 0) {
+    frontViewSequence.value = []
     return
   }
-  
-  // 1. 대그룹 탐지
-  const majorGroups = findMajorGroups(lockers)
-  // Found major groups for transformation
-  
-  // 2. 대그룹 우선순위 정렬
-  const sortedMajorGroups = sortMajorGroups(majorGroups)
-  
-  // 3. 최종 시퀀스 생성
-  const finalSequence: any[] = []
-  const LOCKER_VISUAL_SCALE = 2.0
-  
-  let currentX = 0
-  const renderData: any[] = []
-  
-  // 모든 락커를 하나의 플랫 리스트로 만들어서 처리
-  const allLockersSequence: any[] = []
-  // 모든 소그룹을 저장할 배열
-  const allMinorGroups: any[] = []
-  // 각 락커가 속한 대그룹 인덱스를 저장하는 Map
-  const lockerToMajorGroup = new Map<string, number>()
-  
-  sortedMajorGroups.forEach((majorGroup, majorIndex) => {
-    console.log(`[Front View] Processing major group ${majorIndex + 1}:`, 
-      majorGroup.map(l => `${l.number || l.id}(rot:${l.rotation || 0})`))
-    
-    // 이 대그룹의 모든 락커에 대그룹 인덱스 할당
-    majorGroup.forEach(locker => {
-      lockerToMajorGroup.set(locker.id, majorIndex)
-    })
-    
-    // 4. 소그룹 분류 및 정렬
-    const minorGroups = findMinorGroups(majorGroup)
-    const sortedMinorGroups = sortMinorGroups(minorGroups)
-    
-    // 모든 소그룹을 전체 배열에 추가
-    allMinorGroups.push(...sortedMinorGroups)
-    
-    console.log(`  Found ${sortedMinorGroups.length} minor groups:`)
-    sortedMinorGroups.forEach((minorGroup, minorIdx) => {
-      console.log(`    Minor Group ${minorIdx + 1}:`, minorGroup.map(l => `${l.number}(rot:${l.rotation || 0})`))
-    })
-    
-    sortedMinorGroups.forEach((minorGroup, minorIndex) => {
-      console.log(`  Processing minor group ${minorIndex + 1}:`, 
-        minorGroup.map(l => `${l.number || l.id}(rot:${l.rotation || 0})`))
-      
-      // 5. 회전 처리 및 순서 조정
-      const rotatedLockers = applyRotationToMinorGroup(minorGroup)
-      
-      // 모든 락커를 시퀀스에 추가
-      rotatedLockers.forEach((locker) => {
-        allLockersSequence.push(locker)
-      })
-    })
-  })
-  
-  // 6. 최종 시퀀스 처리 - 동적 간격 적용
-  let prevLocker: any = null
-  
-  allLockersSequence.forEach((locker, index) => {
-    finalSequence.push(locker)
-    
-    // 이전 락커와의 간격 계산 - allMinorGroups와 lockerToMajorGroup을 전달
-    if (prevLocker && index > 0) {
-      // 자식 락커가 포함된 경우 spacing은 0
-      let spacing = 0
-      if (!prevLocker.parentLockrCd && !locker.parentLockrCd) {
-        // 둘 다 부모 락커인 경우에만 그룹 스페이싱 적용
-        spacing = getGroupSpacingForFrontView(prevLocker, locker, allMinorGroups, lockerToMajorGroup)
-      }
-      currentX += spacing
-      
-      if (spacing > 0) {
-        // Adding dynamic gap
-      }
-    }
-    
-    const width = (locker.width || 40) * LOCKER_VISUAL_SCALE
-    // 세로모드에서는 height 사용! (평면모드는 depth)
-    const height = (locker.actualHeight || locker.height || 60) * LOCKER_VISUAL_SCALE
-    
-    // Positioning locker
-    
-    renderData.push({
-      ...locker,
-      frontViewX: currentX,
-      frontViewY: FLOOR_Y - height, // 바닥선 정렬
-      frontViewRotation: 0, // 모든 락커 아래 방향
-    })
-    
-    // CRITICAL: 자식 락커 위치 계산 수정 - 배치 업데이트를 위해 저장만 함
-    if (locker.parentLockrCd) {
-      // 자식 락커는 부모 락커 위치 기반으로 계산
-      const parentLocker = renderData.find(r => r.lockrCd === locker.parentLockrCd)
-      if (parentLocker) {
-        // 부모 락커의 타입에서 높이 정보 가져오기
-        let TIER_HEIGHT = 30  // 기본값
-        if (parentLocker.lockrTypeCd || parentLocker.typeId || parentLocker.type) {
-          const typeId = parentLocker.lockrTypeCd || parentLocker.typeId || parentLocker.type
-          const lockerType = lockerTypes.value.find(t => 
-            t.id === typeId || t.type === typeId || t.LOCKR_TYPE_CD === typeId
-          )
-          if (lockerType && lockerType.height) {
-            TIER_HEIGHT = lockerType.height
-            console.log(`[TIER HEIGHT] Using type height: ${TIER_HEIGHT} for parent type: ${typeId}`)
-          }
-        }
-        
-        const TIER_GAP = 0  // 부모 락커와 바로 붙임
-        const scaledTierHeight = TIER_HEIGHT * LOCKER_VISUAL_SCALE
-        const scaledGap = TIER_GAP * LOCKER_VISUAL_SCALE
-        const tierLevel = locker.tierLevel || 1
-        
-        // 자식 락커는 부모와 같은 X, 위쪽 Y 좌표 (gap 없이)
-        const childX = parentLocker.frontViewX  // 부모와 동일한 X
-        const childY = parentLocker.frontViewY - scaledTierHeight * tierLevel  // 위쪽으로 (gap 없이)
-        
-        // Positioning child locker
-        
-        // renderData에 위치 저장 (나중에 배치 업데이트)
-        renderData[renderData.length - 1].frontViewX = childX
-        renderData[renderData.length - 1].frontViewY = childY
-        renderData[renderData.length - 1].frontViewRotation = 0
-        
-        // 자식 락커는 currentX를 증가시키지 않음 (부모 위에 스택)
-      } else {
-        console.error(`[CHILD POSITION] Parent not found for ${locker.number}, parentLockrCd: ${locker.parentLockrCd}`)
-        
-        // 부모를 찾지 못한 경우 기본 위치 사용 (나중에 배치 업데이트)
-        renderData[renderData.length - 1].frontViewX = currentX
-        renderData[renderData.length - 1].frontViewY = FLOOR_Y - height
-        renderData[renderData.length - 1].frontViewRotation = 0
-        currentX += width
-      }
-    } else {
-      // 부모 락커도 renderData에 위치 저장 (나중에 배치 업데이트)
-      renderData[renderData.length - 1].frontViewX = currentX
-      renderData[renderData.length - 1].frontViewY = FLOOR_Y - height
-      renderData[renderData.length - 1].frontViewRotation = 0
-      
-      currentX += width // 락커 너비만큼 이동
-    }
-    
-    prevLocker = locker // 다음 반복을 위해 현재 락커 저장
-  })
-  
-  // 7. 전체 중앙 정렬 - 자식 락커도 함께 이동
-  const totalWidth = currentX
-  const centerOffset = (canvasWidth.value - totalWidth) / 2
-  
-  // Center alignment calculation
-  
-  // 모든 renderData 아이템에 중앙 정렬 적용
-  renderData.forEach((item) => {
-    item.frontViewX += centerOffset
-  })
-  
-  // 8. 화면 위쪽 경계를 넘어가는 락커 감지 및 삭제
-  const lockersToDelete = []
-  const canvasTopY = 0  // 캔버스 상단 Y 좌표
-  
-  // renderData를 기준으로 경계 체크 (계산된 좌표를 사용)
-  renderData.forEach(renderItem => {
-    const height = (renderItem.actualHeight || renderItem.height || 0) * 2.0  // LOCKER_VISUAL_SCALE 적용
-    const lockerTopEdge = renderItem.frontViewY  // renderData에서 계산된 Y 좌표
-    
-    // 락커의 상단이 0보다 작으면 (화면 위로 넘어가면)
-    if (lockerTopEdge < canvasTopY) {
-      console.warn(`[Boundary Check] 락커 ${renderItem.number}이(가) 화면 위쪽 경계를 넘어갑니다:`, {
-        lockerId: renderItem.id,
-        number: renderItem.number,
-        topEdge: lockerTopEdge,
-        height: height,
-        canvasTop: canvasTopY,
-        isOverflowing: lockerTopEdge < canvasTopY
-      })
-      // currentLockers에서 해당 락커 찾기
-      const locker = currentLockers.value.find(l => l.id === renderItem.id)
-      if (locker) {
-        lockersToDelete.push(locker)
-      }
-    }
-  })
-  
-  // 화면을 넘어가는 락커들 삭제
-  if (lockersToDelete.length > 0) {
-    console.log(`[Boundary Check] 화면을 넘어가는 ${lockersToDelete.length}개의 락커를 삭제합니다:`,
-      lockersToDelete.map(l => `${l.number}(${l.id})`))
-    
-    // 먼저 로컬 스토어에서 즉시 삭제 (화면에서 즉시 제거)
-    lockersToDelete.forEach(locker => {
-      const index = currentLockers.value.findIndex(l => l.id === locker.id)
-      if (index !== -1) {
-        currentLockers.value.splice(index, 1)
-      }
-    })
-    
-    // 백엔드에서 비동기로 삭제
-    const deletePromises = lockersToDelete.map(async (locker) => {
-      try {
-        // 백엔드 API 호출
-        const response = await fetch(`${API_BASE_URL}/lockrs/${locker.lockrCd}`, {
-          method: 'DELETE'
-        })
-        
-        if (response.ok) {
-          console.log(`[Boundary Check] 백엔드에서 락커 ${locker.number}(${locker.lockrCd}) 삭제 완료`)
-        } else {
-          console.error(`[Boundary Check] 백엔드에서 락커 ${locker.number} 삭제 실패:`, await response.text())
-          // 삭제 실패 시 다시 추가할 수도 있지만, 화면 경계를 넘는 락커이므로 그대로 둠
-        }
-      } catch (error) {
-        console.error(`[Boundary Check] 백엔드에서 락커 ${locker.number} 삭제 중 오류:`, error)
-      }
-    })
-    
-    // 모든 삭제 작업이 완료되면 락커 목록 다시 로드하고 위치 재계산
-    Promise.all(deletePromises).then(() => {
-      console.log('[Boundary Check] 모든 경계 초과 락커 삭제 완료, 락커 목록 다시 로드 및 위치 재계산')
-      loadLockers().then(() => {
-        // 락커 로드 완료 후 위치 재계산
-        nextTick(() => {
-          transformToFrontViewNew()
-        })
-      })
-    })
+
+  const isParentLocker = (locker: any) => {
+    return !locker.parentLockrCd && !locker.parentLockerId && (!locker.tierLevel || locker.tierLevel === 0)
   }
-  
-  // 8.5. 배치 업데이트 - 모든 락커를 한번에 업데이트하여 동시에 렌더링되도록 함
-  console.log('[Batch Update] Starting batch update for all lockers...')
-  
-  // 배치 업데이트를 위한 준비
-  const batchUpdates = []
-  
-  renderData.forEach((item) => {
-    batchUpdates.push({
-      id: item.id,
-      updates: {
-        frontViewX: item.frontViewX,
-        frontViewY: item.frontViewY,
-        frontViewRotation: item.frontViewRotation || 0
-      }
-    })
-  })
-  
-  // 배치 업데이트 함수를 사용하여 모든 락커를 한 번에 업데이트
-  // 이렇게 하면 Vue의 반응성 시스템이 한 번만 트리거되어
-  // 모든 자식 락커가 동시에 fade-in 애니메이션을 시작합니다
-  lockerStore.batchUpdateLockers(batchUpdates)
-  console.log(`[Batch Update] Updated ${batchUpdates.length} lockers simultaneously`)
-  
-  // 8.6. DB에 front view 좌표 저장 (비동기로 처리)
-  console.log('[DB Save] Saving front view coordinates to database...')
-  const savePromises = batchUpdates.map(async (update) => {
-    try {
-      // lockerStore.updateLocker를 사용하여 DB에 저장
-      // 이미 로컬 스토어는 업데이트했으므로 중복을 피하기 위해 직접 API 호출
-      const locker = currentLockers.value.find(l => l.id === update.id)
-      if (locker && locker.lockrCd) {
-        // DB 컬럼명은 대문자 snake_case 사용 (FRONT_VIEW_X, FRONT_VIEW_Y)
-        // FRONT_VIEW_ROTATION 컬럼은 DB에 없으므로 제외
-        const dbUpdates: any = {}
-        if (update.updates.frontViewX !== undefined) {
-          dbUpdates.FRONT_VIEW_X = update.updates.frontViewX
-        }
-        if (update.updates.frontViewY !== undefined) {
-          dbUpdates.FRONT_VIEW_Y = update.updates.frontViewY
-        }
-        // FRONT_VIEW_ROTATION은 DB에 컬럼이 없으므로 전송하지 않음
-        
-        const response = await fetch(`${API_BASE_URL}/lockrs/${locker.lockrCd}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(dbUpdates)
-        })
-        
-        if (!response.ok) {
-          console.error(`[DB Save] Failed to save locker ${locker.number}:`, await response.text())
-        } else {
-          console.log(`[DB Save] Saved locker ${locker.number} with FRONT_VIEW_X=${dbUpdates.FRONT_VIEW_X}, FRONT_VIEW_Y=${dbUpdates.FRONT_VIEW_Y}`)
-        }
-      }
-    } catch (error) {
-      console.error(`[DB Save] Failed to save locker ${update.id}:`, error)
+
+  const compareByStoredFrontPosition = (a: any, b: any) => {
+    const ax = (a.frontViewX ?? a.x ?? 0)
+    const bx = (b.frontViewX ?? b.x ?? 0)
+    if (Math.abs(ax - bx) > 1e-3) {
+      return ax - bx
     }
+    const ay = (a.frontViewY ?? a.y ?? 0)
+    const by = (b.frontViewY ?? b.y ?? 0)
+    return ay - by
+  }
+
+  const parents = lockers.filter(isParentLocker).sort(compareByStoredFrontPosition)
+  const sequence: any[] = []
+
+  parents.forEach(parent => {
+    sequence.push(parent)
+    const children = lockers
+      .filter(child => child.parentLockrCd === parent.lockrCd || child.parentLockerId === parent.id)
+      .sort((a, b) => {
+        const tierA = a.tierLevel ?? 0
+        const tierB = b.tierLevel ?? 0
+        if (tierA !== tierB) {
+          return tierA - tierB
+        }
+        return compareByStoredFrontPosition(a, b)
+      })
+    sequence.push(...children)
   })
-  
-  // 모든 저장 작업을 비동기로 처리 (UI 블로킹 방지)
-  Promise.all(savePromises).then(() => {
-    console.log('[DB Save] All front view coordinates saved to database')
-  }).catch((error) => {
-    console.error('[DB Save] Error saving some lockers:', error)
-  })
-  
-  // 9. 시퀀스 저장
-  frontViewSequence.value = finalSequence
-  
-  console.log('[Front View] NEW Transformation complete:', {
-    totalLockers: finalSequence.length,
-    majorGroups: sortedMajorGroups.length,
-    sequence: finalSequence.map(l => l.number || l.id).join(' → '),
-    deletedLockers: lockersToDelete.length
-  })
+
+  frontViewSequence.value = sequence
+}
+
 }
 
 // 프론트 뷰에서 락커 위치 지정 - 중앙 정렬 및 간격 없음
@@ -9196,3 +8916,5 @@ onUnmounted(() => {
   }
 }
 </style>
+
+
