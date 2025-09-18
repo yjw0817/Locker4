@@ -7218,6 +7218,104 @@ watch(() => currentLockers.value, (newLockers) => {
   }
 }, { deep: true })
 
+
+if (import.meta.env.DEV) {
+  let lockerStatusDemoSnapshot: Map<any, any> | null = null
+
+  const toIsoDate = (date: Date) => {
+    return date.toISOString().split('T')[0]
+  }
+
+  const addDays = (base: Date, days: number) => {
+    const clone = new Date(base)
+    clone.setDate(clone.getDate() + days)
+    return clone
+  }
+
+  ;(window as any).applyLockerStatusDemo = () => {
+    if (!lockerStore.lockers.length) {
+      console.warn('[LockerManagement][Demo] No lockers loaded yet. Load a zone first.')
+      return
+    }
+    const parents = lockerStore.lockers.filter(l => !l.parentLockrCd && !l.parentLockerId).slice(0, 5)
+    if (parents.length < 5) {
+      console.warn('[LockerManagement][Demo] Need at least 5 parent lockers to demonstrate colors.')
+      return
+    }
+    if (!lockerStatusDemoSnapshot) {
+      lockerStatusDemoSnapshot = new Map(lockerStatuses.value)
+    }
+    const now = new Date()
+    const sequences = [
+      {
+        locker: parents[0],
+        memberName: '만료됨',
+        startDate: toIsoDate(addDays(now, -60)),
+        endDate: toIsoDate(addDays(now, -1)),
+        lockrStat: '00'
+      },
+      {
+        locker: parents[1],
+        memberName: '만료 임박',
+        startDate: toIsoDate(addDays(now, -30)),
+        endDate: toIsoDate(addDays(now, 3)),
+        lockrStat: '00'
+      },
+      {
+        locker: parents[2],
+        memberName: '사용 중',
+        startDate: toIsoDate(addDays(now, -5)),
+        endDate: toIsoDate(addDays(now, 30)),
+        lockrStat: '00'
+      },
+      {
+        locker: parents[3],
+        memberName: '',
+        startDate: null,
+        endDate: null,
+        lockrStat: '02'
+      },
+      {
+        locker: parents[4],
+        memberName: '예약 가능',
+        startDate: null,
+        endDate: null,
+        lockrStat: '00',
+        statusColor: '#E0E7FF'
+      }
+    ]
+
+    const next = new Map(lockerStatusDemoSnapshot)
+    sequences.forEach(({ locker, ...overrides }) => {
+      if (!locker.lockrCd) return
+      next.set(locker.lockrCd, {
+        LOCKR_CD: locker.lockrCd,
+        lockrCd: locker.lockrCd,
+        memberName: overrides.memberName,
+        startDate: overrides.startDate,
+        endDate: overrides.endDate,
+        lockrStat: overrides.lockrStat,
+        statusColor: overrides.statusColor ?? null,
+        color: overrides.statusColor ?? null
+      })
+    })
+    lockerStatuses.value = next
+    console.info('[LockerManagement][Demo] Applied locker status color preview. Call clearLockerStatusDemo() to revert.')
+  }
+
+  ;(window as any).clearLockerStatusDemo = () => {
+    if (!lockerStatusDemoSnapshot) {
+      console.warn('[LockerManagement][Demo] No demo status applied yet.')
+      return
+    }
+    lockerStatuses.value = new Map(lockerStatusDemoSnapshot)
+    lockerStatusDemoSnapshot = null
+    console.info('[LockerManagement][Demo] Restored original locker statuses.')
+  }
+
+  console.info('[LockerManagement] DEV helper ready: call applyLockerStatusDemo() to preview status colors. Use clearLockerStatusDemo() to restore.')
+}
+
 // Watch for view mode changes and reload lockers accordingly
 watch(() => currentViewMode.value, async (newViewMode, oldViewMode) => {
   // Only react to actual view mode changes (not initial mount)
