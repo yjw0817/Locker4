@@ -289,7 +289,7 @@
       :font-size="fontSize * 1.0"
       fill="#374151"
       font-weight="800"
-      font-family="Pretendard, 'Noto Sans KR', sans-serif"
+      font-family="Inter, 'Pretendard', 'Noto Sans KR', sans-serif"
       class="locker-number-top"
       style="user-select: none; pointer-events: none;"
     >
@@ -306,6 +306,7 @@
         dominant-baseline="middle"
         :font-size="fontSize * 1.5"
         fill="#9CA3AF"
+        font-family="Inter, 'Pretendard', 'Noto Sans KR', sans-serif"
         font-weight="600"
         style="user-select: none; pointer-events: none;"
       >
@@ -336,9 +337,10 @@
         :y="logicalDimensions.height / 2 + 1 - 12 + 3 + 1 + 1 + 1 + 1"
         text-anchor="middle"
         dominant-baseline="middle"
-        :font-size="fontSize * 1.2"
+        :font-size="fontSize * 1.4"
         fill="#374151"
-        font-weight="normal"
+        font-family="Inter, 'Pretendard', 'Noto Sans KR', sans-serif"
+        font-weight="600"
         style="user-select: none; pointer-events: none;"
       >
         {{ props.lockerStatus.memberName }}
@@ -353,7 +355,7 @@
         dominant-baseline="middle"
         :font-size="fontSize * 0.7"
         fill="#FFFFFF"
-        font-weight="normal"
+        font-weight="600"
         style="user-select: none; pointer-events: none;"
       >
         {{ formatDate(props.lockerStatus.startDate) }} ~ {{ formatDate(props.lockerStatus.endDate) }}
