@@ -619,15 +619,15 @@ const lockerFill = computed(() => {
         const endDate = new Date(props.lockerStatus.endDate)
         const now = new Date()
         if (endDate < now) {
-          return '#FCA5A5' // 진한 빨간색 배경 (만료)
+          return '#FEE2E2' // 파스텔 빨간색 (만료)
         }
       }
       // 만료 임박 (7일 이내)
       if (isExpiringSoon()) {
-        return '#FDBA74' // 진한 주황색 배경 (만료 임박)
+        return '#FDEBC8' // 파스텔 주황색 (만료 임박)
       }
       // 정상 사용 중
-      return '#FDE047' // 진한 노란색 배경 (사용중)
+      return '#FEF3C7' // 파스텔 노란색 (사용중)
     }
     // 사용불가 락커 (lockrStat이 '02'인 경우)
     if (props.lockerStatus?.lockrStat === '02') {
