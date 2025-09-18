@@ -320,8 +320,8 @@
       <path
         v-if="props.lockerStatus.startDate && props.lockerStatus.endDate"
         :d="`
-          M 0 ${logicalDimensions.height - 7 * LOCKER_VISUAL_SCALE - 1}
-          L ${logicalDimensions.width} ${logicalDimensions.height - 7 * LOCKER_VISUAL_SCALE - 1}
+          M 0 ${logicalDimensions.height - 7 * LOCKER_VISUAL_SCALE}
+          L ${logicalDimensions.width} ${logicalDimensions.height - 7 * LOCKER_VISUAL_SCALE}
           L ${logicalDimensions.width} ${logicalDimensions.height - cornerRadius}
           Q ${logicalDimensions.width} ${logicalDimensions.height} ${logicalDimensions.width - cornerRadius} ${logicalDimensions.height}
           L ${cornerRadius} ${logicalDimensions.height}
@@ -350,7 +350,7 @@
       <text
         v-if="props.lockerStatus.startDate && props.lockerStatus.endDate"
         :x="logicalDimensions.width / 2"
-        :y="logicalDimensions.height - 3 * LOCKER_VISUAL_SCALE + 1"
+        :y="logicalDimensions.height - 3 * LOCKER_VISUAL_SCALE"
         text-anchor="middle"
         dominant-baseline="middle"
         :font-size="fontSize * 0.7"
