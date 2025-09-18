@@ -286,7 +286,7 @@
       :y="5 * LOCKER_VISUAL_SCALE - 1"
       text-anchor="start"
       dominant-baseline="middle"
-      :font-size="fontSize * 1.0"
+      :font-size="fontSize * 1.2"
       fill="#374151"
       font-weight="800"
       font-family="Pretendard, 'Noto Sans KR', sans-serif"
@@ -336,7 +336,7 @@
         :y="logicalDimensions.height / 2 + 1 - 12 + 3 + 1 + 1 + 1 + 1"
         text-anchor="middle"
         dominant-baseline="middle"
-        :font-size="fontSize * 1.0"
+        :font-size="fontSize * 1.2"
         fill="#374151"
         font-weight="normal"
         style="user-select: none; pointer-events: none;"
@@ -1424,6 +1424,7 @@ const handleRotateStart = (e: MouseEvent) => {
   }
 }
 </style>
+
 
 
 
