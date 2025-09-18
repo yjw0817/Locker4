@@ -304,8 +304,8 @@
         :y="logicalDimensions.height / 2 + 1"
         text-anchor="middle"
         dominant-baseline="middle"
-        :font-size="fontSize * 1.0"
-        fill="#000000"
+        :font-size="fontSize * 1.5"
+        fill="#9CA3AF"
         font-weight="600"
         style="user-select: none; pointer-events: none;"
       >
@@ -336,7 +336,7 @@
         :y="logicalDimensions.height / 2 + 1 - 12 + 3 + 1 + 1 + 1 + 1"
         text-anchor="middle"
         dominant-baseline="middle"
-        :font-size="fontSize * 1.0"
+        :font-size="fontSize * 1.2"
         fill="#374151"
         font-weight="normal"
         style="user-select: none; pointer-events: none;"
@@ -1424,6 +1424,8 @@ const handleRotateStart = (e: MouseEvent) => {
   }
 }
 </style>
+
+
 
 
 
