@@ -619,19 +619,19 @@ const lockerFill = computed(() => {
         const endDate = new Date(props.lockerStatus.endDate)
         const now = new Date()
         if (endDate < now) {
-          return '#FEE2E2' // 파스텔 빨간색 (만료)
+          return '#F8E1FB' // 만료
         }
       }
       // 만료 임박 (7일 이내)
       if (isExpiringSoon()) {
-        return '#FDEBC8' // 파스텔 주황색 (만료 임박)
+        return '#FEF3E1' // 만료 임박
       }
       // 정상 사용 중
-      return '#FEF3C7' // 파스텔 노란색 (사용중)
+      return '#E6EFFE' // 사용중
     }
     // 사용불가 락커 (lockrStat이 '02'인 경우)
     if (props.lockerStatus?.lockrStat === '02') {
-      return '#D1D5DB' // 진한 회색 배경 (정비중)
+      return '#F3F3F3' // 사용불가
     }
     // 미사용 락커
     return '#FFFFFF' // 흰색
@@ -1135,10 +1135,10 @@ const getDateAreaColor = () => {
   if (props.lockerStatus?.endDate) {
     const endDate = new Date(props.lockerStatus.endDate)
     const now = new Date()
-    if (endDate < now) return '#DC2626' // 진한 빨간색 (만료)
+    if (endDate < now) return '#D79BE6' // 만료 (진한 톤)
   }
-  if (isExpiringSoon()) return '#EA580C' // 진한 주황색 (만료 임박)
-  return '#D97706' // 진한 노란색 (사용중)
+  if (isExpiringSoon()) return '#F5CE85' // 만료 임박 (진한 톤)
+  return '#94B8FF' // 사용중 (진한 톤)
 }
 
 const handleClick = (e: MouseEvent) => {
