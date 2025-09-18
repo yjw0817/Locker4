@@ -305,7 +305,7 @@
         text-anchor="middle"
         dominant-baseline="middle"
         :font-size="fontSize * 1.5"
-        fill="#9CA3AF"
+        fill="#000000"
         font-weight="600"
         style="user-select: none; pointer-events: none;"
       >
@@ -1424,6 +1424,7 @@ const handleRotateStart = (e: MouseEvent) => {
   }
 }
 </style>
+
 
 
 
